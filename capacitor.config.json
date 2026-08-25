@@ -1,0 +1,13 @@
+{
+  "appId": "org.rfcap.tabs",
+  "appName": "RFCap",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
