@@ -39,6 +39,17 @@ import java.util.UUID;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
+import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.driver.UsbSerialProber;
+import java.util.Arrays;
 
 /**
  * RfSerial — single-transport Bluetooth serial plugin for RFCap.
@@ -84,6 +95,53 @@ public class RfSerialPlugin extends Plugin {
     public void load() {
         BluetoothManager bm = (BluetoothManager) getContext().getSystemService(Context.BLUETOOTH_SERVICE);
         adapter = (bm != null) ? bm.getAdapter() : BluetoothAdapter.getDefaultAdapter();
+        initUsb();
+    }
+
+    /* ==================== USB serial (host OTG) ==================== */
+
+    private static final String ACTION_USB_PERMISSION = "org.rfcap.tabs.USB_PERMISSION";
+    private UsbManager usbManager;
+    private UsbDeviceConnection usbConn;
+    private UsbSerialPort usbPort;
+    private Thread usbThread;
+    private volatile boolean usbRunning = false;
+    private final Object usbLock = new Object();
+    private volatile boolean usbPermResult = false;
+    private BroadcastReceiver usbReceiver;
+
+    private void initUsb() {
+        try {
+            usbManager = (UsbManager) getContext().getSystemService(Context.USB_SERVICE);
+        } catch (Exception ignore) { usbManager = null; }
+        if (usbManager == null) return;
+        usbReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent i) {
+                String a = i.getAction();
+                if (ACTION_USB_PERMISSION.equals(a)) {
+                    synchronized (usbLock) {
+                        usbPermResult = i.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
+                        usbLock.notifyAll();
+                    }
+                } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(a)) {
+                    UsbDevice d = i.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    if (d != null && usbPort != null && usbPort.getDriver() != null
+                            && usbPort.getDriver().getDevice() != null
+                            && usbPort.getDriver().getDevice().equals(d)) {
+                        closeUsbQuietly();
+                        JSObject s = new JSObject();
+                        s.put("on", false);
+                        s.put("detail", "USB device detached");
+                        notifyListeners("rfState", s);
+                    }
+                }
+            }
+        };
+        IntentFilter f = new IntentFilter(ACTION_USB_PERMISSION);
+        f.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        f.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        getContext().registerReceiver(usbReceiver, f);
     }
 
     /* ==================== permissions ==================== */
@@ -312,6 +370,194 @@ public class RfSerialPlugin extends Plugin {
         }
     }
 
+
+
+    /* ==================== USB SERIAL (host OTG) ==================== */
+
+    private UsbSerialDriver findUsbDriver(UsbDevice d) {
+        if (d == null) return null;
+        return UsbSerialProber.getDefaultProber().probeDevice(d);
+    }
+
+    private UsbDevice findUsbDevice(int id) {
+        if (usbManager == null) return null;
+        for (UsbDevice d : usbManager.getDeviceList().values()) {
+            if (d.getDeviceId() == id) return d;
+        }
+        return null;
+    }
+
+    @PluginMethod
+    public void usbList(final PluginCall call) {
+        JSArray arr = new JSArray();
+        if (usbManager != null) {
+            for (UsbDevice d : usbManager.getDeviceList().values()) {
+                UsbSerialDriver drv = findUsbDriver(d);
+                if (drv == null) continue;
+                JSObject o = new JSObject();
+                o.put("deviceId", d.getVendorId() + ":" + d.getProductId() + ":" + d.getDeviceId());
+                o.put("vendorId", d.getVendorId());
+                o.put("productId", d.getProductId());
+                String name = null;
+                try { name = d.getProductName(); } catch (Exception ignore) {}
+                o.put("name", name != null ? name : drv.getClass().getSimpleName());
+                arr.put(o);
+            }
+        }
+        JSObject res = new JSObject();
+        res.put("devices", arr);
+        call.resolve(res);
+    }
+
+    private boolean requestUsbPermission(UsbDevice dev) {
+        if (dev == null) return false;
+        if (usbManager.hasPermission(dev)) return true;
+        synchronized (usbLock) {
+            usbPermResult = false;
+            PendingIntent pi;
+            try {
+                pi = PendingIntent.getBroadcast(getContext(), 0, new Intent(ACTION_USB_PERMISSION),
+                        PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            } catch (Exception e) { return false; }
+            usbManager.requestPermission(dev, pi);
+            try {
+                long t0 = System.currentTimeMillis();
+                while (!usbPermResult && System.currentTimeMillis() - t0 < 9000) usbLock.wait(200);
+            } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            return usbPermResult;
+        }
+    }
+
+    @PluginMethod
+    public void usbConnect(final PluginCall call) {
+        if (usbManager == null) { call.reject("USB host not available on this device"); return; }
+        int baud = call.getInt("baudRate", 115200);
+        UsbDevice dev = null;
+        String idStr = call.getString("deviceId");
+        if (idStr != null && !idStr.isEmpty()) {
+            String[] p = idStr.split(":");
+            int want;
+            try { want = Integer.parseInt(p[p.length - 1]); } catch (NumberFormatException e) { want = -1; }
+            if (want >= 0) dev = findUsbDevice(want);
+        }
+        if (dev == null) {
+            for (UsbDevice d : usbManager.getDeviceList().values()) {
+                if (findUsbDriver(d) != null) { dev = d; break; }
+            }
+        }
+        if (dev == null) { call.reject("No USB serial device found"); return; }
+
+        if (!requestUsbPermission(dev)) { call.reject("USB permission denied"); return; }
+
+        UsbSerialDriver drv = findUsbDriver(dev);
+        if (drv == null) { call.reject("No USB serial driver for this device"); return; }
+
+        closeUsbQuietly();
+        UsbDeviceConnection conn = usbManager.openDevice(dev);
+        if (conn == null) { call.reject("Failed to open USB device (permission not granted?)"); return; }
+        UsbSerialPort port = drv.getPorts().get(0);
+        try {
+            port.open(conn);
+            port.setParameters(baud, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+        } catch (Exception e) {
+            try { conn.close(); } catch (Exception ignore) {}
+            call.reject("USB open failed: " + e.getMessage());
+            return;
+        }
+
+        usbConn = conn;
+        usbPort = port;
+        usbRunning = true;
+        startUsbRead();
+
+        JSObject r = new JSObject();
+        r.put("name", portName(drv));
+        r.put("deviceId", dev.getVendorId() + ":" + dev.getProductId() + ":" + dev.getDeviceId());
+
+        JSObject st = new JSObject();
+        st.put("on", true);
+        st.put("kind", "usb");
+        st.put("name", portName(drv));
+        notifyListeners("rfState", st);
+
+        call.resolve(r);
+    }
+
+    private String portName(UsbSerialDriver drv) {
+        if (drv == null || drv.getDevice() == null) return "USB";
+        String n = null;
+        try { n = drv.getDevice().getProductName(); } catch (Exception ignore) {}
+        return n != null ? n : drv.getClass().getSimpleName();
+    }
+
+    private void startUsbRead() {
+        usbThread = new Thread(() -> {
+            byte[] buf = new byte[1024];
+            while (usbRunning && usbPort != null) {
+                int n;
+                try {
+                    n = usbPort.read(buf, 500);
+                } catch (Exception e) {
+                    break;
+                }
+                if (n > 0) {
+                    final byte[] chunk = Arrays.copyOfRange(buf, 0, n);
+                    JSObject o = new JSObject();
+                    o.put("b64", Base64.encodeToString(chunk, 0, n, Base64.NO_WRAP));
+                    notifyListeners("rfData", o);
+                }
+            }
+            if (usbRunning) {
+                closeUsbQuietly();
+                JSObject s = new JSObject();
+                s.put("on", false);
+                s.put("detail", "USB read error / link lost");
+                notifyListeners("rfState", s);
+            }
+        });
+        usbThread.setName("rf-usb");
+        usbThread.start();
+    }
+
+    @PluginMethod
+    public void usbWrite(final PluginCall call) {
+        String b64 = call.getString("b64");
+        if (b64 == null) { call.reject("b64 required"); return; }
+        final byte[] data;
+        try { data = Base64.decode(b64, Base64.NO_WRAP); }
+        catch (IllegalArgumentException e) { call.reject("bad b64"); return; }
+        final UsbSerialPort p = usbPort;
+        if (p == null) { call.reject("USB not connected"); return; }
+        try {
+            p.write(data, 1000);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("USB write failed: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void usbDisconnect(final PluginCall call) {
+        closeUsbQuietly();
+        JSObject s = new JSObject();
+        s.put("on", false);
+        s.put("detail", "USB disconnected");
+        notifyListeners("rfState", s);
+        if (call != null) call.resolve();
+    }
+
+    private void closeUsbQuietly() {
+        usbRunning = false;
+        UsbSerialPort p = usbPort;
+        usbPort = null;
+        UsbDeviceConnection c = usbConn;
+        usbConn = null;
+        if (p != null) { try { p.close(); } catch (Exception ignore) {} }
+        if (c != null) { try { c.close(); } catch (Exception ignore) {} }
+        Thread t = usbThread;
+        usbThread = null;
+        if (t != null) t.interrupt();
+    }
 
 
     /* ==================== BLE (GATT client) ==================== */
@@ -646,6 +892,11 @@ public class RfSerialPlugin extends Plugin {
     protected void handleOnDestroy() {
         closeSppQuietly();
         disconnectBleQuietly();
+        closeUsbQuietly();
+        if (usbReceiver != null) {
+            try { getContext().unregisterReceiver(usbReceiver); } catch (Exception ignore) {}
+            usbReceiver = null;
+        }
         try { bleStopScan(null); } catch (Exception ignore) {}
         super.handleOnDestroy();
     }
