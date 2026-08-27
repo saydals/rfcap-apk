@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotorflight Configurator - Servos</title>
+    <style>
+        :root {
+            --animation-speed: 0.2s ease;
+            --section-gap: 16px;
+            --section-padding: 8px;
+            --color-shadow: rgba(0, 0, 0, 0.2);
+            --color-shadow-soft: rgba(0, 0, 0, 0.12);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            outline: none;
+            user-select: none;
+            -webkit-user-drag: none;
+            -webkit-app-region: no-drag;
+            box-sizing: border-box;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-500); }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
+            font-size: 12px;
+            color: var(--color-text);
+            background-color: var(--color-surface);
+            transition: background-color var(--animation-speed), color var(--animation-speed);
+        }
+
+        /* ============ LIGHT THEME ============ */
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 5%, 98%);
+            --color-neutral-100: hsl(220, 5%, 97%);
+            --color-neutral-200: hsl(220, 5%, 92%);
+            --color-neutral-300: hsl(220, 5%, 85%);
+            --color-neutral-400: hsl(220, 5%, 70%);
+            --color-neutral-500: hsl(220, 5%, 50%);
+            --color-neutral-600: hsl(220, 5%, 30%);
+            --color-neutral-700: hsl(220, 5%, 15%);
+            --color-neutral-800: hsl(220, 5%, 8%);
+            --color-neutral-900: hsl(220, 5%, 3%);
+            --color-neutral-950: hsl(220, 5%, 2%);
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+        }
+
+        /* ============ DARK THEME ============ */
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(248, 5%, 5%);
+            --color-neutral-900: hsl(248, 5%, 10%);
+            --color-neutral-800: hsl(248, 5%, 20%);
+            --color-neutral-700: hsl(248, 5%, 30%);
+            --color-neutral-600: hsl(248, 5%, 40%);
+            --color-neutral-500: hsl(248, 5%, 50%);
+            --color-neutral-400: hsl(248, 5%, 60%);
+            --color-neutral-300: hsl(248, 5%, 70%);
+            --color-neutral-200: hsl(248, 5%, 80%);
+            --color-neutral-100: hsl(248, 5%, 90%);
+            --color-neutral-50: hsl(248, 5%, 95%);
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 40%, 40%);
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-100);
+            --color-text-disabled: var(--color-neutral-300);
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+            --color-btn-fg: var(--color-neutral-900);
+            --color-btn-fg-disabled: var(--color-neutral-700);
+            --color-btn-bg: var(--color-neutral-200);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-400);
+            --color-switch: hsl(202, 40%, 40%);
+            --color-switch-handle: var(--color-neutral-100);
+            --accent: hsl(202, 40%, 40%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+        }
+
+        body {
+            background-color: var(--color-bg);
+            overflow-x: hidden;
+        }
+
+        a { text-decoration: none; color: var(--color-border-accent); font-weight: bold; }
+        a.disabled { pointer-events: none; cursor: default; color: var(--color-text-disabled); }
+
+        /* ============ Connection Panel ============ */
+        #connection-panel {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        #connection-panel .panel-title { font-weight: bold; font-size: 14px; margin-right: 12px; }
+        #connection-panel select, #connection-panel input[type="text"] {
+            padding: 4px 8px; border: 1px solid var(--color-border); border-radius: 4px;
+            background-color: var(--color-input-bg); color: var(--color-text); font-size: 12px; height: 28px;
+        }
+        #connection-panel button {
+            padding: 4px 16px; border: 1px solid var(--color-border); border-radius: 4px;
+            background-color: var(--color-btn-bg); color: var(--color-btn-fg); font-size: 12px; font-weight: bold;
+            cursor: pointer; height: 28px;
+        }
+        #connection-panel button:hover:not(:disabled) { background-color: var(--color-btn-bg-hover); }
+        #connection-panel button:disabled { background-color: var(--color-btn-bg-disabled); color: var(--color-btn-fg-disabled); cursor: not-allowed; }
+        #connection-panel button.active { background-color: #d32f2f; color: white; border-color: #b71c1c; }
+        #connection-panel button.active:hover { background-color: #b71c1c; }
+        #connection-panel #connection-status { font-weight: bold; color: var(--color-text-soft); }
+        #connection-panel #connection-status.connected { color: #2e8b2e; }
+        #theme-toggle-btn { margin-left: auto; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-btn-bg); color: var(--color-btn-fg); cursor: pointer; }
+
+        /* ============ Tab / Layout ============ */
+        /* Same shell layout as rates/profiles: the content area is a REAL
+           scroll container so the numeric keypad can auto-scroll fields clear
+           of its fixed overlay. */
+        #main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #tab-content-container {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px;
+        }
+        .tab-servos { max-width: 1200px; margin: 0 auto; }
+        .tab-servos .tab_title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: var(--color-text); }
+
+        .tab-servos .grid-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+        .tab-servos .grid-col { flex: 1; min-width: 320px; }
+
+        .tab-servos .gui_box {
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            padding-top: 28px;
+            position: relative;
+            border: 1px solid #CCCCCC;
+            background-color: #F5F5F5;
+            border-radius: 5px;
+            overflow: visible;
+        }
+        html[data-theme="dark"] .tab-servos .gui_box { background-color: #2a2a2a; border-color: #555555; }
+        .tab-servos .gui_box.grey { background-color: #F5F5F5; }
+        html[data-theme="dark"] .tab-servos .gui_box.grey { background-color: #2a2a2a; }
+
+        .tab-servos .gui_box_titlebar {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 0;
+            padding: 3px 14px;
+            background-color: #555555;
+            color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 22px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+        html[data-theme="dark"] .tab-servos .gui_box_titlebar { background-color: #444444; color: #ffffff; }
+
+        .tab-servos .spacer_box { padding: 4px 6px; }
+
+        /* Bus servo sub-header (gray, same family as other pages) */
+        .tab-servos .servo-spacer, .tab-servos .servo-override-spacer {
+            background-color: #555555;
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin: 4px 0 8px 0;
+        }
+        html[data-theme="dark"] .tab-servos .servo-spacer, html[data-theme="dark"] .tab-servos .servo-override-spacer { background-color: #444444; }
+        .tab-servos .servo-spacer .spacer-title { font-weight: 700; font-size: 13px; }
+        .tab-servos .servo-spacer .spacer-description { font-size: 11px; opacity: 0.85; }
+
+        /* Servo tables */
+        .tab-servos table.servoConfig, .tab-servos table.servoOverride { width: 100%; border-collapse: collapse; }
+        .tab-servos .pwm-servos-section, .tab-servos .bus-servos-section, .tab-servos .override {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .tab-servos table.servoConfig th, .tab-servos table.servoOverride th {
+            background-color: var(--color-surface-alt);
+            color: var(--color-text-alt);
+            font-weight: 600;
+            padding: 3px 4px;
+            text-align: left;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--color-border-soft);
+        }
+        .tab-servos table.servoConfig td, .tab-servos table.servoOverride td {
+            padding: 2px 3px;
+            border-bottom: 1px solid var(--color-border-soft);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .tab-servos table.servoConfig input[type="number"], .tab-servos table.servoOverride input[type="number"] {
+            width: 60px;
+            padding: 2px 4px;
+            border: 1px solid var(--subtleAccent);
+            border-radius: var(--radius-sm);
+            background-color: var(--color-input-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            height: 24px;
+        }
+        .tab-servos table.servoConfig input[type="number"]:focus, .tab-servos table.servoOverride input[type="number"]:focus { border-color: var(--color-border-accent); }
+        .tab-servos .servo-index { font-weight: bold; width: 28px; }
+        .tab-servos .servoRateColumn, .tab-servos .servoSourceColumn { width: 70px; }
+
+        /* Signal meter */
+        .tab-servos .meter {
+            position: relative;
+            height: 16px;
+            background-color: var(--color-input-bg-disabled);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .tab-servos .meter-fill {
+            position: absolute;
+            top: 0; left: 0;
+            height: 100%;
+            background-color: var(--accent);
+            transition: width var(--animation-speed);
+        }
+        .tab-servos .meter-label {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 16px;
+            font-size: 10px;
+            color: var(--color-text);
+        }
+
+        /* Override */
+        .tab-servos .override { display: none; padding: 4px 6px 10px 6px; }
+        .tab-servos .override.visible { display: block; }
+        /* Slider column is the only flexible column: it absorbs all leftover
+           table width so the slider is as long as possible (finer control)
+           while the other columns keep their size - margins stay balanced. */
+        .tab-servos table.servoOverride .servoOverrideSlider {
+            width: auto;
+            min-width: 150px;
+            padding-right: 4px;
+        }
+        .tab-servos table.servoOverride .servoOverrideSlider input[type="range"] {
+            display: block;
+            width: 100%;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        .tab-servos table.servoOverride .servoOverrideInput { width: 60px; }
+
+        /* Toolbar - same look/position as the rates/profiles toolbar:
+           right-aligned at the bottom of the content. */
+        .tab-servos.toolbar_hidden .content_toolbar { display: none; }
+        .tab-servos .content_toolbar { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 0 2px 0; }
+        .tab-servos .content_toolbar .btn a {
+            display: inline-block; padding: 6px 18px; border: 1px solid var(--color-border); border-radius: 4px;
+            background-color: var(--color-btn-bg); color: var(--color-btn-fg); cursor: pointer;
+        }
+        .tab-servos .content_toolbar .btn a:hover { background-color: var(--color-btn-bg-hover); }
+        .tab-servos .content_toolbar .save_btn a { background-color: #2e7d32; color: #fff; border-color: #1b5e20; }
+
+        /* Notes */
+        .tab-servos .note {
+            margin-bottom: 8px; text-align: left; padding: 8px;
+            background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404;
+        }
+        html[data-theme="dark"] .tab-servos .note { background-color: #3d3010; border-color: #b8860b; color: #ffc107; }
+        .tab-servos .note p { margin: 0; }
+        .tab-servos .servoValueWarning { display: none; }
+        .tab-servos .servoRateRebootNote { display: none; }
+        .tab-servos .warning { display: none; }
+        .tab-servos .servoValueWarning .warning { display: block; margin-top: 4px; }
+
+        .tab-servos input.param-missing, .tab-servos select.param-missing {
+            background-color: #c9c9c9 !important; color: var(--color-text-disabled) !important; border-color: #999999 !important; cursor: not-allowed;
+        }
+        html[data-theme="dark"] .tab-servos input.param-missing, html[data-theme="dark"] .tab-servos select.param-missing { background-color: #2a2a2a !important; }
+    </style>
+</head>
+<body data-theme="light">
+    <div id="main-wrapper">
+        <div id="connection-panel">
+            <span class="panel-title">Connection</span>
+            <select id="port-select">
+                <option value="none">Select Port</option>
+            </select>
+            <select id="baud-select">
+                <option value="1000000">1000000</option>
+                <option value="500000">500000</option>
+                <option value="250000">250000</option>
+                <option value="115200" selected>115200</option>
+                <option value="57600">57600</option>
+                <option value="38400">38400</option>
+            </select>
+            <button id="connect-btn">Connect</button>
+            <span id="connection-status">Disconnected</span>
+            <button id="theme-toggle-btn">&#127769; / &#9728;&#65039;</button>
+        </div>
+
+        <div id="tab-content-container">
+            <div class="tab-servos toolbar_hidden">
+                <div class="content_wrapper">
+                    <div class="tab_title">Servos</div>
+
+                    <!-- CONFIGURATION -->
+                    <div class="configuration">
+                        <div class="note servoRateRebootNote">
+                            <p><span class="message-negative">Warning:</span> Changes to the <i>Servo Rate</i> parameter require System Reboot before taking affect!</p>
+                        </div>
+                        <div class="note servoValueWarning">
+                            <div class="warning servo-unusual-limits-warning"><p><span class="message-negative">Warning:</span> The servo <i>Limits</i> are set to unusual values. Please check!</p></div>
+                            <div class="warning servo-unusual-scales-warning"><p><span class="message-negative">Warning:</span> The servo <i>Scales</i> are set to unusual values. Please check!</p></div>
+                            <div class="warning servo-unusual-rates-warning"><p><span class="message-negative">Warning:</span> The servo <i>Rates</i> are set to unusual values. Please check!</p></div>
+                            <div class="warning servo-unusual-geometry-correction"><p><span class="message-negative">Warning:</span> The <i>Geometry correction</i> is not equal for all servos. Please check!</p></div>
+                        </div>
+
+                        <div class="gui_box">
+                            <div class="gui_box_titlebar"><div class="spacer_box_title">Servo Configuration</div></div>
+                            <div class="spacer_box">
+                                <div class="pwm-servos-section">
+                                    <table class="servoConfig pwm-servo-config">
+                                        <thead>
+                                            <tr class="trhead">
+                                                <th>Servo</th>
+                                                <th>Center</th>
+                                                <th>Min</th>
+                                                <th>Max</th>
+                                                <th>Scale neg</th>
+                                                <th>Scale pos</th>
+                                                <th class="servoRateColumn">Rate [Hz]</th>
+                                                <th>Speed [ms]</th>
+                                                <th>Reverse</th>
+                                                <th>Geo cor</th>
+                                                <th>PWM Signal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                                <div class="bus-servos-section" style="display:none;">
+                                    <div class="servo-spacer">
+                                        <div class="spacer-title">Bus Servos (FBUS/SBUS)</div>
+                                        <div class="spacer-description">Servos controlled via digital bus protocol</div>
+                                    </div>
+                                    <table class="servoConfig bus-servo-config">
+                                        <thead>
+                                            <tr class="trhead">
+                                                <th>Servo</th>
+                                                <th>Center</th>
+                                                <th>Min</th>
+                                                <th>Max</th>
+                                                <th>Scale neg</th>
+                                                <th>Scale pos</th>
+                                                <th class="servoSourceColumn">Source</th>
+                                                <th>Speed [ms]</th>
+                                                <th>Reverse</th>
+                                                <th>Geo cor</th>
+                                                <th>BUS-Signal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OVERRIDES -->
+                    <div class="overrides gui_box grey">
+                        <div class="gui_box_titlebar"><div class="spacer_box_title">Servo Override</div></div>
+                        <div class="spacer_box">
+                            <table class="servoEnableOverride">
+                                <tr>
+                                    <td><input type="checkbox" id="servoEnableOverrideSwitch" class="toggle" /></td>
+                                    <td><span><strong>Enable servo override</strong></span></td>
+                                    <td><span class="description">Servo override forces the servos to arbitrary positions for setup purposes. The override values are not saved, and will be reset after a reboot.</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="override">
+                            <div class="pwm-servo-overrides-section">
+                                <table class="servoOverride pwm-servo-override">
+                                    <thead>
+                                        <tr class="trhead">
+                                            <th>Servo</th>
+                                            <th>Enable</th>
+                                            <th>Angle</th>
+                                            <th>Slider</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="bus-servo-overrides-section" style="display:none;">
+                                <div class="servo-override-spacer"><div class="spacer-title">Bus Servos</div></div>
+                                <table class="servoOverride bus-servo-override">
+                                    <thead>
+                                        <tr class="trhead">
+                                            <th>Servo</th>
+                                            <th>Enable</th>
+                                            <th>Angle</th>
+                                            <th>Slider</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content_toolbar">
+                    <div class="btn revert_btn"><a href="#" id="revert-btn">Revert</a></div>
+                    <div class="btn save_btn"><a href="#" id="save-btn">Save</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Theme ====================
+        (function () {
+            const KEY = 'rf-theme';
+            function apply(t) { document.documentElement.setAttribute('data-theme', t); localStorage.setItem(KEY, t); }
+            const saved = localStorage.getItem(KEY);
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            apply(saved || (prefersDark ? 'dark' : 'light'));
+            window.toggleTheme = () => { const cur = document.documentElement.getAttribute('data-theme'); apply(cur === 'dark' ? 'light' : 'dark'); };
+        })();
+
+        // ==================== Web Serial API Connection ====================
+        class SerialConnection {
+            constructor() {
+                this.port = null; this.reader = null; this.writer = null;
+                this.connected = false; this.baudRate = 115200;
+                this.onData = null; this.onStatusChange = null;
+            }
+            async requestPort() {
+                this.port = await navigator.serial.requestPort();
+                await this.updatePorts();
+                return this.port;
+            }
+            async updatePorts() {
+                const ports = await navigator.serial.getPorts();
+                const select = document.getElementById('port-select');
+                select.innerHTML = '<option value="none">Select Port</option>';
+                ports.forEach((port, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = port.getInfo().usbVendorId
+                        ? `USB Device (VID: ${port.getInfo().usbVendorId?.toString(16).padStart(4, '0')})`
+                        : `Serial Port ${index + 1}`;
+                    select.appendChild(option);
+                });
+            }
+            async connect(portIndex, baudRate) {
+                try {
+                    const ports = await navigator.serial.getPorts();
+                    if (portIndex >= ports.length) throw new Error('Invalid port');
+                    this.port = ports[portIndex];
+                    this.baudRate = parseInt(baudRate);
+                    await this.port.open({ baudRate: this.baudRate });
+                    this.connected = true;
+                    this.writer = this.port.writable.getWriter();
+                    this.reader = this.port.readable.getReader();
+                    this.onStatusChange?.(true);
+                    this.readLoop();
+                    return true;
+                } catch (e) {
+                    console.error('Connection error:', e);
+                    this.onStatusChange?.(false);
+                    return false;
+                }
+            }
+            async disconnect() {
+                if (this.reader) { await this.reader.cancel(); this.reader.releaseLock(); this.reader = null; }
+                if (this.writer) { this.writer.releaseLock(); this.writer = null; }
+                if (this.port) { await this.port.close(); this.port = null; }
+                this.connected = false;
+                this.onStatusChange?.(false);
+            }
+            async readLoop() {
+                try {
+                    while (this.port && this.reader) {
+                        const { value, done } = await this.reader.read();
+                        if (done) break;
+                        if (value && this.onData) this.onData(value);
+                    }
+                } catch (e) { console.error('Read error:', e); }
+            }
+            async send(data) { if (this.writer && this.connected) await this.writer.write(data); }
+        }
+
+        // ==================== Real MSP Protocol ====================
+        function mspChecksum(length, code, payload) {
+            let checksum = length ^ code;
+            for (let i = 0; i < payload.length; i++) checksum ^= payload[i];
+            return checksum & 0xFF;
+        }
+        function readS8(b) { return (b << 24) >> 24; }
+        function readU16(p, idx) { return (p[idx + 1] << 8) | p[idx]; }
+        function readS16(p, idx) { let v = (p[idx + 1] << 8) | p[idx]; if (v > 32767) v -= 65536; return v; }
+        function readU32(p, idx) { return (p[idx] | (p[idx + 1] << 8) | (p[idx + 2] << 16) | (p[idx + 3] << 24)) >>> 0; }
+
+        function buildMSPMessage(code, payload = []) {
+            const length = payload.length;
+            const buf = new Uint8Array(6 + length);
+            buf[0] = 0x24; buf[1] = 0x4D; buf[2] = 0x3C;
+            buf[3] = length & 0xFF; buf[4] = code & 0xFF;
+            payload.forEach((b, i) => { buf[5 + i] = b & 0xFF; });
+            buf[5 + length] = mspChecksum(length, code, payload);
+            return buf;
+        }
+
+        class MSPParser {
+            /* BLE burst-safe parser (bleblackbox module): O(n) accumulator,
+               CRC verification, multi-frame drain per chunk, and stale-frame
+               filtering - the FC dumps ALL queued MSP responses back-to-back,
+               so leftovers from a previous burst must never be delivered as
+               the answer to the next request. */
+            constructor() {
+                this.buf = new Uint8Array(1024);
+                this.len = 0;
+                this.pos = 0;
+                this.expectedCode = null;
+                this.pendingResponse = null;
+                this.timeout = null;
+            }
+
+            feed(data) {
+                if (this.len + data.length > this.buf.length) {
+                    if (this.pos > 0) {
+                        this.buf.copyWithin(0, this.pos, this.len);
+                        this.len -= this.pos; this.pos = 0;
+                    }
+                    if (this.len + data.length > this.buf.length) {
+                        const cap = Math.max(this.buf.length * 2, this.len + data.length);
+                        const nb = new Uint8Array(cap);
+                        nb.set(this.buf.subarray(0, this.len));
+                        this.buf = nb;
+                    }
+                }
+                this.buf.set(data, this.len);
+                this.len += data.length;
+                while (this.tryParseOne()) {}
+            }
+
+            tryParseOne() {
+                while (this.len - this.pos >= 6) {
+                    if (this.buf[this.pos] !== 0x24 || this.buf[this.pos + 1] !== 0x4D || this.buf[this.pos + 2] !== 0x3E) { this.pos++; continue; }
+                    const b3 = this.buf[this.pos + 3];
+                    const jumbo = (b3 === 0xFF);          /* MSPv1 jumbo: $M> FF code lenLo lenHi payload crc */
+                    let length;
+                    if (jumbo) {
+                        if (this.len - this.pos < 8) return false;
+                        length = this.buf[this.pos + 5] | (this.buf[this.pos + 6] << 8);
+                    } else {
+                        length = b3;
+                    }
+                    const hdrEnd = jumbo ? 7 : 5;
+                    const totalLen = hdrEnd + length + 1;
+                    if (this.len - this.pos < totalLen) return false;
+                    const code = this.buf[this.pos + 4];
+                    const ps = this.pos + hdrEnd;
+                    let crc;
+                    if (jumbo) crc = 255 ^ code ^ (length & 0xFF) ^ ((length >> 8) & 0xFF);
+                    else crc = length ^ code;
+                    for (let i = 0; i < length; i++) crc ^= this.buf[ps + i];
+                    if (crc !== this.buf[ps + length]) { this.pos++; continue; }
+                    const payload = new Uint8Array(this.buf.slice(ps, ps + length));
+                    this.pos += totalLen;
+                    if (this.pos >= this.len) { this.pos = 0; this.len = 0; }
+                    else if (this.pos > 4096) { this.buf.copyWithin(0, this.pos, this.len); this.len -= this.pos; this.pos = 0; }
+                    if (this.pendingResponse && (this.expectedCode === null || this.expectedCode === code)) {
+                        clearTimeout(this.timeout);
+                        const cb = this.pendingResponse;
+                        this.pendingResponse = null;
+                        this.expectedCode = null;
+                        cb({ code, payload });
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            waitResponse(code, timeout = 1500) {
+                this.expectedCode = (code === undefined || code === null) ? null : code;
+                return new Promise((resolve, reject) => {
+                    this.pendingResponse = resolve;
+                    this.timeout = setTimeout(() => {
+                        this.pendingResponse = null;
+                        this.expectedCode = null;
+                        reject(new Error('MSP response timeout'));
+                    }, timeout);
+                });
+            }
+        }
+
+        const MSP = {
+            API_VERSION: 1,
+            SERIAL_CONFIG: 54,
+            STATUS: 101,
+            SERVO: 103,
+            SERVO_CONFIGURATIONS: 120,
+            BUS_SERVO_CONFIG: 152,
+            SERVO_OVERRIDE: 192,
+            SET_SERVO_OVERRIDE: 193,
+            SET_SERVO_CONFIGURATION: 212,
+            EEPROM_WRITE: 250,
+            SET_REBOOT: 68,
+        };
+
+        const ServoConst = {
+            OVERRIDE_OFF: 2001,
+            BUS_SERVO_OFFSET: 8,
+            BUS_SERVO_CHANNELS: 18,
+            FLAG_REVERSE: 1,
+            FLAG_GEOCOR: 2,
+        };
+
+        function apiGte(v, major, minor) {
+            if (!v) return false;
+            const parts = v.split('.').map(n => parseInt(n) || 0);
+            return (parts[0] * 1000 + parts[1]) >= (major * 1000 + minor);
+        }
+
+        class RealMSP {
+            constructor(serialConnection) {
+                this.serial = serialConnection;
+                this.parser = new MSPParser();
+                this.data = {
+                    apiVersion: '1.0',
+                    SERVO_CONFIG: [],
+                    SERVO_OVERRIDE: [],
+                    SERVO_DATA: [],
+                    BUS_SERVO_CONFIG: [],
+                    SERIAL_CONFIG: { ports: [] },
+                    supportsBus: false,
+                    hasFbusSbus: false,
+                    pwmServoCount: 0,
+                };
+                this.serial.onData = (bytes) => this.parser.feed(bytes);
+                // Serialize all MSP traffic so concurrent sends (e.g. the 0.5s
+                // SERVO_DATA poll racing a live config/override write) never hit
+                // the Web Serial writer at the same time, and responses are not
+                // mismatched by the single shared pendingResponse.
+                this._busy = Promise.resolve();
+            }
+
+            async sendCommand(codeOrMsg, payload = [], expectResponse = true) {
+                const run = async () => {
+                    const msg = (codeOrMsg instanceof Uint8Array) ? codeOrMsg : buildMSPMessage(codeOrMsg, payload);
+                    await this.serial.send(msg);
+                    if (!expectResponse) return null;
+                    const expectCode = (codeOrMsg instanceof Uint8Array) ? ((codeOrMsg.length > 4) ? codeOrMsg[4] : null) : codeOrMsg;
+                    return await this.parser.waitResponse(expectCode);
+                };
+                const result = this._busy.then(run, run);
+                this._busy = result.then(() => {}, () => {});
+                return result;
+            }
+
+            async readApiVersion() {
+                const resp = await this.sendCommand(MSP.API_VERSION);
+                this.data.apiVersion = resp.payload[1] + '.' + resp.payload[2] + '.0';
+            }
+
+            /* MSP_STATUS: variable layout — parse sequentially to reach
+               motorCount/servoCount at the tail (matches rfconfigurator
+               MSPHelper). servoCount is the AUTHORITATIVE number of used
+               servos; MSP 120 may return the full slot list instead. */
+            async readStatus() {
+                const resp = await this.sendCommand(MSP.STATUS);
+                const p = resp.payload;
+                let i = 0;
+                if (i >= p.length) return;
+                const flagCount = p[i++];                 // extra flight mode flags
+                i += flagCount;
+                if (i >= p.length) return;
+                i += 1;                                   // armingDisableCount
+                i += 4;                                   // armingDisableFlags (u32)
+                i += 1;                                   // extraFlags
+                i += 1;                                   // configurationState
+                i += 1;                                   // profile
+                i += 1;                                   // numProfiles
+                i += 1;                                   // rateProfile
+                i += 1;                                   // numRateProfiles
+                if (i < p.length) this.data.motorCount = p[i++];
+                if (i < p.length) this.data.servoCount = p[i++];   // authoritative used-servo count
+            }
+
+            async readSerialConfig() {
+                const resp = await this.sendCommand(MSP.SERIAL_CONFIG);
+                const p = resp.payload;
+                const ports = [];
+                const count = Math.floor(p.length / 9);
+                for (let i = 0; i < count; i++) {
+                    let idx = i * 9;
+                    const portId = p[idx];
+                    const fnMask = readU32(p, idx + 1);
+                    ports.push({ identifier: portId, functionMask: fnMask });
+                }
+                this.data.SERIAL_CONFIG.ports = ports;
+                const FBUS = 1 << 19, SBUS = 1 << 18;
+                this.data.hasFbusSbus = ports.some(pt => (pt.functionMask & FBUS) || (pt.functionMask & SBUS));
+            }
+
+            async readServoConfig() {
+                const resp = await this.sendCommand(MSP.SERVO_CONFIGURATIONS);
+                const p = resp.payload;
+                const configs = [];
+                const count = p[0];
+                let idx = 1;
+                for (let i = 0; i < count; i++) {
+                    configs.push({
+                        mid: readU16(p, idx),
+                        min: readS16(p, idx + 2),
+                        max: readU16(p, idx + 4),
+                        rneg: readU16(p, idx + 6),
+                        rpos: readU16(p, idx + 8),
+                        rate: readU16(p, idx + 10),
+                        speed: readU16(p, idx + 12),
+                        flags: readU16(p, idx + 14),
+                    });
+                    idx += 16;
+                }
+                this.data.SERVO_CONFIG = configs;
+            }
+
+            async readServoOverride() {
+                const resp = await this.sendCommand(MSP.SERVO_OVERRIDE);
+                const p = resp.payload;
+                const count = Math.floor(p.length / 2);
+                const ov = [];
+                for (let i = 0; i < count; i++) ov.push(readS16(p, i * 2));
+                this.data.SERVO_OVERRIDE = ov;
+            }
+
+            async readServoData() {
+                const resp = await this.sendCommand(MSP.SERVO);
+                const p = resp.payload;
+                const count = Math.floor(p.length / 2);
+                const data = [];
+                for (let i = 0; i < count; i++) data.push(readU16(p, i * 2));
+                this.data.SERVO_DATA = data;
+            }
+
+            async readBusServoConfig() {
+                const resp = await this.sendCommand(MSP.BUS_SERVO_CONFIG);
+                const p = resp.payload;
+                const cfg = [];
+                for (let i = 0; i < ServoConst.BUS_SERVO_CHANNELS; i++) cfg.push(p[i] || 0);
+                this.data.BUS_SERVO_CONFIG = cfg;
+            }
+
+            buildSetServoConfig(index) {
+                const c = this.data.SERVO_CONFIG[index];
+                if (!c) return null;
+                const payload = [
+                    index & 0xFF,
+                    c.mid & 0xFF, (c.mid >> 8) & 0xFF,
+                    c.min & 0xFF, (c.min >> 8) & 0xFF,
+                    c.max & 0xFF, (c.max >> 8) & 0xFF,
+                    c.rneg & 0xFF, (c.rneg >> 8) & 0xFF,
+                    c.rpos & 0xFF, (c.rpos >> 8) & 0xFF,
+                    c.rate & 0xFF, (c.rate >> 8) & 0xFF,
+                    c.speed & 0xFF, (c.speed >> 8) & 0xFF,
+                    c.flags & 0xFF, (c.flags >> 8) & 0xFF,
+                ];
+                return buildMSPMessage(MSP.SET_SERVO_CONFIGURATION, payload);
+            }
+
+            buildSetServoOverride(index) {
+                const value = this.data.SERVO_OVERRIDE[index] ?? ServoConst.OVERRIDE_OFF;
+                const payload = [index & 0xFF, value & 0xFF, (value >> 8) & 0xFF];
+                return buildMSPMessage(MSP.SET_SERVO_OVERRIDE, payload);
+            }
+        }
+
+        // ==================== Servos Tab ====================
+        class ServosTab {
+            constructor() {
+                this.isDirty = false;
+                this.needSave = false;
+                this.needReboot = false;
+                this.serial = new SerialConnection();
+                this.msp = new RealMSP(this.serial);
+                this.prevConfig = null;
+                this.pollInterval = null;
+                this.init();
+            }
+
+            init() {
+                this.bindConnection();
+                this.bindButtons();
+                this.bindInputs();
+            }
+
+            bindConnection() {
+                const connectBtn = document.getElementById('connect-btn');
+                const portSelect = document.getElementById('port-select');
+                const baudSelect = document.getElementById('baud-select');
+                const statusEl = document.getElementById('connection-status');
+
+                connectBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (this.serial.connected) {
+                        await this.serial.disconnect();
+                        connectBtn.textContent = 'Connect'; connectBtn.classList.remove('active');
+                        statusEl.textContent = 'Disconnected'; statusEl.classList.remove('connected');
+                    } else {
+                        let portIndex = parseInt(portSelect.value);
+                        if (portSelect.value === 'none' || isNaN(portIndex)) {
+                            try { await this.serial.requestPort(); await this.serial.updatePorts(); portIndex = 0; }
+                            catch (err) { console.log('Port selection cancelled'); return; }
+                        }
+                        const success = await this.serial.connect(portIndex, baudSelect.value);
+                        if (success) {
+                            connectBtn.textContent = 'Disconnect'; connectBtn.classList.add('active');
+                            statusEl.textContent = 'Connected'; statusEl.classList.add('connected');
+                            this.onConnect();
+                        }
+                    }
+                });
+
+                this.serial.updatePorts();
+                this.serial.onStatusChange = (connected) => {
+                    if (!connected) {
+                        connectBtn.textContent = 'Connect'; connectBtn.classList.remove('active');
+                        statusEl.textContent = 'Disconnected'; statusEl.classList.remove('connected');
+                        if (this.pollInterval) { clearInterval(this.pollInterval); this.pollInterval = null; }
+                    }
+                };
+            }
+
+            async onConnect() { await this.loadDataFromFC(); }
+
+            async loadDataFromFC() {
+                try {
+                    await this.msp.readApiVersion();
+                    await this.msp.readStatus();
+                    await this.msp.readSerialConfig();
+                    await this.msp.readServoConfig();
+                    await this.msp.readServoOverride();
+                    this.data = this.msp.data;
+                    this.data.supportsBus = apiGte(this.data.apiVersion, 12, 9);
+                    if (this.data.supportsBus) await this.msp.readBusServoConfig();
+                    await this.msp.readServoData();
+                } catch (e) {
+                    console.error('Failed to read from FC:', e);
+                    alert('Failed to read servo data from FC: ' + e.message);
+                    return;
+                }
+
+                this.data.pwmServoCount = this.data.SERVO_CONFIG.length;
+                if (this.data.supportsBus && this.data.hasFbusSbus) {
+                    this.data.pwmServoCount = Math.max(0, this.data.SERVO_CONFIG.length - ServoConst.BUS_SERVO_CHANNELS);
+                }
+                /* Non-bus mode: MSP 120 returns every firmware slot - limit the
+                   display to the servos actually configured (MSP_STATUS), exactly
+                   like the original rfconfigurator tab. */
+                const used = this.data.servoCount | 0;
+                if (!(this.data.supportsBus && this.data.hasFbusSbus) && used > 0 && used < this.data.pwmServoCount) {
+                    this.data.pwmServoCount = used;
+                }
+
+                this.prevConfig = JSON.parse(JSON.stringify(this.data.SERVO_CONFIG));
+                this.isDirty = false; this.needSave = false; this.needReboot = false;
+
+                /* diagnostics (chrome://inspect → console): helps pin down
+                   BLE-vs-SPP differences in the servo slot count */
+                console.debug('[servos] apiVersion=' + this.data.apiVersion,
+                    'supportsBus=' + this.data.supportsBus,
+                    'hasFbusSbus=' + this.data.hasFbusSbus,
+                    'SERVO_CONFIG.length=' + this.data.SERVO_CONFIG.length,
+                    'statusServoCount=' + this.data.servoCount,
+                    'pwmServoCount=' + this.data.pwmServoCount);
+
+                this.renderConfigRows();
+                this.renderOverrideRows();
+                this.processWarnings();
+                this.updateServoBars();
+                this.updateOverrideVisibility();
+
+                if (this.data.supportsBus && this.data.hasFbusSbus) {
+                    document.querySelector('.bus-servos-section').style.display = '';
+                    document.querySelector('.bus-servo-overrides-section').style.display = '';
+                } else {
+                    document.querySelector('.bus-servos-section').style.display = 'none';
+                    document.querySelector('.bus-servo-overrides-section').style.display = 'none';
+                }
+
+                this.hideToolbar();
+                this.startPolling();
+            }
+
+            startPolling() {
+                if (this.pollInterval) clearInterval(this.pollInterval);
+                this.pollInterval = setInterval(() => {
+                    if (this.serial.connected) this.msp.readServoData().then(() => this.updateServoBars()).catch(() => {});
+                }, 500);
+            }
+
+            // ---- Config rows ----
+            renderConfigRows() {
+                const pwmBody = document.querySelector('.pwm-servo-config tbody');
+                const busBody = document.querySelector('.bus-servo-config tbody');
+                pwmBody.innerHTML = ''; busBody.innerHTML = '';
+                const self = this;
+                const supportsBus = this.data.supportsBus && this.data.hasFbusSbus;
+
+                for (let i = 0; i < this.data.pwmServoCount; i++) {
+                    pwmBody.appendChild(this.buildConfigRow(i, false));
+                }
+                if (supportsBus) {
+                    const displayBus = Math.min(ServoConst.BUS_SERVO_CHANNELS, 16);
+                    for (let i = 0; i < displayBus; i++) {
+                        const arrayIndex = this.data.pwmServoCount + i;
+                        busBody.appendChild(this.buildConfigRow(arrayIndex, true));
+                    }
+                }
+            }
+
+            buildConfigRow(index, isBus) {
+                const c = this.data.SERVO_CONFIG[index] || { mid: 1500, min: -375, max: 375, rneg: 250, rpos: 250, rate: 333, speed: 0, flags: 0 };
+                const revs = !!(c.flags & ServoConst.FLAG_REVERSE);
+                const geocor = !!(c.flags & ServoConst.FLAG_GEOCOR);
+                const displayIndex = isBus ? (index - this.data.pwmServoCount + 1) : (index + 1);
+                const tr = document.createElement('tr');
+                tr.className = `servoConfig${index}`;
+                tr.dataset.index = index;
+                tr.dataset.isBusServo = isBus ? 'true' : 'false';
+
+                let rateOrSource;
+                let isRx = false;
+                if (isBus) {
+                    const busIdx = index - this.data.pwmServoCount;
+                    const src = this.data.BUS_SERVO_CONFIG[busIdx] || 0;
+                    isRx = (src === 1);
+                    rateOrSource = `<td class="servoSourceColumn servo-source"><span class="source-text">${src === 1 ? 'RX' : 'Mixer'}</span></td>`;
+                } else {
+                    rateOrSource = `<td class="servoRateColumn"><input type="number" class="rate" min="50" max="5000" value="${c.rate}" /></td>`;
+                }
+
+                const geocorStyle = (isBus && isRx) ? 'style="display:none"' : '';
+                tr.innerHTML = `
+                    <td class="servo-index">#${displayIndex}</td>
+                    <td><input type="number" class="mid" min="50" max="2250" value="${c.mid}" /></td>
+                    <td><input type="number" class="min" min="-1000" max="1000" value="${c.min}" /></td>
+                    <td><input type="number" class="max" min="-1000" max="1000" value="${c.max}" /></td>
+                    <td><input type="number" class="rneg" min="50" max="1000" value="${c.rneg}" /></td>
+                    <td><input type="number" class="rpos" min="50" max="1000" value="${c.rpos}" /></td>
+                    ${rateOrSource}
+                    <td><input type="number" class="speed" min="0" max="60000" value="${c.speed}" /></td>
+                    <td><input type="checkbox" class="reversed toggle" ${revs ? 'checked' : ''} /></td>
+                    <td><input type="checkbox" class="geocor toggle" ${geocor ? 'checked' : ''} ${geocorStyle} /></td>
+                    <td><div class="meter"><div class="meter-fill"></div><div class="meter-label"></div></div></td>
+                `;
+
+                const self = this;
+                const onServoValueChanged = () => {
+                    self.updateServoConfig(index);
+                    self.processWarnings();
+                    self.setDirty();
+                    self.updateServoBars();
+                    // Send to FC RAM immediately (no save needed) so the servo
+                    // reacts live as the value is edited.
+                    self.msp.sendCommand(self.msp.buildSetServoConfig(index));
+                };
+                // 'input' = real-time as the user types/spins; 'change' = on commit.
+                tr.querySelectorAll('input').forEach(inp => {
+                    inp.addEventListener('input', onServoValueChanged);
+                    inp.addEventListener('change', onServoValueChanged);
+                });
+                const rateEl = tr.querySelector('.rate');
+                if (rateEl) {
+                    rateEl.addEventListener('change', () => {
+                        document.querySelector('.servoRateRebootNote').style.display = 'block';
+                        self.needReboot = true;
+                        self.setDirty();
+                    });
+                }
+                return tr;
+            }
+
+            updateServoConfig(index) {
+                const tr = document.querySelector(`.tab-servos .servoConfig${index}`);
+                if (!tr) return;
+                let mid = this.clampInt(tr.querySelector('.mid').value, 50, 2250);
+                let min = this.clampInt(tr.querySelector('.min').value, -1000, 1000);
+                let max = this.clampInt(tr.querySelector('.max').value, -1000, 1000);
+                const isBus = tr.dataset.isBusServo === 'true';
+                if (isBus) {
+                    mid = Math.max(1001, Math.min(1999, mid));
+                    min = Math.min(-1, Math.max(-500, min));
+                    max = Math.max(1, Math.min(500, max));
+                }
+                const c = this.data.SERVO_CONFIG[index];
+                const rateEl = tr.querySelector('.rate');
+                c.mid = mid; c.min = min; c.max = max;
+                c.rneg = this.clampInt(tr.querySelector('.rneg').value, 50, 1000);
+                c.rpos = this.clampInt(tr.querySelector('.rpos').value, 50, 1000);
+                c.rate = rateEl ? this.clampInt(rateEl.value, 50, 5000) : c.rate;
+                c.speed = this.clampInt(tr.querySelector('.speed').value, 0, 60000);
+                c.flags = (tr.querySelector('.reversed').checked ? ServoConst.FLAG_REVERSE : 0) |
+                          (tr.querySelector('.geocor').checked ? ServoConst.FLAG_GEOCOR : 0);
+                tr.querySelector('.mid').value = mid; tr.querySelector('.min').value = min; tr.querySelector('.max').value = max;
+            }
+
+            clampInt(v, lo, hi) { let n = parseInt(v); if (isNaN(n)) n = lo; return Math.max(lo, Math.min(hi, n)); }
+
+            // ---- Signal bars ----
+            // Mirror the original Rotorflight Configurator rule: the PWM Signal
+            // column shows the raw value reported by the FC (MSP_SERVO / SERVO_DATA),
+            // and the meter scale is derived from the servo's center pulse category
+            // (bus 1000-2000, 760us 375-1145, 960us 460-1460, 1520us 500-2500).
+            updateServoBars() {
+                const self = this;
+                const supportsBus = this.data.supportsBus && this.data.hasFbusSbus;
+                for (let i = 0; i < this.data.SERVO_CONFIG.length; i++) {
+                    const c = this.data.SERVO_CONFIG[i];
+                    if (!c) continue;
+                    const isBus = supportsBus && i >= this.data.pwmServoCount;
+
+                    let rangeMin, rangeMax;
+                    if (isBus) {
+                        rangeMin = 1000; rangeMax = 2000;
+                    } else if (c.mid <= 860) {
+                        rangeMin = 375; rangeMax = 1145;
+                    } else if (c.mid <= 1060) {
+                        rangeMin = 460; rangeMax = 1460;
+                    } else {
+                        rangeMin = 500; rangeMax = 2500;
+                    }
+
+                    const servoValue = self.data.SERVO_DATA[i] || 0;
+                    const range = rangeMax - rangeMin;
+                    let percnt = range > 0 ? 100 * (servoValue - rangeMin) / range : 0;
+                    percnt = Math.max(0, Math.min(100, percnt));
+
+                    const meters = document.querySelectorAll(`.tab-servos .servoConfig${i} .meter`);
+                    meters.forEach((meter) => {
+                        meter.querySelector('.meter-fill').style.width = percnt + '%';
+                        meter.querySelector('.meter-label').textContent = servoValue;
+                    });
+                }
+            }
+
+            // ---- Override rows ----
+            renderOverrideRows() {
+                const pwmBody = document.querySelector('.pwm-servo-override tbody');
+                const busBody = document.querySelector('.bus-servo-override tbody');
+                pwmBody.innerHTML = ''; busBody.innerHTML = '';
+                const self = this;
+                const supportsBus = this.data.supportsBus && this.data.hasFbusSbus;
+
+                for (let i = 0; i < this.data.pwmServoCount; i++) pwmBody.appendChild(this.buildOverrideRow(i, false));
+                if (supportsBus) {
+                    const displayBus = Math.min(ServoConst.BUS_SERVO_CHANNELS, 16);
+                    for (let i = 0; i < displayBus; i++) {
+                        const arrayIndex = this.data.pwmServoCount + i;
+                        busBody.appendChild(this.buildOverrideRow(arrayIndex, true));
+                    }
+                }
+            }
+
+            buildOverrideRow(index, isBus) {
+                const self = this;
+                const tr = document.createElement('tr');
+                tr.className = `servoOverride${index}`;
+                tr.dataset.arrayIndex = index;
+                tr.dataset.isBusServo = isBus ? 'true' : 'false';
+                const displayIndex = isBus ? (index - this.data.pwmServoCount + 1) : (index + 1);
+                const mspIndex = isBus ? (ServoConst.BUS_SERVO_OFFSET + (index - this.data.pwmServoCount)) : index;
+                tr.dataset.mspIndex = mspIndex;
+
+                const raw = this.data.SERVO_OVERRIDE[mspIndex] ?? ServoConst.OVERRIDE_OFF;
+                const check = (raw >= -2000 && raw <= 2000);
+                const displayValue = check ? Math.round(raw * (isBus ? 90 / 500 : 50 / 1000)) : 0;
+
+                tr.innerHTML = `
+                    <td><span class="servoOverrideIndex">#${displayIndex}</span></td>
+                    <td><div class="servoOverrideEnable"><input type="checkbox" class="toggle override-enable" ${check ? 'checked' : ''} /></div></td>
+                    <td><div class="servoOverrideInput"><input type="number" class="angle" min="-90" max="90" step="1" value="${displayValue}" ${check ? '' : 'disabled'} /></div></td>
+                    <td><div class="servoOverrideSlider"><input type="range" min="-90" max="90" step="5" value="${displayValue}" ${check ? '' : 'disabled'} /></div></td>
+                `;
+
+                const enableEl = tr.querySelector('.override-enable');
+                const inputEl = tr.querySelector('.angle');
+                const sliderEl = tr.querySelector('.servoOverrideSlider input');
+
+                function computeRaw(val) {
+                    return isBus ? Math.round(val * 500 / 90) : Math.round(val * 1000 / 50);
+                }
+
+                function applyRaw() {
+                    const v = enableEl.checked ? computeRaw(Math.round(parseFloat(inputEl.value) || 0)) : ServoConst.OVERRIDE_OFF;
+                    self.data.SERVO_OVERRIDE[mspIndex] = v;
+                    self.setDirty();
+                }
+
+                enableEl.addEventListener('change', () => {
+                    inputEl.disabled = !enableEl.checked;
+                    sliderEl.disabled = !enableEl.checked;
+                    inputEl.value = 0; sliderEl.value = 0;
+                    applyRaw();
+                    self.msp.sendCommand(self.msp.buildSetServoOverride(mspIndex), [], false);
+                });
+                inputEl.addEventListener('change', () => {
+                    let v = parseFloat(inputEl.value); if (isNaN(v)) v = 0;
+                    v = Math.max(-90, Math.min(90, v));
+                    inputEl.value = v; sliderEl.value = v;
+                    applyRaw();
+                    self.msp.sendCommand(self.msp.buildSetServoOverride(mspIndex), [], false);
+                });
+                sliderEl.addEventListener('input', () => {
+                    inputEl.value = sliderEl.value;
+                    applyRaw();
+                    self.msp.sendCommand(self.msp.buildSetServoOverride(mspIndex), [], false);
+                });
+                return tr;
+            }
+
+            updateOverrideVisibility() {
+                let anyEnabled = false;
+                for (let i = 0; i < this.data.SERVO_OVERRIDE.length; i++) {
+                    const v = this.data.SERVO_OVERRIDE[i];
+                    if (v >= -2000 && v <= 2000) { anyEnabled = true; break; }
+                }
+                document.getElementById('servoEnableOverrideSwitch').checked = anyEnabled;
+                document.querySelector('.tab-servos .override').classList.toggle('visible', anyEnabled);
+            }
+
+            // ---- Warnings ----
+            processWarnings() {
+                const SERVOS = this.data.SERVO_CONFIG;
+                const count = this.data.pwmServoCount || SERVOS.length;
+                const hasExtended = this.data.supportsBus;
+                let unusualScale = false, unusualRate = false, unusualLimit = false, unusualGeoCor = false;
+
+                for (let i = 0; i < count; i++) {
+                    const s = SERVOS[i]; if (!s) continue;
+                    if (s.mid > 860) {
+                        if (s.rate > 433) unusualRate = true;
+                        if (s.min < -750 || s.min > -300 || s.max > 750 || s.max < 300) unusualLimit = true;
+                        if (s.rneg < 300 || s.rneg > 750 || s.rpos < 300 || s.rpos > 750) unusualScale = true;
+                    } else {
+                        if (s.rate > 600) unusualRate = true;
+                        if (s.min < -375 || s.min > -150 || s.max > 375 || s.max < 150) unusualLimit = true;
+                        const scaleMin = hasExtended ? 50 : 150;
+                        if (s.rneg < scaleMin || s.rneg > 375 || s.rpos < scaleMin || s.rpos > 375) unusualScale = true;
+                    }
+                }
+                if (count >= 2) {
+                    const f = i => (SERVOS[i] ? (SERVOS[i].flags & ServoConst.FLAG_GEOCOR) : 0);
+                    const r = i => (SERVOS[i] ? SERVOS[i].rate : 0);
+                    const n = Math.min(count, 3);
+                    if (n >= 3) {
+                        if (f(0) !== f(1) || f(1) !== f(2) || f(0) !== f(2)) unusualGeoCor = true;
+                        if (r(0) !== r(1) || r(1) !== r(2) || r(0) !== r(2)) unusualRate = true;
+                    } else if (n === 2) {
+                        if (f(0) !== f(1)) unusualGeoCor = true;
+                        if (r(0) !== r(1)) unusualRate = true;
+                    }
+                }
+                const q = sel => document.querySelector(sel);
+                q('.servo-unusual-limits-warning').style.display = unusualLimit ? 'block' : 'none';
+                q('.servo-unusual-scales-warning').style.display = unusualScale ? 'block' : 'none';
+                q('.servo-unusual-rates-warning').style.display = unusualRate ? 'block' : 'none';
+                q('.servo-unusual-geometry-correction').style.display = unusualGeoCor ? 'block' : 'none';
+                q('.servoValueWarning').style.display = (unusualLimit || unusualScale || unusualRate || unusualGeoCor) ? 'block' : 'none';
+            }
+
+            // ---- Buttons / inputs ----
+            bindButtons() {
+                document.getElementById('save-btn').addEventListener('click', async (e) => {
+                    e.preventDefault(); await this.save();
+                });
+                document.getElementById('revert-btn').addEventListener('click', async (e) => {
+                    e.preventDefault(); await this.revert();
+                });
+            }
+
+            bindInputs() {
+                document.getElementById('servoEnableOverrideSwitch').addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    document.querySelector('.tab-servos .override').classList.toggle('visible', checked);
+                    document.querySelectorAll('.servoOverrideEnable input').forEach(cb => {
+                        if (cb.checked !== checked) { cb.checked = checked; cb.dispatchEvent(new Event('change')); }
+                    });
+                    this.setDirty();
+                });
+            }
+
+            setDirty() {
+                if (!this.isDirty) { this.isDirty = true; this.showToolbar(); }
+            }
+            showToolbar() { document.querySelector('.tab-servos').classList.remove('toolbar_hidden'); }
+            hideToolbar() { document.querySelector('.tab-servos').classList.add('toolbar_hidden'); }
+
+            async save() {
+                try {
+                    this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.msp.sendCommand(m); });
+                    this.data.SERVO_OVERRIDE.forEach((_, i) => { this.msp.sendCommand(this.msp.buildSetServoOverride(i), [], false); });
+                    await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
+                    this.isDirty = false;
+                    this.hideToolbar();
+                    alert('Settings saved.');
+                } catch (e) {
+                    console.error('Save failed:', e);
+                    alert('Failed to save servos: ' + e.message);
+                }
+            }
+
+            async revert() {
+                this.data.SERVO_CONFIG = JSON.parse(JSON.stringify(this.prevConfig));
+                this.needSave = true;
+                try {
+                    this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.msp.sendCommand(m); });
+                    this.renderConfigRows();
+                    this.processWarnings();
+                    this.isDirty = false;
+                    this.hideToolbar();
+                } catch (e) {
+                    console.error('Revert failed:', e);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const tab = new ServosTab();
+            const tt = document.getElementById('theme-toggle-btn');
+            if (tt) tt.addEventListener('click', window.toggleTheme);
+        });
+    </script>
+    <script src="../bridge.js"></script>
+</body>
+</html>
