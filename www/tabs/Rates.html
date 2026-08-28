@@ -1,0 +1,3502 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotorflight Configurator - Rates</title>
+    <style>
+        :root {
+            --animation-speed: 0.2s ease;
+            --section-gap: 16px;
+            --section-padding: 8px;
+            --color-shadow: rgba(0,0,0,0.2);
+            --color-shadow-soft: rgba(0,0,0,0.12);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * { outline:none; user-select:none; -webkit-user-drag:none; -webkit-app-region:no-drag; box-sizing:border-box; }
+        ::-webkit-scrollbar { width:8px; height:8px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-500); }
+
+        html, body {
+            height:100%; margin:0; padding:0;
+            font-family:"Open Sans","Segoe UI",Tahoma,sans-serif;
+            font-size:12px;
+            color:var(--color-text);
+            background-color:var(--color-bg);
+            transition: background-color var(--animation-speed), color var(--animation-speed);
+        }
+
+        /* ============ LIGHT THEME ============ */
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 8%, 98%);
+            --color-neutral-100: hsl(220, 8%, 97%);
+            --color-neutral-200: hsl(220, 8%, 92%);
+            --color-neutral-300: hsl(220, 8%, 85%);
+            --color-neutral-400: hsl(220, 8%, 70%);
+            --color-neutral-500: hsl(220, 8%, 50%);
+            --color-neutral-600: hsl(220, 8%, 30%);
+            --color-neutral-700: hsl(220, 8%, 18%);
+            --color-neutral-800: hsl(220, 8%, 10%);
+            --color-neutral-900: hsl(220, 8%, 5%);
+            --color-neutral-950: hsl(220, 8%, 3%);
+
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-surface-hover: var(--color-neutral-200);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+            --quietHeader: #555555;
+            --quietText: #ffffff;
+
+            /* rates + profiles unified axis colors */
+            --color-roll: #e85d5d;
+            --color-pitch: #5dcf5d;
+            --color-yaw: #6b6bff;
+            --color-collective: #ffb700;
+            --color-roll-soft: #ff8080;
+            --color-pitch-soft: #80ff80;
+            --color-yaw-soft: #8080ff;
+            --color-collective-soft: #ffcc33;
+        }
+
+        /* ============ DARK THEME ============ */
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(240, 10%, 5%);
+            --color-neutral-900: hsl(240, 8%, 10%);
+            --color-neutral-800: hsl(240, 6%, 18%);
+            --color-neutral-700: hsl(240, 5%, 26%);
+            --color-neutral-600: hsl(240, 5%, 36%);
+            --color-neutral-500: hsl(240, 4%, 52%);
+            --color-neutral-400: hsl(240, 5%, 62%);
+            --color-neutral-300: hsl(240, 6%, 72%);
+            --color-neutral-200: hsl(240, 8%, 82%);
+            --color-neutral-100: hsl(240, 10%, 90%);
+            --color-neutral-50: hsl(240, 12%, 95%);
+
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-surface-hover: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 55%, 48%);
+
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-300);
+            --color-text-disabled: var(--color-neutral-500);
+
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+
+            --color-btn-fg: var(--color-neutral-50);
+            --color-btn-fg-disabled: var(--color-neutral-600);
+            --color-btn-bg: var(--color-neutral-700);
+            --color-btn-bg-hover: var(--color-neutral-600);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-800);
+
+            --color-switch: hsl(202, 45%, 45%);
+            --color-switch-handle: var(--color-neutral-100);
+
+            --accent: hsl(202, 50%, 50%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+            --quietHeader: #3a3a3a;
+            --quietText: #e0e0e0;
+
+            --color-roll: #a83232;
+            --color-pitch: #2e8b2e;
+            --color-yaw: #3a3ab8;
+            --color-collective: #b87a00;
+            --color-roll-soft: #ff6b6b;
+            --color-pitch-soft: #6bcf6b;
+            --color-yaw-soft: #7a7aff;
+            --color-collective-soft: #ffbb33;
+        }
+
+        /* axis color scoping compatibility */
+        html[data-theme="light"] .tab-rates .dynamics-section,
+        html[data-theme="light"] .tab-profiles .dynamics-section {
+            --color-roll: var(--color-roll-soft);
+            --color-pitch: var(--color-pitch-soft);
+            --color-yaw: var(--color-yaw-soft);
+            --color-collective: var(--color-collective-soft);
+        }
+        html[data-theme="dark"] .tab-rates .dynamics-section,
+        html[data-theme="dark"] .tab-profiles .dynamics-section {
+            --color-roll: var(--color-roll);
+            --color-pitch: var(--color-pitch);
+            --color-yaw: var(--color-yaw);
+            --color-collective: var(--color-collective);
+        }
+
+body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
+            font-size: 12px;
+            color: var(--color-text);
+            background-color: var(--color-surface);
+        }
+
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 5%, 98%);
+            --color-neutral-100: hsl(220, 5%, 97%);
+            --color-neutral-200: hsl(220, 5%, 92%);
+            --color-neutral-300: hsl(220, 5%, 85%);
+            --color-neutral-400: hsl(220, 5%, 70%);
+            --color-neutral-500: hsl(220, 5%, 50%);
+            --color-neutral-600: hsl(220, 5%, 30%);
+            --color-neutral-700: hsl(220, 5%, 15%);
+            --color-neutral-800: hsl(220, 5%, 8%);
+            --color-neutral-900: hsl(220, 5%, 3%);
+            --color-neutral-950: hsl(220, 5%, 2%);
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+            --color-roll: hsl(2, 62%, 60%);
+            --color-pitch: hsl(122, 62%, 60%);
+            --color-yaw: hsl(242, 62%, 60%);
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+        }
+
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(248, 5%, 5%);
+            --color-neutral-900: hsl(248, 5%, 10%);
+            --color-neutral-800: hsl(248, 5%, 20%);
+            --color-neutral-700: hsl(248, 5%, 30%);
+            --color-neutral-600: hsl(248, 5%, 40%);
+            --color-neutral-500: hsl(248, 5%, 50%);
+            --color-neutral-400: hsl(248, 5%, 60%);
+            --color-neutral-300: hsl(248, 5%, 70%);
+            --color-neutral-200: hsl(248, 5%, 80%);
+            --color-neutral-100: hsl(248, 5%, 90%);
+            --color-neutral-50: hsl(248, 5%, 95%);
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 40%, 40%);
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-100);
+            --color-text-disabled: var(--color-neutral-300);
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+            --color-btn-fg: var(--color-neutral-900);
+            --color-btn-fg-disabled: var(--color-neutral-700);
+            --color-btn-bg: var(--color-neutral-200);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-400);
+            --color-switch: hsl(202, 40%, 40%);
+            --color-switch-handle: var(--color-neutral-100);
+            --color-roll: hsl(2, 48%, 45%);
+            --color-pitch: hsl(122, 48%, 40%);
+            --color-yaw: hsl(242, 48%, 55%);
+            --accent: hsl(202, 40%, 40%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+        }
+
+        body {
+            background-color: var(--color-bg);
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--color-border-accent);
+            font-weight: bold;
+        }
+
+        a.disabled {
+            pointer-events: none;
+            cursor: default;
+            color: var(--color-text-disabled);
+        }
+
+        /* Connection Panel */
+        #connection-panel {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #connection-panel .panel-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+
+        #connection-panel select,
+        #connection-panel input[type="text"] {
+            padding: 4px 8px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-input-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            height: 28px;
+        }
+
+        #connection-panel button {
+            padding: 4px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 28px;
+        }
+
+        #connection-panel button:hover:not(:disabled) {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        #connection-panel button:disabled {
+            background-color: var(--color-btn-bg-disabled);
+            color: var(--color-btn-fg-disabled);
+            cursor: not-allowed;
+        }
+
+        #connection-panel button.active {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-panel button.active:hover {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-status {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--color-text-soft);
+        }
+
+        #connection-status.connected {
+            color: #2e8b2e;
+        }
+
+        /* Main Layout */
+        #main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #tab-content-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Profiles Tab */
+        .tab-profiles {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .tab-profiles .tab-container {
+            border-bottom: 3px solid #0099FF;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: start;
+            width: 100%;
+        }
+
+        .tab-profiles .tab-container > div {
+            background-color: #555555;
+            padding: 6px 16px;
+            border-right: 1px solid #777777;
+            box-sizing: border-box;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tab-profiles .tab-container > div:first-child {
+            border-top-left-radius: 0px;
+        }
+
+        .tab-profiles .tab-container > div:last-child {
+            border-top-right-radius: 0px;
+            border-right: none;
+        }
+
+        .tab-profiles .tab-container > div a {
+            display: block;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tab-profiles .tab-container > div.active,
+        .tab-profiles .tab-container > div.active a {
+            background-color: #0099FF;
+            color: #ffffff;
+        }
+
+        .tab-profiles .tab-container > div.tab-copy {
+            background-color: #444444;
+            border-right: none;
+            margin-left: 20px;
+        }
+
+        .tab-profiles .tab-container > div.tab-copy a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .tab-profiles .tab-area {
+            width: 100%;
+            position: relative;
+            padding: 10px;
+            border: 1px solid #CCCCCC;
+            border-bottom-right-radius: 0px;
+            border-bottom-left-radius: 0px;
+            border-top: 1px solid #CCCCCC;
+            background: #F5F5F5;
+        }
+
+        html[data-theme="dark"] .tab-profiles .tab-area {
+            background: #1e1e1e;
+            border-color: #555555;
+        }
+
+        .tab-profiles .subtab {
+            display: flex;
+            flex-flow: row wrap;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .tab-profiles .subtab .cf_column {
+            min-width: 472px;
+            flex: 1;
+        }
+
+        .tab-profiles .gui_box {
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            display: block;
+            width: 100%;
+            background-color: #F5F5F5;
+            border: 1px solid #CCCCCC;
+            border-radius: 5px;
+            padding-top: 28px;
+            overflow: visible;
+            position: relative;
+        }
+
+        html[data-theme="dark"] .tab-profiles .gui_box {
+            background-color: #2a2a2a;
+            border-color: #555555;
+        }
+
+        .tab-profiles .gui_box span {
+            font-style: normal;
+            font-weight: normal;
+            line-height: 22px;
+            color: var(--color-text-soft);
+        }
+
+        .tab-profiles .gui_box_titlebar {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 0;
+            padding: 3px 14px;
+            background-color: #555555;
+            color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 22px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        html[data-theme="dark"] .tab-profiles .gui_box_titlebar {
+            background-color: #444444;
+            color: #ffffff;
+        }
+
+        /* Section divider lines */
+        .tab-profiles .section-divider {
+            border: none;
+            border-top: 1px solid #CCCCCC;
+            margin: 2px 8px 4px 8px;
+        }
+
+        html[data-theme="dark"] .tab-profiles .section-divider {
+            border-top-color: #555555;
+        }
+
+        /* Sub-section headings inside gui_box */
+        .tab-profiles .gui_box .sub-heading {
+            font-size: 12px;
+            font-weight: 700;
+            color: #333333;
+            padding: 4px 8px 4px 8px;
+            margin: 0;
+            line-height: 16px;
+        }
+
+        html[data-theme="dark"] .tab-profiles .gui_box .sub-heading {
+            color: #DDDDDD;
+        }
+
+        /* PID table row borders */
+        .tab-profiles .pid_table tr.ROLL,
+        .tab-profiles .pid_table tr.PITCH,
+        .tab-profiles .pid_table tr.YAW {
+            border-bottom: 1px solid #DDDDDD;
+        }
+
+        .tab-profiles .pid_table tr.YAW {
+            border-bottom: none;
+        }
+
+        html[data-theme="dark"] .tab-profiles .pid_table tr.ROLL,
+        html[data-theme="dark"] .tab-profiles .pid_table tr.PITCH,
+        html[data-theme="dark"] .tab-profiles .pid_table tr.YAW {
+            border-bottom-color: #444444;
+        }
+
+        .tab-profiles table {
+            width: 100%;
+            min-width: 130px;
+            margin: 0;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        .tab-profiles table input,
+        .tab-profiles table select {
+            display: block;
+            width: 100%;
+            height: 20px;
+            line-height: 20px;
+            text-align: right;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+            color: #000;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        html[data-theme="dark"] .tab-profiles table input,
+        html[data-theme="dark"] .tab-profiles table select {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+        .tab-profiles table input[type="checkbox"] {
+            width: auto;
+            height: auto;
+            text-align: left;
+            margin: 2px;
+        }
+
+        .tab-profiles table td {
+            padding: 2px 4px;
+            border-bottom: 0;
+        }
+
+        .tab-profiles table tr td:first-child {
+            text-align: left;
+            padding-left: 8px;
+        }
+
+        .tab-profiles table tr td:last-child {
+            border-right: 0;
+            padding-right: 8px;
+        }
+
+        .tab-profiles .pid_table tr.pid_titlebar th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: normal;
+            line-height: 16px;
+            height: 22px;
+            padding: 0 4px;
+        }
+
+        html[data-theme="light"] .tab-profiles .pid_table tr.pid_titlebar th {
+            background-color: #D0D0D0;
+            color: #333333;
+        }
+
+        html[data-theme="dark"] .tab-profiles .pid_table tr.pid_titlebar th {
+            color: #DDDDDD;
+            background-color: #444444;
+        }
+
+        .tab-profiles .pid_table td.pid_data {
+            padding-left: 3px;
+            padding-right: 3px;
+        }
+
+        .tab-profiles .settings_table tr {
+            height: 26px;
+        }
+
+        /* Prevent first row clipping after titlebar/divider/sub-heading */
+        .tab-profiles .gui_box > table:first-child,
+        .tab-profiles .gui_box > hr + table {
+            margin-top: 2px;
+        }
+
+        .tab-profiles .settings_table tr.border {
+            border-bottom: 1px solid #CCCCCC;
+        }
+
+        html[data-theme="dark"] .tab-profiles .settings_table tr.border {
+            border-bottom-color: #555555;
+        }
+
+        .tab-profiles .settings_table tr:last-child {
+            border-bottom: none !important;
+        }
+
+        .tab-profiles .settings_table td {
+            padding-left: 5px;
+            padding-right: 8px;
+            padding-bottom: 2px;
+        }
+
+        .tab-profiles .settings_table td:first-child {
+            width: 80px;
+            text-align: center;
+            vertical-align: top;
+            padding-top: 2px;
+            border-right: 1px solid #CCCCCC;
+        }
+
+        html[data-theme="dark"] .tab-profiles .settings_table td:first-child {
+            border-right-color: #555555;
+        }
+
+        .tab-profiles .settings_table td:last-child {
+            width: 100%;
+        }
+
+        .tab-profiles .settings_table .suboption {
+            margin-left: 2%;
+            display: flex;
+            flex-flow: row wrap-reverse;
+            align-items: center;
+            padding-bottom: 2px;
+            font-size: 11px;
+        }
+
+        .tab-profiles .settings_table .suboption select {
+            width: 80px;
+            height: 20px;
+            text-align: right;
+            font-size: 1.1em;
+            box-sizing: border-box;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+        }
+
+        html[data-theme="dark"] .tab-profiles .settings_table .suboption select {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+        .tab-profiles .settings_table .suboption input {
+            width: 80px;
+            height: 20px;
+            box-sizing: border-box;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+        }
+
+        html[data-theme="dark"] .tab-profiles .settings_table .suboption input {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+        .tab-profiles .settings_table .suboption label {
+            margin-left: 5px;
+        }
+
+        .tab-profiles .ROLL .axis_title {
+            background-color: #FF8080;
+        }
+
+        .tab-profiles .PITCH .axis_title {
+            background-color: #80FF80;
+        }
+
+        .tab-profiles .YAW .axis_title {
+            background-color: #8080FF;
+        }
+
+        .tab-profiles .spacer_left {
+            padding-left: 0;
+            float: right;
+            width: calc(100% - 20px);
+        }
+
+        .tab-profiles.toolbar_hidden .content_toolbar {
+            display: none;
+        }
+
+        .tab-profiles .content_toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding: 10px 0 2px 0;
+        }
+
+        .tab-profiles .content_toolbar .btn a {
+            display: inline-block;
+            padding: 6px 18px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-profiles .content_toolbar .btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-profiles .content_toolbar .save_btn a {
+            background-color: #2e7d32;
+            color: #fff;
+            border-color: #1b5e20;
+        }
+
+        .tab-profiles .resetbtn {
+            width: 150px;
+            margin-right: 10px;
+        }
+
+        .tab-profiles dialog {
+            width: 40em;
+            border-radius: 5px;
+            border: 1px solid var(--color-border);
+            padding: 16px;
+        }
+
+        .tab-profiles dialog h3 {
+            margin-top: 0;
+            margin-bottom: 0.5em;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        dialog {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px 20px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            min-width: 280px;
+        }
+
+        dialog h3 {
+            margin: 0 0 8px 0;
+        }
+
+        dialog .buttons {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        dialog .buttons a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        dialog .spinner {
+            display: block;
+        }
+
+        .tab-profiles .note {
+            margin-bottom: 2px;
+            text-align: left;
+            padding: 8px;
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            color: #856404;
+        }
+
+        html[data-theme="dark"] .tab-profiles .note {
+            background-color: #3d3010;
+            border-color: #b8860b;
+            color: #ffc107;
+        }
+
+        .tab-profiles .pid_titlebar .name-helpicon-flex {
+            display: flex;
+            flex-flow: row wrap;
+            justify-content: space-around;
+        }
+
+        .tab-profiles .pid_titlebar .name-helpicon-flex .helpicon {
+            margin-top: 1px;
+            margin-right: 0;
+        }
+
+        .tab-profiles .content_wrapper_header {
+            margin-bottom: 10px;
+        }
+
+        .tab-profiles .content_wrapper_header_btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tab-profiles .default_btn a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-profiles .default_btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-profiles .tab_title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .helpicon {
+            float: right;
+            margin-top: 7px;
+            margin-right: 7px;
+            display: block;
+            height: 14px;
+            width: 14px;
+            opacity: 0.2;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="gray"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>');
+            background-size: contain;
+            background-position: center;
+            cursor: help;
+        }
+
+        .helpicon:hover {
+            opacity: 0.9;
+        }
+
+        .cf_tip {
+            position: relative;
+        }
+
+        .tab-profiles .cf_column {
+            min-width: 472px;
+            flex: 1;
+        }
+
+        .tab-profiles .param-missing,
+        .tab-profiles tr.param-missing td {
+            color: var(--color-text-disabled) !important;
+            opacity: 0.5;
+        }
+
+        .tab-profiles input.param-missing,
+        .tab-profiles select.param-missing {
+            background-color: #c9c9c9 !important;
+            color: var(--color-text-disabled) !important;
+            border-color: #999999 !important;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        html[data-theme="dark"] .tab-profiles input.param-missing,
+        html[data-theme="dark"] .tab-profiles select.param-missing {
+            background-color: #2a2a2a !important;
+        }
+
+        .tab-profiles label.param-missing,
+        .tab-profiles label.param-missing span {
+            color: var(--color-text-disabled) !important;
+            text-decoration: line-through;
+        }
+
+        @media all and (max-width: 575px) {
+            .tab-rates .tab-container > div,
+            .tab-profiles .tab-container > div {
+                width: calc(100% / 3);
+            }
+
+            .tab-profiles .subtab .cf_column {
+                min-width: 100%;
+                width: 100%;
+            }
+
+            .tab-profiles .spacer_left {
+                width: 100%;
+            }
+        }
+    
+body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
+            font-size: 12px;
+            color: var(--color-text);
+            background-color: var(--color-surface);
+        }
+
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 5%, 98%);
+            --color-neutral-100: hsl(220, 5%, 97%);
+            --color-neutral-200: hsl(220, 5%, 92%);
+            --color-neutral-300: hsl(220, 5%, 85%);
+            --color-neutral-400: hsl(220, 5%, 70%);
+            --color-neutral-500: hsl(220, 5%, 50%);
+            --color-neutral-600: hsl(220, 5%, 30%);
+            --color-neutral-700: hsl(220, 5%, 15%);
+            --color-neutral-800: hsl(220, 5%, 8%);
+            --color-neutral-900: hsl(220, 5%, 3%);
+            --color-neutral-950: hsl(220, 5%, 2%);
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+            --quietHeader: #555555;
+            --quietText: #ffffff;
+        }
+
+        html[data-theme="light"] .tab-rates .dynamics-section {
+            --color-roll: #ff8080;
+            --color-pitch: #80ff80;
+            --color-yaw: #8080ff;
+            --color-collective: #ffbb00;
+        }
+
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(248, 5%, 5%);
+            --color-neutral-900: hsl(248, 5%, 10%);
+            --color-neutral-800: hsl(248, 5%, 20%);
+            --color-neutral-700: hsl(248, 5%, 30%);
+            --color-neutral-600: hsl(248, 5%, 40%);
+            --color-neutral-500: hsl(248, 5%, 50%);
+            --color-neutral-400: hsl(248, 5%, 60%);
+            --color-neutral-300: hsl(248, 5%, 70%);
+            --color-neutral-200: hsl(248, 5%, 80%);
+            --color-neutral-100: hsl(248, 5%, 90%);
+            --color-neutral-50: hsl(248, 5%, 95%);
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 40%, 40%);
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-100);
+            --color-text-disabled: var(--color-neutral-300);
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+            --color-btn-fg: var(--color-neutral-900);
+            --color-btn-fg-disabled: var(--color-neutral-700);
+            --color-btn-bg: var(--color-neutral-200);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-400);
+            --color-switch: hsl(202, 40%, 40%);
+            --color-switch-handle: var(--color-neutral-100);
+            --accent: hsl(202, 40%, 40%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+            --quietHeader: #444444;
+            --quietText: #ffffff;
+        }
+
+        html[data-theme="dark"] .tab-rates .dynamics-section {
+            --color-roll: #a00000;
+            --color-pitch: #00a000;
+            --color-yaw: #0000a0;
+            --color-collective: #c08000;
+        }
+
+        body {
+            background-color: var(--color-bg);
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--color-border-accent);
+            font-weight: bold;
+        }
+
+        a.disabled {
+            pointer-events: none;
+            cursor: default;
+            color: var(--color-text-disabled);
+        }
+
+        /* Connection Panel */
+        #connection-panel {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #connection-panel .panel-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+
+        #connection-panel select,
+        #connection-panel input[type="text"] {
+            padding: 4px 8px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-input-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            height: 28px;
+        }
+
+        #connection-panel button {
+            padding: 4px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 28px;
+        }
+
+        #connection-panel button:hover:not(:disabled) {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        #connection-panel button:disabled {
+            background-color: var(--color-btn-bg-disabled);
+            color: var(--color-btn-fg-disabled);
+            cursor: not-allowed;
+        }
+
+        #connection-panel button.active {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-panel button.active:hover {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-status {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--color-text-soft);
+        }
+
+        #connection-status.connected {
+            color: #2e8b2e;
+        }
+
+        /* Main Layout */
+        #main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #tab-content-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Rates Tab */
+        .tab-rates {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .tab-rates .content_wrapper_header {
+            margin-bottom: 10px;
+        }
+
+        .tab-rates .content_wrapper_header_btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tab-rates .default_btn a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-rates .default_btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-rates .tab_title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .tab-rates .tab-container {
+            border-bottom: 3px solid #0099FF;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: start;
+            width: 100%;
+        }
+
+        .tab-rates .tab-container > div {
+            background-color: #555555;
+            padding: 6px 16px;
+            border-right: 1px solid #777777;
+            box-sizing: border-box;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tab-rates .tab-container > div:first-child {
+            border-top-left-radius: 0px;
+        }
+
+        .tab-rates .tab-container > div.tab:last-child {
+            border-top-right-radius: 0px;
+            border-right: none;
+        }
+
+        .tab-rates .tab-container > div a {
+            display: block;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tab-rates .tab-container > div.active,
+        .tab-rates .tab-container > div.active a {
+            background-color: #0099FF;
+            color: #ffffff;
+        }
+
+        .tab-rates .tab-container > div.tab-copy {
+            background-color: #444444;
+            border-right: none;
+            margin-left: 20px;
+        }
+
+        .tab-rates .tab-container > div.tab-copy a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .tab-rates .tab-area {
+            width: 100%;
+            position: relative;
+            padding: 10px;
+            border: 1px solid #CCCCCC;
+            border-bottom-right-radius: 0px;
+            border-bottom-left-radius: 0px;
+            border-top: 1px solid #CCCCCC;
+            background: #F5F5F5;
+        }
+
+        html[data-theme="dark"] .tab-rates .tab-area {
+            background: #1e1e1e;
+            border-color: #555555;
+        }
+
+        .tab-rates .subtab {
+            display: flex;
+            flex-flow: row wrap;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .tab-rates .subtab .cf_column {
+            min-width: 360px;
+            flex: 1;
+        }
+
+        .tab-rates .gui_box {
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            display: block;
+            width: 100%;
+            background-color: #F5F5F5;
+            border: 1px solid #CCCCCC;
+            border-radius: 5px;
+            padding-top: 28px;
+            overflow: visible;
+            position: relative;
+        }
+
+        html[data-theme="dark"] .tab-rates .gui_box {
+            background-color: #2a2a2a;
+            border-color: #555555;
+        }
+
+        .tab-rates .gui_box.grey {
+            background-color: #ededed;
+        }
+
+        html[data-theme="dark"] .tab-rates .gui_box.grey {
+            background-color: #252525;
+        }
+
+        .tab-rates .gui_box span {
+            font-style: normal;
+            font-weight: normal;
+            line-height: 22px;
+            color: var(--color-text-soft);
+        }
+
+        .tab-rates .gui_box_titlebar {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 0;
+            padding: 3px 14px;
+            background-color: #555555;
+            color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 22px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        html[data-theme="dark"] .tab-rates .gui_box_titlebar {
+            background-color: #444444;
+            color: #ffffff;
+        }
+
+        .tab-rates table {
+            width: 100%;
+            min-width: 130px;
+            margin: 0;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        .tab-rates table input,
+        .tab-rates table select {
+            display: block;
+            width: 100%;
+            height: 20px;
+            line-height: 20px;
+            text-align: right;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+            color: #000;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        html[data-theme="dark"] .tab-rates table input,
+        html[data-theme="dark"] .tab-rates table select {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+        .tab-rates table input[type="checkbox"] {
+            width: auto;
+            height: auto;
+            text-align: left;
+            margin: 2px;
+            display: inline-block;
+        }
+
+        .tab-rates table td {
+            padding: 2px 4px;
+            border-bottom: 0;
+        }
+
+        .tab-rates table th {
+            padding: 0;
+            border: 0;
+            height: 10px;
+            font-weight: normal;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        .tab-rates .cf th {
+            height: 19px;
+            font-weight: normal;
+            padding: 4px;
+            color: white;
+            text-align: left;
+            background: #666;
+            border-right: dotted 1px var(--superSubtleAccent);
+        }
+
+        .tab-rates .cf td:first-child {
+            border-bottom-left-radius: 3px;
+        }
+
+        .tab-rates .cf input {
+            margin: 4px;
+            width: calc(100% - 10px);
+            border: 1px solid var(--subtleAccent);
+            border-radius: 3px;
+        }
+
+        .tab-rates .cf select {
+            margin: 4px;
+            width: calc(100% - 10px);
+            border: 1px solid var(--subtleAccent);
+        }
+
+        .tab-rates .rates_titlebar th {
+            padding: 5px;
+            text-align: left;
+            border-right: 1px solid var(--subtleAccent);
+        }
+
+        .tab-rates .rates_setup .maxAngularVelRoll,
+        .tab-rates .rates_setup .maxAngularVelPitch,
+        .tab-rates .rates_setup .maxAngularVelYaw,
+        .tab-rates .rates_setup .maxCollectiveAngle {
+            background-color: #fff;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            text-align: right;
+            padding: 0 4px;
+            height: 20px;
+            line-height: 20px;
+            box-sizing: border-box;
+            color: #000;
+        }
+
+        .tab-rates .rates_setup td.maxAngularVelRoll,
+        .tab-rates .rates_setup td.maxAngularVelPitch,
+        .tab-rates .rates_setup td.maxAngularVelYaw,
+        .tab-rates .rates_setup td.maxCollectiveAngle {
+            padding: 0;
+        }
+
+        html[data-theme="dark"] .tab-rates .rates_setup .maxAngularVelRoll,
+        html[data-theme="dark"] .tab-rates .rates_setup .maxAngularVelPitch,
+        html[data-theme="dark"] .tab-rates .rates_setup .maxAngularVelYaw,
+        html[data-theme="dark"] .tab-rates .rates_setup .maxCollectiveAngle {
+            background-color: #2e2e2e;
+            border-color: #555555;
+            color: var(--color-text);
+        }
+
+        .tab-rates table tr td:first-child {
+            text-align: left;
+            padding-left: 8px;
+        }
+
+        .tab-rates table tr td:last-child {
+            border-right: 0;
+            text-align: right;
+            padding-right: 8px;
+        }
+
+        .tab-rates .rates_setup table th.name {
+            width: 80px;
+        }
+
+        .tab-rates .field {
+            padding: 2px 6px;
+        }
+
+        .tab-rates .field > div {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .tab-rates .field label {
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+        .tab-rates .field input[type="number"] {
+            width: 80px;
+            height: 20px;
+            line-height: 20px;
+            text-align: right;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+            color: #000;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        html[data-theme="dark"] .tab-rates .field input[type="number"] {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+
+        /* Rates logo area */
+        .tab-rates .rates_logo_div {
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            color: var(--color-text);
+        }
+
+        /* Rate curve */
+        .tab-rates .rc_curve {
+            height: 100%;
+            min-height: 300px;
+        }
+
+        .tab-rates .rate_curve {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        html[data-theme="dark"] .tab-rates .rate_curve {
+            background: #1a1a1a;
+            border-color: #555;
+        }
+
+        .tab-rates .rate_curve canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Dynamics section */
+        .tab-rates .subtab > .cf_column:last-child {
+            flex-basis: 100%;
+        }
+
+        .tab-rates .dynamics-section {
+            margin-bottom: 12px;
+        }
+
+        .tab-rates .dynamics-grid-container {
+            display: grid;
+            grid-template-columns: max-content repeat(4, minmax(64px, 1fr));
+            gap: 4px;
+            padding: 8px;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .tab-rates .dynamics-title-row,
+        .tab-rates .dynamics-row {
+            display: contents;
+        }
+
+        .tab-rates .dynamics-axis-header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 3px 0;
+            border-radius: 3px;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .tab-rates .roll-header {
+            background-color: #ff6b6b;
+        }
+
+        .tab-rates .pitch-header {
+            background-color: #51cf66;
+        }
+
+        .tab-rates .yaw-header {
+            background-color: #5c7cfa;
+        }
+
+        .tab-rates .collective-header {
+            background-color: #ffd43b;
+            color: #333;
+        }
+
+        .tab-rates .dynamics-label {
+            font-size: 10px;
+            color: var(--color-text-soft);
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            white-space: nowrap;
+            padding-right: 4px;
+        }
+
+        .tab-rates .dynamics-row input {
+            width: 100%;
+            height: 20px;
+            text-align: right;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background: #fff;
+            color: #000;
+            padding: 0 4px;
+            box-sizing: border-box;
+            font-size: 11px;
+        }
+
+        html[data-theme="dark"] .tab-rates .dynamics-row input {
+            background: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555;
+        }
+
+        .tab-rates .empty-cell {
+            /* Empty cell for yaw-only parameters */
+        }
+
+        /* Toolbar */
+        .tab-rates.toolbar_hidden .content_toolbar {
+            display: none;
+        }
+
+        .tab-rates .content_toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding: 10px 0 2px 0;
+        }
+
+        .tab-rates .content_toolbar .btn a {
+            display: inline-block;
+            padding: 6px 18px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-rates .content_toolbar .btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-rates .content_toolbar .save_btn a {
+            background-color: #2e7d32;
+            color: #fff;
+            border-color: #1b5e20;
+        }
+
+        /* Dialogs */
+        dialog {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px 20px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            min-width: 280px;
+        }
+
+        dialog h3 {
+            margin: 0 0 8px 0;
+        }
+
+        dialog .buttons {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        dialog .buttons a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        dialog .spinner {
+            display: block;
+        }
+
+        dialog .buttons a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        /* Missing param styling */
+        .tab-rates .param-missing,
+        .tab-rates tr.param-missing td { color: var(--color-text-disabled) !important; opacity: 0.5; }
+        .tab-rates input.param-missing,
+        .tab-rates select.param-missing {
+            background-color: #c9c9c9 !important; color: var(--color-text-disabled) !important;
+            border-color: #999999 !important; cursor: not-allowed; text-decoration: line-through;
+        }
+        html[data-theme="dark"] .tab-rates input.param-missing,
+        html[data-theme="dark"] .tab-rates select.param-missing { background-color: #2a2a2a !important; }
+        .tab-rates label.param-missing,
+        .tab-rates label.param-missing span { color: var(--color-text-disabled) !important; text-decoration: line-through; }
+    
+        /* ===== RFCap mobile alignment (added) ===== */
+        @media all and (max-width: 700px) {
+            .tab-rates .subtab .cf_column,
+            .tab-profiles .subtab .cf_column {
+                min-width: 100%;
+                width: 100%;
+                flex: 1 1 100%;
+            }
+            .tab-rates .field input[type="number"] { width: 62px; }
+            .tab-rates .dynamics-grid-container {
+                grid-template-columns: max-content repeat(4, minmax(46px, 1fr));
+            }
+            .tab-rates .rate_curve { height: 230px; }
+            .tab-container { flex-wrap: wrap; }
+        }
+
+    </style>
+
+<script>
+(function(){
+  const STORAGE_KEY='rf-theme';
+  function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem(STORAGE_KEY,t); }
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initial = saved || (prefersDark ? 'dark' : 'light');
+  applyTheme(initial);
+  window.toggleTheme = function(){
+    const cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur==='dark' ? 'light' : 'dark');
+  };
+  // auto add toggle button if connection panel exists
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const panel = document.getElementById('connection-panel') || document.querySelector('.header');
+    if(panel && !document.getElementById('theme-toggle-btn')){
+      const btn=document.createElement('button');
+      btn.id='theme-toggle-btn';
+      btn.textContent='🌙 / ☀️';
+      btn.title='Toggle dark/light';
+      btn.style.cssText='margin-left:auto;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-btn-bg);color:var(--color-btn-fg);cursor:pointer;';
+      btn.onclick=window.toggleTheme;
+      panel.appendChild(btn);
+    }
+  });
+})();
+</script>
+</head>
+<body data-theme="light">
+    <div id="main-wrapper">
+        <!-- Connection Panel -->
+        <div id="connection-panel">
+            <span class="panel-title">Connection</span>
+            <select id="port-select">
+                <option value="none">Select Port</option>
+            </select>
+            <select id="baud-select">
+                <option value="1000000">1000000</option>
+                <option value="500000">500000</option>
+                <option value="250000">250000</option>
+                <option value="115200" selected>115200</option>
+                <option value="57600">57600</option>
+                <option value="38400">38400</option>
+            </select>
+            <button id="connect-btn">Connect</button>
+            <span id="connection-status">Disconnected</span>
+        </div>
+
+        <!-- Rates Tab Content -->
+        <div id="tab-content-container">
+            <div class="tab-rates toolbar_hidden">
+                <div class="content_wrapper">
+                    <div class="tab_title">Rates</div>
+                    <div class="content_wrapper_header">
+                        <div class="content_wrapper_header_btns">
+                        </div>
+                    </div>
+
+                    <div class="tab-container">
+                        <div class="tab rateProfile1 active"><a href="#">Profile #1</a></div>
+                        <div class="tab rateProfile2"><a href="#">Profile #2</a></div>
+                        <div class="tab rateProfile3"><a href="#">Profile #3</a></div>
+                        <div class="tab-copy">
+                            <a href="#" id="copyProfile">Copy Profile</a>
+                        </div>
+                    </div>
+
+                    <div class="tab-area">
+                        <form name="rate-profile" id="rate-profile">
+                            <div class="subtab-rates">
+                                <div class="subtab">
+                                    <div class="cf_column">
+                                        <!-- Rates Type -->
+                                        <div class="gui_box rates_type rates_change">
+                                            <div class="gui_box_titlebar">Rates Type</div>
+                                            <table class="cf">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            <select id="ratesType"></select>
+                                                        </td>
+                                                        <td class="rates_logo_bg">
+                                                            <div class="rates_logo_div">
+                                                                <span id="ratesLogoText">-</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Cyclic Ring -->
+                                        <div class="gui_box grey cyclic-ring-container">
+                                            <div class="gui_box_titlebar">Cyclic Ring</div>
+                                            <div class="content">
+                                                <div class="field">
+                                                    <div>
+                                                        <input type="checkbox" id="enable-cyclic-ring" class="toggle" />
+                                                    </div>
+                                                    <label for="enable-cyclic-ring">Enable Cyclic Ring</label>
+                                                </div>
+
+                                                <div class="field">
+                                                    <input type="number" id="cyclic-ring-level" step="1" min="100" max="250" />
+                                                    <label for="cyclic-ring-level">
+                                                        <span>Cyclic Ring Level</span>
+                                                        <span>[%]</span>
+                                                    </label>
+                                                </div>
+
+                                                <div class="field">
+                                                    <div>
+                                                        <input type="checkbox" id="enable-polar-coordinates" class="toggle" />
+                                                    </div>
+                                                    <label for="enable-polar-coordinates">Enable Polar Coordinates</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Rates Setup -->
+                                        <div class="gui_box grey rates_setup rates_change">
+                                            <div class="gui_box_titlebar">Rates</div>
+                                            <table>
+                                                <tr class="rates_titlebar">
+                                                    <th class="name">Axis</th>
+                                                    <th class="rc_rate">RC Rate</th>
+                                                    <th class="rate">Rate</th>
+                                                    <th class="rc_expo">RC Expo</th>
+                                                    <th class="maxVel">Max Rate</th>
+                                                </tr>
+                                                <tr class="ROLL">
+                                                    <td class="axis_title">ROLL</td>
+                                                    <td class="roll_rc_rate">
+                                                        <input type="number" class="rc_rate_input" name="roll_rc_rate" step="0.01" min="0.01" max="2.55" />
+                                                    </td>
+                                                    <td class="roll_srate">
+                                                        <input type="number" class="rate_input" name="roll_srate" step="0.01" min="0" max="1.00" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="expo_input" name="roll_rc_expo" step="0.01" min="0" max="1" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="max_rate_input maxAngularVelRoll" readonly value="-" />
+                                                    </td>
+                                                </tr>
+                                                <tr class="PITCH">
+                                                    <td class="axis_title">PITCH</td>
+                                                    <td>
+                                                        <input type="number" class="rc_rate_input" name="pitch_rc_rate" step="0.01" min="0.01" max="2.55" />
+                                                    </td>
+                                                    <td class="pitch_srate">
+                                                        <input type="number" class="rate_input" name="pitch_srate" step="0.01" min="0" max="1.00" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="expo_input" name="pitch_rc_expo" step="0.01" min="0" max="1" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="max_rate_input maxAngularVelPitch" readonly value="-" />
+                                                    </td>
+                                                </tr>
+                                                <tr class="YAW">
+                                                    <td class="axis_title">YAW</td>
+                                                    <td>
+                                                        <input type="number" class="rc_rate_input" name="yaw_rc_rate" step="0.01" min="0.01" max="2.55" />
+                                                    </td>
+                                                    <td class="yaw_rate">
+                                                        <input type="number" class="rate_input" name="yaw_srate" step="0.01" min="0" max="2.55" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="expo_input" name="yaw_rc_expo" step="0.01" min="0" max="1" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="max_rate_input maxAngularVelYaw" readonly value="-" />
+                                                    </td>
+                                                </tr>
+                                                <tr class="COLLECTIVE">
+                                                    <td class="axis_title">COLLECT</td>
+                                                    <td>
+                                                        <input type="number" class="rc_collective_input" name="collective_rc_rate" step="0.1" min="0" max="30" />
+                                                    </td>
+                                                    <td class="collective_rate">
+                                                        <input type="number" class="collective_input" name="collective_srate" step="0.1" min="0" max="30" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="expo_input" name="collective_rc_expo" step="0.01" min="0" max="1" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="max_rate_input maxCollectiveAngle" readonly value="-" />
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+
+                                        <!-- Rate Curve -->
+                                        <div class="gui_box rc_curve">
+                                            <div class="gui_box_titlebar">Rate Curve</div>
+                                            <div class="rc_curve">
+                                                <div class="rate_curve background_paper" style="position:relative;">
+                                                    <canvas id="rate_curve_layer0" width="1000" height="1000"></canvas>
+                                                    <canvas id="rate_curve_layer1" width="1000" height="1000"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="cf_column">
+                                        <!-- Dynamics Section -->
+                                        <div class="gui_box dynamics-section grey spacer_left">
+                                            <div class="gui_box_titlebar">Dynamics</div>
+                                            <div class="dynamics-grid-container">
+                                                <!-- Column Headers with colors -->
+                                                <div class="dynamics-title-row">
+                                                    <div class="dynamics-param-header"></div>
+                                                    <div class="dynamics-axis-header roll-header">ROLL</div>
+                                                    <div class="dynamics-axis-header pitch-header">PITCH</div>
+                                                    <div class="dynamics-axis-header yaw-header">YAW</div>
+                                                    <div class="dynamics-axis-header collective-header">COLLECT</div>
+                                                </div>
+
+                                                <!-- Response Time Row -->
+                                                <div class="dynamics-row">
+                                                    <div class="dynamics-label">
+                                                        Response Time [ms]
+                                                    </div>
+                                                    <input type="number" name="roll_response" step="1" min="0" max="250" value="0" />
+                                                    <input type="number" name="pitch_response" step="1" min="0" max="250" value="0" />
+                                                    <input type="number" name="yaw_response" step="1" min="0" max="250" value="0" />
+                                                    <input type="number" name="coll_response" step="1" min="0" max="250" value="0" />
+                                                </div>
+
+                                                <!-- Setpoint Boost Gain Row -->
+                                                <div class="dynamics-row">
+                                                    <div class="dynamics-label">
+                                                        Setpoint B Gain
+                                                    </div>
+                                                    <input type="number" id="setpoint-boost-gain-roll" step="1" min="0" max="250" value="0" />
+                                                    <input type="number" id="setpoint-boost-gain-pitch" step="1" min="0" max="250" value="0" />
+                                                    <input type="number" id="setpoint-boost-gain-yaw" step="1" min="0" max="250" value="0" />
+                                                    <input type="number" id="setpoint-boost-gain-collective" step="1" min="0" max="250" value="0" />
+                                                </div>
+
+                                                <!-- Setpoint Boost Cutoff Row -->
+                                                <div class="dynamics-row">
+                                                    <div class="dynamics-label">
+                                                        Setpoint B Cutoff [Hz]
+                                                    </div>
+                                                    <input type="number" id="setpoint-boost-cutoff-roll" step="1" min="0" max="250" value="15" />
+                                                    <input type="number" id="setpoint-boost-cutoff-pitch" step="1" min="0" max="250" value="15" />
+                                                    <input type="number" id="setpoint-boost-cutoff-yaw" step="1" min="0" max="250" value="90" />
+                                                    <input type="number" id="setpoint-boost-cutoff-collective" step="1" min="0" max="250" value="15" />
+                                                </div>
+
+                                                <!-- Dynamic Ceiling Gain Row -->
+                                                <div class="dynamics-row">
+                                                    <div class="dynamics-label">
+                                                        Dynamic Ceiling Gain
+                                                    </div>
+                                                    <div class="empty-cell"></div>
+                                                    <div class="empty-cell"></div>
+                                                    <input type="number" id="yaw-dynamic-ceiling-gain" step="1" min="0" max="250" value="0" />
+                                                    <div class="empty-cell"></div>
+                                                </div>
+
+                                                <!-- Dynamic Deadband Gain Row -->
+                                                <div class="dynamics-row">
+                                                    <div class="dynamics-label">
+                                                        Dynamic DB Gain
+                                                    </div>
+                                                    <div class="empty-cell"></div>
+                                                    <div class="empty-cell"></div>
+                                                    <input type="number" id="yaw-dynamic-deadband-gain" step="1" min="0" max="250" value="10" />
+                                                    <div class="empty-cell"></div>
+                                                </div>
+
+                                                <!-- Dynamic Deadband Filter Row -->
+                                                <div class="dynamics-row">
+                                                    <div class="dynamics-label">
+                                                        Dynamic DB Filter [Hz]
+                                                    </div>
+                                                    <div class="empty-cell"></div>
+                                                    <div class="empty-cell"></div>
+                                                    <input type="number" id="yaw-dynamic-deadband-filter" step="0.1" min="0" max="25" value="6.0" />
+                                                    <div class="empty-cell"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="content_toolbar">
+                        <div class="btn revert_btn">
+                            <a class="revert" href="#">Revert</a>
+                        </div>
+                        <div class="btn save_btn">
+                            <a class="save" href="#">Save</a>
+                        </div>
+                    </div>
+                </div>
+
+                <dialog class="dialogCopyProfile">
+                    <h3>Copy Rate Profile</h3>
+                    <div class="content">
+                        <div style="margin-top: 10px">Copy the current rate profile to another profile.</div>
+                        <div style="margin-top:20px;">
+                            <span>Copy to: </span> <select class="selectRateProfile" id="selectProfile"></select>
+                        </div>
+                    </div>
+                    <div class="buttons">
+                        <a href="#" class="dialogCopyProfile-confirmbtn">Copy</a>
+                        <a href="#" class="dialogCopyProfile-cancelbtn">Cancel</a>
+                    </div>
+                </dialog>
+
+                <dialog class="dialogResetProfile">
+                    <h3>Reset Rate Profile</h3>
+                    <div class="content">
+                        <div style="margin-top: 10px">Reset the current rate profile to defaults for the selected rates type?</div>
+                    </div>
+                    <div class="buttons">
+                        <a href="#" class="dialogResetProfile-confirmbtn">Reset</a>
+                        <a href="#" class="dialogResetProfile-cancelbtn">Cancel</a>
+                    </div>
+                </dialog>
+
+                <dialog class="dialogProfileChange">
+                    <h3>Save changes?</h3>
+                    <div class="content">
+                        <div>Do you want to save changes before switching profiles?</div>
+                    </div>
+                    <div class="buttons">
+                        <a href="#" class="dialogProfileChangeYesBtn">Yes</a>
+                        <a href="#" class="dialogProfileChangeNoBtn">No</a>
+                    </div>
+                </dialog>
+
+                <dialog class="dialogSaving">
+                    <h3>Saving...</h3>
+                    <div class="content">
+                        <div style="margin-top: 10px">Writing to FC, please wait...</div>
+                        <div class="spinner" style="margin: 20px auto; width: 30px; height: 30px; border: 3px solid var(--color-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    </div>
+                </dialog>
+
+                <dialog class="dialogRatesType">
+                    <h3>Change Rates Type</h3>
+                    <div class="content">
+                        <div style="margin-top: 10px">Changing the rates type will reset the rate values to the defaults for that type. Continue?</div>
+                    </div>
+                    <div class="buttons">
+                        <a href="#" class="dialogRatesType-confirmbtn">Change</a>
+                        <a href="#" class="dialogRatesType-cancelbtn">Cancel</a>
+                    </div>
+                </dialog>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Web Serial API Connection ====================
+        class SerialConnection {
+            constructor() {
+                this.port = null;
+                this.reader = null;
+                this.writer = null;
+                this.connected = false;
+                this.baudRate = 115200;
+                this.onData = null;
+                this.onStatusChange = null;
+            }
+
+            async requestPort() {
+                try {
+                    this.port = await navigator.serial.requestPort();
+                    await this.updatePorts();
+                    return this.port;
+                } catch (e) {
+                    console.error('Error requesting port:', e);
+                    throw e;
+                }
+            }
+
+            async updatePorts() {
+                const ports = await navigator.serial.getPorts();
+                const select = document.getElementById('port-select');
+                select.innerHTML = '<option value="none">Select Port</option>';
+                ports.forEach((port, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = port.getInfo().usbVendorId ?
+                        `USB Device (VID: ${port.getInfo().usbVendorId?.toString(16).padStart(4, '0')})` :
+                        `Serial Port ${index + 1}`;
+                    select.appendChild(option);
+                });
+            }
+
+            async connect(portIndex, baudRate) {
+                try {
+                    const ports = await navigator.serial.getPorts();
+                    if (portIndex >= ports.length) {
+                        throw new Error('Invalid port');
+                    }
+                    this.port = ports[portIndex];
+                    this.baudRate = parseInt(baudRate);
+                    await this.port.open({ baudRate: this.baudRate });
+                    this.connected = true;
+                    this.writer = this.port.writable.getWriter();
+                    this.reader = this.port.readable.getReader();
+                    this.onStatusChange?.(true);
+                    this.readLoop();
+                    return true;
+                } catch (e) {
+                    console.error('Connection error:', e);
+                    this.onStatusChange?.(false);
+                    return false;
+                }
+            }
+
+            async disconnect() {
+                if (this.reader) {
+                    await this.reader.cancel();
+                    this.reader.releaseLock();
+                    this.reader = null;
+                }
+                if (this.writer) {
+                    this.writer.releaseLock();
+                    this.writer = null;
+                }
+                if (this.port) {
+                    await this.port.close();
+                    this.port = null;
+                }
+                this.connected = false;
+                this.onStatusChange?.(false);
+            }
+
+            async readLoop() {
+                try {
+                    while (this.port && this.reader) {
+                        const { value, done } = await this.reader.read();
+                        if (done) break;
+                        if (value && this.onData) {
+                            this.onData(value);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Read error:', e);
+                }
+            }
+
+            async send(data) {
+                if (this.writer && this.connected) {
+                    await this.writer.write(data);
+                }
+            }
+        }
+
+        // ==================== Real MSP Protocol ====================
+        const MSP_HEADER = '$M';
+        const MSP_DIR_REQUEST = '<';
+        const MSP_DIR_RESPONSE = '>';
+        const MSP_CRC_MASK = 0xFF;
+
+        const MSP = {
+            API_VERSION: 1,
+            STATUS: 101,
+            RC_TUNING: 111,
+            RC_COMMAND: 113,
+            SET_RC_TUNING: 204,
+            SELECT_SETTING: 210,
+            EEPROM_WRITE: 250,
+            COPY_PROFILE: 183,
+        };
+
+        const RATE_PROFILE_MASK = 128;
+
+        function mspChecksum(length, code, payload) {
+            let checksum = length ^ code;
+            for (let i = 0; i < payload.length; i++) {
+                checksum ^= payload[i];
+            }
+            return checksum & MSP_CRC_MASK;
+        }
+
+        function bitCheck(num, bit) {
+            return ((num >> bit) & 1) !== 0;
+        }
+
+        function bitSet(num, bit) {
+            return num | (1 << bit);
+        }
+
+        function bitClear(num, bit) {
+            return num & ~(1 << bit);
+        }
+
+        function buildMSPMessage(code, payload = []) {
+            const length = payload.length;
+            const buf = new Uint8Array(6 + length);
+            buf[0] = 0x24; // $
+            buf[1] = 0x4D; // M
+            buf[2] = 0x3C; // <
+            buf[3] = length & 0xFF;
+            buf[4] = code & 0xFF;
+            payload.forEach((b, i) => { buf[5 + i] = b & 0xFF; });
+            buf[5 + length] = mspChecksum(length, code, payload);
+            return buf;
+        }
+
+        class MSPParser {
+            /* BLE burst-safe parser (bleblackbox module): O(n) accumulator,
+               CRC verification, multi-frame drain per chunk, and stale-frame
+               filtering - the FC dumps ALL queued MSP responses back-to-back,
+               so leftovers from a previous burst must never be delivered as
+               the answer to the next request. */
+            constructor() {
+                this.buf = new Uint8Array(1024);
+                this.len = 0;
+                this.pos = 0;
+                this.expectedCode = null;
+                this.pendingResponse = null;
+                this.timeout = null;
+            }
+
+            feed(data) {
+                if (this.len + data.length > this.buf.length) {
+                    if (this.pos > 0) {
+                        this.buf.copyWithin(0, this.pos, this.len);
+                        this.len -= this.pos; this.pos = 0;
+                    }
+                    if (this.len + data.length > this.buf.length) {
+                        const cap = Math.max(this.buf.length * 2, this.len + data.length);
+                        const nb = new Uint8Array(cap);
+                        nb.set(this.buf.subarray(0, this.len));
+                        this.buf = nb;
+                    }
+                }
+                this.buf.set(data, this.len);
+                this.len += data.length;
+                while (this.tryParseOne()) {}
+            }
+
+            tryParseOne() {
+                while (this.len - this.pos >= 6) {
+                    if (this.buf[this.pos] !== 0x24 || this.buf[this.pos + 1] !== 0x4D || this.buf[this.pos + 2] !== 0x3E) { this.pos++; continue; }
+                    const b3 = this.buf[this.pos + 3];
+                    const jumbo = (b3 === 0xFF);          /* MSPv1 jumbo: $M> FF code lenLo lenHi payload crc */
+                    let length;
+                    if (jumbo) {
+                        if (this.len - this.pos < 8) return false;
+                        length = this.buf[this.pos + 5] | (this.buf[this.pos + 6] << 8);
+                    } else {
+                        length = b3;
+                    }
+                    const hdrEnd = jumbo ? 7 : 5;
+                    const totalLen = hdrEnd + length + 1;
+                    if (this.len - this.pos < totalLen) return false;
+                    const code = this.buf[this.pos + 4];
+                    const ps = this.pos + hdrEnd;
+                    let crc;
+                    if (jumbo) crc = 255 ^ code ^ (length & 0xFF) ^ ((length >> 8) & 0xFF);
+                    else crc = length ^ code;
+                    for (let i = 0; i < length; i++) crc ^= this.buf[ps + i];
+                    if (crc !== this.buf[ps + length]) { this.pos++; continue; }
+                    const payload = new Uint8Array(this.buf.slice(ps, ps + length));
+                    this.pos += totalLen;
+                    if (this.pos >= this.len) { this.pos = 0; this.len = 0; }
+                    else if (this.pos > 4096) { this.buf.copyWithin(0, this.pos, this.len); this.len -= this.pos; this.pos = 0; }
+                    if (this.pendingResponse && (this.expectedCode === null || this.expectedCode === code)) {
+                        clearTimeout(this.timeout);
+                        const cb = this.pendingResponse;
+                        this.pendingResponse = null;
+                        this.expectedCode = null;
+                        cb({ code, payload });
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            waitResponse(code, timeout = 5000) {
+                this.expectedCode = (code === undefined || code === null) ? null : code;
+                return new Promise((resolve, reject) => {
+                    this.pendingResponse = resolve;
+                    this.timeout = setTimeout(() => {
+                        this.pendingResponse = null;
+                        this.expectedCode = null;
+                        reject(new Error('MSP response timeout'));
+                    }, timeout);
+                });
+            }
+        }
+
+        // ==================== Rate Curve (ported from RateCurve.js) ====================
+        const RATES_TYPE = { NONE: 0, BETAFLIGHT: 1, RACEFLIGHT: 2, KISS: 3, ACTUAL: 4, QUICKRATES: 5, ROTORFLIGHT: 6 };
+        const RATES_TYPE_NAMES = ['None', 'Betaflight', 'Raceflight', 'KISS', 'Actual', 'QuickRates', 'Rotorflight'];
+        const RATES_TYPE_IMAGES = ['none', 'betaflight', 'raceflight', 'kiss', 'actual', 'quickrates', 'rotorflight'];
+
+        class RateCurve {
+            constructor() {
+                this.maxAngularVel = null;
+            }
+
+            constrain(value, min, max) {
+                return Math.max(min, Math.min(value, max));
+            }
+
+            rcCommand(rcData, rcRate, deadband) {
+                const tmp = Math.max(Math.abs(rcData - 1500) - deadband, 0);
+                let result = tmp * rcRate;
+                if (rcData < 1500) {
+                    result = -result;
+                }
+                return result;
+            }
+
+            rcCommandRawToDegreesPerSecond(rcData, ratesType, rate, rcRate, rcExpo, superExpoActive, deadband, limit) {
+                let angleRate;
+                if (rate !== undefined && rcRate !== undefined && rcExpo !== undefined) {
+                    let rcCommandf = this.rcCommand(rcData, 1, deadband);
+                    rcCommandf = rcCommandf / (500 - deadband);
+                    const rcCommandfAbs = Math.abs(rcCommandf);
+
+                    switch (ratesType) {
+                        case RATES_TYPE.BETAFLIGHT: {
+                            let angularVel;
+                            if (rcRate > 2) rcRate = rcRate + (rcRate - 2) * 14.54;
+                            let expoPower = 3;
+                            let rcRateConstant = 200;
+                            if (rcExpo > 0) {
+                                rcCommandf = rcCommandf * Math.pow(rcCommandfAbs, expoPower) * rcExpo + rcCommandf * (1 - rcExpo);
+                            }
+                            if (superExpoActive) {
+                                const rcFactor = 1 / this.constrain(1 - rcCommandfAbs * rate, 0.01, 1);
+                                angularVel = rcRateConstant * rcRate * rcCommandf;
+                                angularVel = angularVel * rcFactor;
+                            } else {
+                                angularVel = (((rate * 100) + 27) * rcCommandf / 16) / 4.1;
+                            }
+                            angleRate = this.constrain(angularVel, -1 * limit, limit);
+                            break;
+                        }
+                        case RATES_TYPE.RACEFLIGHT: {
+                            let angularVel = ((1 + 0.01 * rcExpo * (rcCommandf * rcCommandf - 1.0)) * rcCommandf);
+                            angularVel = (angularVel * (rcRate + (Math.abs(angularVel) * rcRate * rate * 0.01)));
+                            angleRate = angularVel;
+                            break;
+                        }
+                        case RATES_TYPE.KISS: {
+                            const kissRpy = 1 - rcCommandfAbs * rate;
+                            const kissTempCurve = rcCommandf * rcCommandf;
+                            rcCommandf = ((rcCommandf * kissTempCurve) * rcExpo + rcCommandf * (1 - rcExpo)) * (rcRate / 10);
+                            angleRate = ((2000.0 * (1.0 / kissRpy)) * rcCommandf);
+                            break;
+                        }
+                        case RATES_TYPE.ACTUAL: {
+                            let angularVel;
+                            const expof = rcCommandfAbs * ((Math.pow(rcCommandf, 5) * rcExpo) + (rcCommandf * (1 - rcExpo)));
+                            angularVel = Math.max(0, rate - rcRate);
+                            angularVel = (rcCommandf * rcRate) + (angularVel * expof);
+                            angleRate = angularVel;
+                            break;
+                        }
+                        case RATES_TYPE.QUICKRATES: {
+                            rcRate = rcRate * 200;
+                            rate = Math.max(rate, rcRate);
+                            let angularVel;
+                            const superExpoConfig = (((rate / rcRate) - 1) / (rate / rcRate));
+                            const curve = Math.pow(rcCommandfAbs, 3) * rcExpo + rcCommandfAbs * (1 - rcExpo);
+                            angularVel = 1.0 / (1.0 - (curve * superExpoConfig));
+                            angularVel = rcCommandf * rcRate * angularVel;
+                            angleRate = angularVel;
+                            break;
+                        }
+                        case RATES_TYPE.ROTORFLIGHT: {
+                            const shape = rate / 16 + 2;
+                            const expof = rcCommandf * (1 - rcExpo / 100) + Math.sign(rcCommandf) * Math.pow(rcCommandfAbs, shape) * (rcExpo / 100);
+                            angleRate = rcRate * expof;
+                            break;
+                        }
+                        default:
+                            angleRate = rcCommandf * 500;
+                            break;
+                    }
+                }
+                return angleRate;
+            }
+
+            getMaxAngularVel(ratesType, rate, rcRate, rcExpo, superExpoActive, deadband, limit) {
+                return this.rcCommandRawToDegreesPerSecond(2000, ratesType, rate, rcRate, rcExpo, superExpoActive, deadband, limit);
+            }
+
+            setMaxAngularVel(value) {
+                this.maxAngularVel = Math.max(200, Math.ceil(value / 200) * 200);
+                return this.maxAngularVel;
+            }
+
+            drawRateCurve(ratesType, rate, rcRate, rcExpo, superExpoActive, deadband, limit, maxAngularVel, context, width, height, opts = {}) {
+                const rcRange = opts.rcRange ?? 500;
+                const canvasHeightScale = height / (2 * maxAngularVel);
+                const canvasWidthScale = rcRange / 500;
+                const stepWidth = context.lineWidth;
+
+                context.save();
+                context.translate(width / 2, height / 2);
+
+                context.beginPath();
+                let rcData = 1500 - rcRange;
+
+                const getYPos = (rcPos) => {
+                    let value = this.rcCommandRawToDegreesPerSecond(rcPos, ratesType, rate, rcRate, rcExpo, superExpoActive, deadband, limit);
+                    if (opts.maxAngularVel) {
+                        value = Math.max(Math.min(value, opts.maxAngularVel), -opts.maxAngularVel);
+                    }
+                    return value;
+                };
+
+                let xPos = -500;
+                let yPos = -canvasHeightScale * getYPos(rcData);
+                context.moveTo(xPos, yPos);
+                rcData = rcData + stepWidth;
+                while (rcData <= 1500 + rcRange) {
+                    xPos = (rcData - 1500) / canvasWidthScale;
+                    yPos = -canvasHeightScale * getYPos(rcData);
+                    context.lineTo(xPos, yPos);
+                    rcData = rcData + stepWidth;
+                }
+                xPos = 500;
+                yPos = -canvasHeightScale * getYPos(1500 + rcRange);
+                context.lineTo(xPos, yPos);
+                context.stroke();
+                context.restore();
+            }
+
+            draw(ratesType, rate, rcRate, rcExpo, superExpoActive, deadband, limit, maxAngularVel, context, opts) {
+                if (rate !== undefined && rcRate !== undefined && rcExpo !== undefined) {
+                    const height = context.canvas.height;
+                    const width = context.canvas.width;
+                    this.drawRateCurve(ratesType, rate, rcRate, rcExpo, superExpoActive, deadband, limit, maxAngularVel, context, width, height, opts);
+                }
+            }
+        }
+
+        // ==================== Version compare ====================
+        function vcmp(a, b) {
+            const A = String(a).split('.').map(Number);
+            const B = String(b).split('.').map(Number);
+            for (let i = 0; i < 3; i++) {
+                if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) - (B[i] || 0);
+            }
+            return 0;
+        }
+
+        // ==================== Rates data config ====================
+        const DEFAULTS_DYNAMICS_4_5 = {
+            roll_setpoint_boost_gain: 0, pitch_setpoint_boost_gain: 0, yaw_setpoint_boost_gain: 0, collective_setpoint_boost_gain: 0,
+            roll_setpoint_boost_cutoff: 15, pitch_setpoint_boost_cutoff: 15, yaw_setpoint_boost_cutoff: 90, collective_setpoint_boost_cutoff: 15,
+            yaw_dynamic_ceiling_gain: 30, yaw_dynamic_deadband_gain: 30, yaw_dynamic_deadband_filter: 60,
+            roll_response_time: 0, pitch_response_time: 0, yaw_response_time: 0, collective_response_time: 0,
+            roll_accel_limit: 0, pitch_accel_limit: 0, yaw_accel_limit: 0, collective_accel_limit: 0,
+        };
+        const DEFAULTS_DYNAMICS_4_6 = {
+            roll_setpoint_boost_gain: 0, pitch_setpoint_boost_gain: 0, yaw_setpoint_boost_gain: 0, collective_setpoint_boost_gain: 0,
+            roll_setpoint_boost_cutoff: 15, pitch_setpoint_boost_cutoff: 15, yaw_setpoint_boost_cutoff: 90, collective_setpoint_boost_cutoff: 15,
+            yaw_dynamic_ceiling_gain: 0, yaw_dynamic_deadband_gain: 10, yaw_dynamic_deadband_filter: 60,
+            roll_response_time: 0, pitch_response_time: 0, yaw_response_time: 0, collective_response_time: 0,
+            roll_accel_limit: 0, pitch_accel_limit: 0, yaw_accel_limit: 0, collective_accel_limit: 0,
+        };
+
+        // Display scaling (base -> UI). base value = raw FC value / 100.
+        const DISPLAY_SCALE = {
+            [RATES_TYPE.NONE]:       { rc_rate: 1, srate: 1, rc_expo: 1, col_rate: 1, col_srate: 1, col_expo: 1 },
+            [RATES_TYPE.BETAFLIGHT]: { rc_rate: 1, srate: 1, rc_expo: 1, col_rate: 1, col_srate: 1, col_expo: 1 },
+            [RATES_TYPE.KISS]:       { rc_rate: 1, srate: 1, rc_expo: 1, col_rate: 1, col_srate: 1, col_expo: 1 },
+            [RATES_TYPE.RACEFLIGHT]: { rc_rate: 1000, srate: 100, rc_expo: 100, col_rate: 25, col_srate: 100, col_expo: 100 },
+            [RATES_TYPE.ACTUAL]:     { rc_rate: 1000, srate: 1000, rc_expo: 1, col_rate: 25, col_srate: 25, col_expo: 1 },
+            [RATES_TYPE.QUICKRATES]: { rc_rate: 1, srate: 1000, rc_expo: 1, col_rate: 1, col_srate: 480, col_expo: 1 },
+            [RATES_TYPE.ROTORFLIGHT]:{ rc_rate: 500, srate: 100, rc_expo: 100, col_rate: 12.5, col_srate: 100, col_expo: 100 },
+        };
+
+        const RATE_INPUT_CFG = {
+            [RATES_TYPE.NONE]:       { rcRateMax: 0, rcRateMin: 0, rcRateStep: 0, rcRateDec: 0, rateMax: 0, rateStep: 0, rateDec: 0, rcColMax: 0, rcColMin: 0, rcColStep: 0, rcColDec: 0, colMax: 0, colStep: 0, colDec: 0, expoMax: 0, expoStep: 0, expoDec: 0, rcRateLabel: 'RC Rate', rateLabel: 'Rate', rcExpoLabel: 'RC Expo' },
+            [RATES_TYPE.BETAFLIGHT]: { rcRateMax: 2.55, rcRateMin: 0.01, rcRateStep: 0.01, rcRateDec: 2, rateMax: 0.99, rateStep: 0.01, rateDec: 2, rcColMax: 2.20, rcColMin: 0.01, rcColStep: 0.01, rcColDec: 2, colMax: 0.99, colStep: 0.01, colDec: 2, expoMax: 1.00, expoStep: 0.01, expoDec: 2, rcRateLabel: 'RC Rate', rateLabel: 'Rate', rcExpoLabel: 'RC Expo' },
+            [RATES_TYPE.RACEFLIGHT]: { rcRateMax: 1000, rcRateMin: 10, rcRateStep: 10, rcRateDec: 0, rateMax: 255, rateStep: 1, rateDec: 0, rcColMax: 25, rcColMin: 0, rcColStep: 0.1, rcColDec: 1, colMax: 255, colStep: 1, colDec: 0, expoMax: 100, expoStep: 1, expoDec: 0, rcRateLabel: 'RC Rate', rateLabel: 'Raceflight Rate', rcExpoLabel: 'RC Expo' },
+            [RATES_TYPE.KISS]:       { rcRateMax: 2.55, rcRateMin: 0.01, rcRateStep: 0.01, rcRateDec: 2, rateMax: 0.99, rateStep: 0.01, rateDec: 2, rcColMax: 2.55, rcColMin: 0.01, rcColStep: 0.01, rcColDec: 2, colMax: 0.99, colStep: 0.01, colDec: 2, expoMax: 1.00, expoStep: 0.01, expoDec: 2, rcRateLabel: 'RC Rate', rateLabel: 'Raceflight Rate', rcExpoLabel: 'KISS Expo' },
+            [RATES_TYPE.ACTUAL]:     { rcRateMax: 1000, rcRateMin: 10, rcRateStep: 10, rcRateDec: 0, rateMax: 1000, rateStep: 10, rateDec: 0, rcColMax: 25, rcColMin: 0, rcColStep: 0.5, rcColDec: 1, colMax: 25, colStep: 0.5, colDec: 1, expoMax: 1.00, expoStep: 0.01, expoDec: 2, rcRateLabel: 'Actual RC Rate', rateLabel: 'QuickRates Rate', rcExpoLabel: 'Raceflight Expo' },
+            [RATES_TYPE.QUICKRATES]: { rcRateMax: 2.55, rcRateMin: 0.01, rcRateStep: 0.01, rcRateDec: 2, rateMax: 1000, rateStep: 10, rateDec: 0, rcColMax: 2.55, rcColMin: 0.01, rcColStep: 0.01, rcColDec: 2, colMax: 1000, colStep: 10, colDec: 0, expoMax: 1.00, expoStep: 0.01, expoDec: 2, rcRateLabel: 'RC Rate', rateLabel: 'QuickRates Rate', rcExpoLabel: 'Raceflight Expo' },
+            [RATES_TYPE.ROTORFLIGHT]:{ rcRateMax: 1000, rcRateMin: 10, rcRateStep: 5, rcRateDec: 0, rateMax: 127, rateStep: 1, rateDec: 0, rcColMax: 25, rcColMin: 0, rcColStep: 0.25, rcColDec: 2, colMax: 127, colStep: 1, colDec: 0, expoMax: 100, expoStep: 1, expoDec: 0, rcRateLabel: 'Rotorflight RC Rate', rateLabel: 'Rotorflight Shape', rcExpoLabel: 'Rotorflight Expo' },
+        };
+
+        const RATE_DEFAULTS = {
+            [RATES_TYPE.NONE]:       { rcRateDef: 0, rcRateYawDef: 0, rateDef: 0, rcColDef: 0, colDef: 0, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
+            [RATES_TYPE.BETAFLIGHT]: { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 0.00, rcColDef: 2.03, colDef: 0.01, expoDef: 0.00, yawExpoDef: 0.00, colExpoDef: 0.00 },
+            [RATES_TYPE.RACEFLIGHT]: { rcRateDef: 240, rcRateYawDef: 400, rateDef: 0, rcColDef: 12.5, colDef: 0, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
+            [RATES_TYPE.KISS]:       { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 0.00, rcColDef: 2.50, colDef: 0.00, expoDef: 0.00, yawExpoDef: 0.00, colExpoDef: 0.00 },
+            [RATES_TYPE.ACTUAL]:     { rcRateDef: 180, rcRateYawDef: 180, rateDef: 240, rcColDef: 12.5, colDef: 12.5, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
+            [RATES_TYPE.QUICKRATES]: { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 240, rcColDef: 2.50, colDef: 500, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
+            [RATES_TYPE.ROTORFLIGHT]:{ rcRateDef: 250, rcRateYawDef: 400, rateDef: 12, rcColDef: 12.5, colDef: 12, expoDef: 40, yawExpoDef: 50, colExpoDef: 0 },
+        };
+
+        // ==================== RealMSP for Rates ====================
+        class RealMSP {
+            constructor(serialConnection) {
+                this.serial = serialConnection;
+                this.parser = new MSPParser();
+                this.data = {
+                    RC_TUNING: {
+                        rates_type: 1,
+                        roll_rc_rate: 1.0, roll_rc_expo: 0.0, roll_srate: 0.0, roll_response_time: 0, roll_accel_limit: 0,
+                        pitch_rc_rate: 1.0, pitch_rc_expo: 0.0, pitch_srate: 0.0, pitch_response_time: 0, pitch_accel_limit: 0,
+                        yaw_rc_rate: 2.0, yaw_rc_expo: 0.0, yaw_srate: 0.0, yaw_response_time: 0, yaw_accel_limit: 0,
+                        collective_rc_rate: 2.0, collective_rc_expo: 0.0, collective_srate: 0.0, collective_response_time: 0, collective_accel_limit: 0,
+                    },
+                };
+                this.apiVersion = '0.0.0';
+                this.rateProfile = 0;
+
+                this.serial.onData = (bytes) => { this.parser.feed(bytes); };
+            }
+
+            apiGte(v) { return vcmp(this.apiVersion, v) >= 0; }
+
+            async sendCommand(codeOrMsg, payload = []) {
+                const msg = (codeOrMsg instanceof Uint8Array)
+                    ? codeOrMsg
+                    : buildMSPMessage(codeOrMsg, payload);
+                await this.serial.send(msg);
+                const expectCode = (codeOrMsg instanceof Uint8Array) ? ((codeOrMsg.length > 4) ? codeOrMsg[4] : null) : codeOrMsg;
+                    const response = await this.parser.waitResponse(expectCode);
+                return response;
+            }
+
+            async readApiVersion() {
+                const resp = await this.sendCommand(MSP.API_VERSION);
+                const p = resp.payload;
+                // p[0]=msp protocol, p[1]=major, p[2]=minor (patch 0)
+                const major = p[1] || 0;
+                const minor = p[2] || 0;
+                this.apiVersion = `${major}.${minor}.0`;
+                return this.apiVersion;
+            }
+
+            async readStatus() {
+                const resp = await this.sendCommand(MSP.STATUS);
+                const p = resp.payload;
+                let i = 0;
+                const u8 = () => (i < p.length ? p[i++] : 0);
+                const u16 = () => { const lo = u8(); const hi = u8(); return (hi << 8) | lo; };
+                const u32 = () => { const a = u8(), b = u8(), c = u8(), d = u8(); return (d << 24) | (c << 16) | (b << 8) | a; };
+                u16(); // pidCycleTime
+                u16(); // gyroCycleTime
+                u16(); // activeSensors
+                u32(); // mode
+                u8();  // compat profile
+                u16(); // rtLoadRaw
+                u16(); // cpuLoadRaw
+                const flagCount = u8();
+                for (let k = 0; k < flagCount; k++) u8();
+                u8();  // armingDisableCount
+                u32(); // armingDisableFlags
+                u8();  // extraFlags
+                u8();  // configurationState
+                u8();  // profile
+                u8();  // numProfiles
+                this.rateProfile = u8(); // rateProfile
+                u8();  // numRateProfiles
+            }
+
+            async readRCTuning() {
+                const resp = await this.sendCommand(MSP.RC_TUNING);
+                const p = resp.payload;
+                let i = 0;
+                const u8 = () => (i < p.length ? p[i++] : 0);
+                const u16 = () => { const lo = u8(); const hi = u8(); return (hi << 8) | lo; };
+
+                const rt = {};
+                rt.rates_type = u8();
+                rt.roll_rc_rate = u8() / 100;
+                rt.roll_rc_expo = u8() / 100;
+                rt.roll_srate = u8() / 100;
+                rt.roll_response_time = u8();
+                rt.roll_accel_limit = u16();
+                rt.pitch_rc_rate = u8() / 100;
+                rt.pitch_rc_expo = u8() / 100;
+                rt.pitch_srate = u8() / 100;
+                rt.pitch_response_time = u8();
+                rt.pitch_accel_limit = u16();
+                rt.yaw_rc_rate = u8() / 100;
+                rt.yaw_rc_expo = u8() / 100;
+                rt.yaw_srate = u8() / 100;
+                rt.yaw_response_time = u8();
+                rt.yaw_accel_limit = u16();
+                rt.collective_rc_rate = u8() / 100;
+                rt.collective_rc_expo = u8() / 100;
+                rt.collective_srate = u8() / 100;
+                rt.collective_response_time = u8();
+                rt.collective_accel_limit = u16();
+
+                if (this.apiGte('12.8.0')) {
+                    rt.roll_setpoint_boost_gain = u8();
+                    rt.roll_setpoint_boost_cutoff = u8();
+                    rt.pitch_setpoint_boost_gain = u8();
+                    rt.pitch_setpoint_boost_cutoff = u8();
+                    rt.yaw_setpoint_boost_gain = u8();
+                    rt.yaw_setpoint_boost_cutoff = u8();
+                    rt.collective_setpoint_boost_gain = u8();
+                    rt.collective_setpoint_boost_cutoff = u8();
+                    rt.yaw_dynamic_ceiling_gain = u8();
+                    rt.yaw_dynamic_deadband_gain = u8();
+                    rt.yaw_dynamic_deadband_filter = u8();
+                } else {
+                    Object.assign(rt, {
+                        roll_setpoint_boost_gain: 0, roll_setpoint_boost_cutoff: 0,
+                        pitch_setpoint_boost_gain: 0, pitch_setpoint_boost_cutoff: 0,
+                        yaw_setpoint_boost_gain: 0, yaw_setpoint_boost_cutoff: 0,
+                        collective_setpoint_boost_gain: 0, collective_setpoint_boost_cutoff: 0,
+                        yaw_dynamic_ceiling_gain: 0, yaw_dynamic_deadband_gain: 0, yaw_dynamic_deadband_filter: 0,
+                    });
+                }
+
+                if (this.apiGte('12.9.0')) {
+                    rt.cyclic_ring = u8();
+                    rt.cyclic_polar = u8() !== 0;
+                } else {
+                    rt.cyclic_ring = 0;
+                    rt.cyclic_polar = false;
+                }
+
+                this.data.RC_TUNING = rt;
+                return rt;
+            }
+
+            async readRCCommand() {
+                try {
+                    const resp = await this.sendCommand(MSP.RC_COMMAND);
+                    const p = resp.payload;
+                    const arr = [];
+                    for (let i = 0; i + 1 < p.length; i += 2) {
+                        arr.push((p[i + 1] << 8) | p[i]);
+                    }
+                    return arr;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            buildSetRCTuning() {
+                const rt = this.data.RC_TUNING;
+                const b = [];
+                const p8 = (v) => b.push((v | 0) & 0xFF);
+                const p16 = (v) => { const vv = (v | 0) & 0xFFFF; b.push(vv & 0xFF); b.push((vv >> 8) & 0xFF); };
+
+                p8(rt.rates_type);
+                p8(Math.round(rt.roll_rc_rate * 100));
+                p8(Math.round(rt.roll_rc_expo * 100));
+                p8(Math.round(rt.roll_srate * 100));
+                p8(rt.roll_response_time);
+                p16(rt.roll_accel_limit);
+                p8(Math.round(rt.pitch_rc_rate * 100));
+                p8(Math.round(rt.pitch_rc_expo * 100));
+                p8(Math.round(rt.pitch_srate * 100));
+                p8(rt.pitch_response_time);
+                p16(rt.pitch_accel_limit);
+                p8(Math.round(rt.yaw_rc_rate * 100));
+                p8(Math.round(rt.yaw_rc_expo * 100));
+                p8(Math.round(rt.yaw_srate * 100));
+                p8(rt.yaw_response_time);
+                p16(rt.yaw_accel_limit);
+                p8(Math.round(rt.collective_rc_rate * 100));
+                p8(Math.round(rt.collective_rc_expo * 100));
+                p8(Math.round(rt.collective_srate * 100));
+                p8(rt.collective_response_time);
+                p16(rt.collective_accel_limit);
+
+                if (this.apiGte('12.8.0')) {
+                    p8(rt.roll_setpoint_boost_gain); p8(rt.roll_setpoint_boost_cutoff);
+                    p8(rt.pitch_setpoint_boost_gain); p8(rt.pitch_setpoint_boost_cutoff);
+                    p8(rt.yaw_setpoint_boost_gain); p8(rt.yaw_setpoint_boost_cutoff);
+                    p8(rt.collective_setpoint_boost_gain); p8(rt.collective_setpoint_boost_cutoff);
+                    p8(rt.yaw_dynamic_ceiling_gain); p8(rt.yaw_dynamic_deadband_gain); p8(rt.yaw_dynamic_deadband_filter);
+                }
+
+                if (this.apiGte('12.9.0')) {
+                    p8(rt.cyclic_ring); p8(rt.cyclic_polar ? 1 : 0);
+                }
+
+                return buildMSPMessage(MSP.SET_RC_TUNING, b);
+            }
+
+            async selectRateProfile(index) {
+                await this.sendCommand(MSP.SELECT_SETTING, [index + RATE_PROFILE_MASK]);
+            }
+
+            async copyProfile(dstProfile, srcProfile) {
+                await this.sendCommand(MSP.COPY_PROFILE, [1, dstProfile, srcProfile]);
+                await this.sendCommand(MSP.EEPROM_WRITE, []);
+            }
+        }
+
+        // ==================== Rates Tab Logic ====================
+        class RatesTab {
+            constructor() {
+                this.currentRateProfile = 0;
+                this.savedRateProfile = 0;
+                this.currentRatesType = null;
+                this.previousRatesType = null;
+                this.currentRates = null;
+                this.cyclicRingEnabled = false;
+                this.polarRatesEnabled = false;
+                this.isChanged = false;
+                this.isDirty = false;
+                this.serial = new SerialConnection();
+                this.msp = new RealMSP(this.serial);
+                this.rateCurve = new RateCurve();
+                this.rcCommand = [1500, 1500, 1500, 1500];
+                this.liveData = {
+                    raw_setpoint_roll: 0, raw_setpoint_pitch: 0, raw_setpoint_yaw: 0, raw_setpoint_collective: 0,
+                    raw_setpoint_polar_cyclic: 0, actual_setpoint_roll: 0, actual_setpoint_pitch: 0,
+                    actual_setpoint_yaw: 0, actual_setpoint_collective: 0, polar_rc_command: 0,
+                };
+                this.pollTimer = null;
+                this.init();
+            }
+
+            init() {
+                this.bindConnection();
+                this.bindTabs();
+                this.bindButtons();
+                this.bindInputs();
+            }
+
+            bindConnection() {
+                const connectBtn = document.getElementById('connect-btn');
+                const portSelect = document.getElementById('port-select');
+                const baudSelect = document.getElementById('baud-select');
+                const statusEl = document.getElementById('connection-status');
+
+                connectBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (this.serial.connected) {
+                        await this.serial.disconnect();
+                        connectBtn.textContent = 'Connect';
+                        connectBtn.classList.remove('active');
+                        statusEl.textContent = 'Disconnected';
+                        statusEl.classList.remove('connected');
+                        this.stopPolling();
+                    } else {
+                        let portIndex = parseInt(portSelect.value);
+                        if (portSelect.value === 'none' || isNaN(portIndex)) {
+                            try {
+                                await this.serial.requestPort();
+                                await this.serial.updatePorts();
+                                portIndex = 0;
+                            } catch (e) {
+                                console.log('Port selection cancelled');
+                                return;
+                            }
+                        }
+                        const baudRate = baudSelect.value;
+                        const success = await this.serial.connect(portIndex, baudRate);
+                        if (success) {
+                            connectBtn.textContent = 'Disconnect';
+                            connectBtn.classList.add('active');
+                            statusEl.textContent = 'Connected';
+                            statusEl.classList.add('connected');
+                            this.onConnect();
+                        }
+                    }
+                });
+
+                this.serial.updatePorts();
+
+                this.serial.onStatusChange = (connected) => {
+                    if (!connected) {
+                        connectBtn.textContent = 'Connect';
+                        connectBtn.classList.remove('active');
+                        statusEl.textContent = 'Disconnected';
+                        statusEl.classList.remove('connected');
+                    }
+                };
+            }
+
+            async onConnect() {
+                // Allow the FC to finish booting after the DTR reset triggered by port open.
+                await new Promise(r => setTimeout(r, 1200));
+                this.msp.parser.buffer = [];
+                try {
+                    try {
+                        await this.msp.readApiVersion();
+                    } catch (e) {
+                        console.warn('API version read failed, assuming 12.9:', e);
+                        this.msp.apiVersion = '12.9.0';
+                    }
+                    try {
+                        await this.msp.readStatus();
+                    } catch (e) {
+                        console.warn('Status read failed:', e);
+                        this.msp.rateProfile = 0;
+                    }
+                } catch (e) {
+                    console.warn('Pre-init reads failed:', e);
+                }
+
+                this.currentRateProfile = this.msp.rateProfile;
+                this.savedRateProfile = this.currentRateProfile;
+                document.querySelectorAll('.tab-rates .tab-container > div.tab').forEach((tab, i) => {
+                    tab.classList.toggle('active', i === this.currentRateProfile);
+                });
+                this.buildRatesTypeOptions();
+                await this.loadDataFromFC();
+                this.startPolling();
+            }
+
+            buildRatesTypeOptions() {
+                const sel = document.getElementById('ratesType');
+                sel.innerHTML = '';
+                const types = ['None', 'Betaflight', 'Raceflight', 'KISS', 'Actual', 'QuickRates'];
+                if (this.msp.apiGte('12.9.0')) types.push('Rotorflight');
+                types.forEach((name, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = index;
+                    opt.textContent = name;
+                    sel.appendChild(opt);
+                });
+            }
+
+            async loadDataFromFC() {
+                try {
+                    await this.msp.readRCTuning();
+                } catch (e) {
+                    console.error('Failed to read RC_TUNING:', e);
+                    alert('Failed to read rates from FC: ' + e.message);
+                    return;
+                }
+                this.currentRatesType = this.msp.data.RC_TUNING.rates_type;
+                this.previousRatesType = this.msp.data.RC_TUNING.rates_type;
+
+                const sel = document.getElementById('ratesType');
+                if (this.msp.data.RC_TUNING.rates_type < sel.options.length) {
+                    sel.value = this.msp.data.RC_TUNING.rates_type;
+                }
+                this.changeRatesLogo();
+
+                document.querySelector('.cyclic-ring-container').style.display = this.msp.apiGte('12.9.0') ? '' : 'none';
+
+                this.initRatesSystem();
+                this.updateRates();
+            }
+
+            changeRatesLogo() {
+                const name = RATES_TYPE_NAMES[this.currentRatesType] || 'Unknown';
+                document.getElementById('ratesLogoText').textContent = name;
+            }
+
+            initRatesSystem() {
+                const type = this.currentRatesType;
+                const scale = DISPLAY_SCALE[type];
+                const cfg = RATE_INPUT_CFG[type];
+                const base = this.msp.data.RC_TUNING;
+
+                let cr = {
+                    roll_rc_rate: base.roll_rc_rate * scale.rc_rate,
+                    roll_rc_expo: base.roll_rc_expo * scale.rc_expo,
+                    roll_srate: base.roll_srate * scale.srate,
+                    roll_rate_limit: 100000,
+                    pitch_rc_rate: base.pitch_rc_rate * scale.rc_rate,
+                    pitch_rc_expo: base.pitch_rc_expo * scale.rc_expo,
+                    pitch_srate: base.pitch_srate * scale.srate,
+                    pitch_rate_limit: 100000,
+                    yaw_rc_rate: base.yaw_rc_rate * scale.rc_rate,
+                    yaw_rc_expo: base.yaw_rc_expo * scale.rc_expo,
+                    yaw_srate: base.yaw_srate * scale.srate,
+                    yaw_rate_limit: 100000,
+                    collective_rc_rate: base.collective_rc_rate * scale.col_rate,
+                    collective_rc_expo: base.collective_rc_expo * scale.col_expo,
+                    collective_srate: base.collective_srate * scale.col_srate,
+                    collective_rate_limit: 100000,
+                    deadband: 0, yawDeadband: 0, superexpo: true,
+                    roll_response_time: base.roll_response_time, pitch_response_time: base.pitch_response_time,
+                    yaw_response_time: base.yaw_response_time, collective_response_time: base.collective_response_time,
+                    roll_accel_limit: base.roll_accel_limit, pitch_accel_limit: base.pitch_accel_limit,
+                    yaw_accel_limit: base.yaw_accel_limit, collective_accel_limit: base.collective_accel_limit,
+                    roll_setpoint_boost_gain: base.roll_setpoint_boost_gain, roll_setpoint_boost_cutoff: base.roll_setpoint_boost_cutoff,
+                    pitch_setpoint_boost_gain: base.pitch_setpoint_boost_gain, pitch_setpoint_boost_cutoff: base.pitch_setpoint_boost_cutoff,
+                    yaw_setpoint_boost_gain: base.yaw_setpoint_boost_gain, yaw_setpoint_boost_cutoff: base.yaw_setpoint_boost_cutoff,
+                    collective_setpoint_boost_gain: base.collective_setpoint_boost_gain, collective_setpoint_boost_cutoff: base.collective_setpoint_boost_cutoff,
+                    yaw_dynamic_ceiling_gain: base.yaw_dynamic_ceiling_gain, yaw_dynamic_deadband_gain: base.yaw_dynamic_deadband_gain,
+                    yaw_dynamic_deadband_filter: base.yaw_dynamic_deadband_filter,
+                    cyclic_ring: base.cyclic_ring, cyclic_polar: base.cyclic_polar,
+                };
+
+                if (type !== this.previousRatesType) {
+                    const d = RATE_DEFAULTS[type];
+                    cr.roll_srate = d.rateDef; cr.pitch_srate = d.rateDef; cr.yaw_srate = d.rateYawDef;
+                    cr.collective_srate = d.colDef;
+                    cr.roll_rc_rate = d.rcRateDef; cr.pitch_rc_rate = d.rcRateDef; cr.yaw_rc_rate = d.rcRateYawDef;
+                    cr.collective_rc_rate = d.rcColDef;
+                    cr.roll_rc_expo = d.expoDef; cr.pitch_rc_expo = d.expoDef; cr.yaw_rc_expo = d.yawExpoDef;
+                    cr.collective_rc_expo = d.colExpoDef;
+                    cr.cyclic_ring = 150; cr.cyclic_polar = false;
+                    if (this.msp.apiGte('12.9.0')) Object.assign(cr, DEFAULTS_DYNAMICS_4_6);
+                    else Object.assign(cr, DEFAULTS_DYNAMICS_4_5);
+                }
+
+                this.currentRates = cr;
+                this.cyclicRingEnabled = cr.cyclic_ring > 0;
+                this.polarRatesEnabled = cr.cyclic_polar;
+
+                // Set input values (display)
+                document.querySelector('input[name="roll_rc_rate"]').value = cr.roll_rc_rate.toFixed(cfg.rcRateDec);
+                document.querySelector('input[name="pitch_rc_rate"]').value = cr.pitch_rc_rate.toFixed(cfg.rcRateDec);
+                document.querySelector('input[name="yaw_rc_rate"]').value = cr.yaw_rc_rate.toFixed(cfg.rcRateDec);
+                document.querySelector('input[name="roll_srate"]').value = cr.roll_srate.toFixed(cfg.rateDec);
+                document.querySelector('input[name="pitch_srate"]').value = cr.pitch_srate.toFixed(cfg.rateDec);
+                document.querySelector('input[name="yaw_srate"]').value = cr.yaw_srate.toFixed(cfg.rateDec);
+                document.querySelector('input[name="roll_rc_expo"]').value = cr.roll_rc_expo.toFixed(cfg.expoDec);
+                document.querySelector('input[name="pitch_rc_expo"]').value = cr.pitch_rc_expo.toFixed(cfg.expoDec);
+                document.querySelector('input[name="yaw_rc_expo"]').value = cr.yaw_rc_expo.toFixed(cfg.expoDec);
+                document.querySelector('input[name="collective_rc_rate"]').value = cr.collective_rc_rate.toFixed(cfg.rcColDec);
+                document.querySelector('input[name="collective_srate"]').value = cr.collective_srate.toFixed(cfg.colDec);
+                document.querySelector('input[name="collective_rc_expo"]').value = cr.collective_rc_expo.toFixed(cfg.expoDec);
+
+                // apply min/max/step
+                document.querySelectorAll('.rates_setup input[class="rc_rate_input"]').forEach(el => { el.max = cfg.rcRateMax; el.min = cfg.rcRateMin; el.step = cfg.rcRateStep; });
+                document.querySelectorAll('.rates_setup input[class="rate_input"]').forEach(el => { el.max = cfg.rateMax; el.min = 0; el.step = cfg.rateStep; });
+                document.querySelectorAll('.rates_setup input[class="expo_input"]').forEach(el => { el.max = cfg.expoMax; el.min = 0; el.step = cfg.expoStep; });
+                document.querySelectorAll('.rates_setup input[class="rc_collective_input"]').forEach(el => { el.max = cfg.rcColMax; el.min = cfg.rcColMin; el.step = cfg.rcColStep; });
+                document.querySelectorAll('.rates_setup input[class="collective_input"]').forEach(el => { el.max = cfg.colMax; el.min = 0; el.step = cfg.colStep; });
+
+                // titlebar labels
+                document.querySelector('.rates_setup .rates_titlebar .rc_rate').textContent = cfg.rcRateLabel;
+                document.querySelector('.rates_setup .rates_titlebar .rate').textContent = cfg.rateLabel;
+                document.querySelector('.rates_setup .rates_titlebar .rc_expo').textContent = cfg.rcExpoLabel;
+
+                // response / accel
+                document.querySelector('input[name="roll_response"]').value = cr.roll_response_time;
+                document.querySelector('input[name="pitch_response"]').value = cr.pitch_response_time;
+                document.querySelector('input[name="yaw_response"]').value = cr.yaw_response_time;
+                document.querySelector('input[name="coll_response"]').value = cr.collective_response_time;
+
+                document.getElementById('setpoint-boost-gain-roll').value = cr.roll_setpoint_boost_gain;
+                document.getElementById('setpoint-boost-gain-pitch').value = cr.pitch_setpoint_boost_gain;
+                document.getElementById('setpoint-boost-gain-yaw').value = cr.yaw_setpoint_boost_gain;
+                document.getElementById('setpoint-boost-gain-collective').value = cr.collective_setpoint_boost_gain;
+                document.getElementById('setpoint-boost-cutoff-roll').value = cr.roll_setpoint_boost_cutoff;
+                document.getElementById('setpoint-boost-cutoff-pitch').value = cr.pitch_setpoint_boost_cutoff;
+                document.getElementById('setpoint-boost-cutoff-yaw').value = cr.yaw_setpoint_boost_cutoff;
+                document.getElementById('setpoint-boost-cutoff-collective').value = cr.collective_setpoint_boost_cutoff;
+                document.getElementById('yaw-dynamic-ceiling-gain').value = cr.yaw_dynamic_ceiling_gain;
+                document.getElementById('yaw-dynamic-deadband-gain').value = cr.yaw_dynamic_deadband_gain;
+                document.getElementById('yaw-dynamic-deadband-filter').value = (cr.yaw_dynamic_deadband_filter / 10).toFixed(1);
+
+                // cyclic ring + polar
+                const cRing = document.getElementById('enable-cyclic-ring');
+                const cLevel = document.getElementById('cyclic-ring-level');
+                const cPolar = document.getElementById('enable-polar-coordinates');
+                cRing.checked = this.cyclicRingEnabled;
+                cPolar.checked = this.polarRatesEnabled;
+                cLevel.value = cr.cyclic_ring;
+                cLevel.closest('.field').style.display = this.cyclicRingEnabled ? '' : 'none';
+
+                // toggle pitch/roll columns for polar
+                document.querySelector('.rates_setup .ROLL').style.display = this.polarRatesEnabled ? 'none' : '';
+                document.querySelector('.rates_setup .PITCH .axis_title').textContent = this.polarRatesEnabled ? 'CYCLIC' : 'PITCH';
+
+                this.previousRatesType = type;
+                this.updateRates();
+            }
+
+            changeRatesType(rateTypeID) {
+                const dialog = document.querySelector('.dialogRatesType');
+                if (!dialog.open) {
+                    dialog.showModal();
+                    document.querySelector('.dialogRatesType-cancelbtn').onclick = () => {
+                        document.getElementById('ratesType').value = this.currentRatesType;
+                        dialog.close();
+                    };
+                    document.querySelector('.dialogRatesType-confirmbtn').onclick = () => {
+                        this.currentRatesType = rateTypeID;
+                        this.changeRatesLogo();
+                        this.initRatesSystem();
+                        this.setChanged();
+                        dialog.close();
+                    };
+                }
+            }
+
+            updateRates(event) {
+                if (event) {
+                    const t = event.target;
+                    const v = parseFloat(t.value);
+                    if (t.name && Object.hasOwn(this.currentRates, t.name)) {
+                        this.currentRates[t.name] = v;
+                    }
+                    if (t.id === 'ratesType') {
+                        this.changeRatesType(v);
+                        return;
+                    }
+                }
+
+                const cr = this.currentRates;
+                const canvas = document.querySelector('#rate_curve_layer0');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                this.maxCollectiveAngle = this.rateCurve.getMaxAngularVel(
+                    this.currentRatesType, cr.collective_srate, cr.collective_rc_rate, cr.collective_rc_expo, cr.superexpo, 0, cr.collective_rate_limit);
+                cr.max_angular_roll = this.rateCurve.getMaxAngularVel(
+                    this.currentRatesType, cr.roll_srate, cr.roll_rc_rate, cr.roll_rc_expo, cr.superexpo, cr.deadband, cr.roll_rate_limit);
+                cr.max_angular_pitch = this.rateCurve.getMaxAngularVel(
+                    this.currentRatesType, cr.pitch_srate, cr.pitch_rc_rate, cr.pitch_rc_expo, cr.superexpo, cr.deadband, cr.pitch_rate_limit);
+                cr.max_angular_yaw = this.rateCurve.getMaxAngularVel(
+                    this.currentRatesType, cr.yaw_srate, cr.yaw_rc_rate, cr.yaw_rc_expo, cr.superexpo, cr.yawDeadband, cr.yaw_rate_limit);
+
+                cr.max_setpoint_roll = this.cyclicRingEnabled ? (cr.max_angular_roll * (cr.cyclic_ring / 100)) : 2000;
+                cr.max_setpoint_pitch = this.cyclicRingEnabled ? (cr.max_angular_pitch * (cr.cyclic_ring / 100)) : 2000;
+                cr.max_setpoint_polar_cyclic = this.rateCurve.rcCommandRawToDegreesPerSecond(1500 + (500 * Math.sqrt(2)),
+                    this.currentRatesType, cr.pitch_srate, cr.pitch_rc_rate, cr.pitch_rc_expo, cr.superexpo, cr.deadband, cr.pitch_rate_limit);
+                if (this.cyclicRingEnabled) {
+                    cr.max_setpoint_polar_cyclic = Math.min(cr.max_angular_pitch * (cr.cyclic_ring / 100), cr.max_setpoint_polar_cyclic);
+                }
+
+                document.querySelector('.maxAngularVelRoll').value = cr.max_angular_roll.toFixed(0);
+                if (this.polarRatesEnabled) {
+                    document.querySelector('.maxAngularVelPitch').value = cr.max_setpoint_polar_cyclic.toFixed(0);
+                } else {
+                    document.querySelector('.maxAngularVelPitch').value = cr.max_angular_pitch.toFixed(0);
+                }
+                document.querySelector('.maxAngularVelYaw').value = cr.max_angular_yaw.toFixed(0);
+                document.querySelector('.maxCollectiveAngle').value = this.convertToCollective(this.maxCollectiveAngle);
+
+                let maxAngularVel = cr.max_angular_yaw;
+                if (this.polarRatesEnabled) {
+                    maxAngularVel = Math.max(maxAngularVel, cr.max_setpoint_polar_cyclic);
+                } else {
+                    maxAngularVel = Math.max(maxAngularVel, cr.max_angular_roll, cr.max_angular_pitch);
+                }
+                maxAngularVel = this.rateCurve.setMaxAngularVel(maxAngularVel);
+
+                // draw axes
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height / 2);
+                ctx.lineTo(canvas.width, canvas.height / 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2, 0);
+                ctx.lineTo(canvas.width / 2, canvas.height);
+                ctx.stroke();
+
+                const scale = (ctx.canvas.width / ctx.canvas.clientWidth) || 1;
+                ctx.lineWidth = 2 * scale;
+
+                const drawCurve = (rate, rcRate, rcExpo, useSuperExpo, deadband, limit, maxAngularVel, colour, yOffset, context, opts) => {
+                    context.save();
+                    context.strokeStyle = colour;
+                    context.translate(0, yOffset);
+                    this.rateCurve.draw(this.currentRatesType, rate, rcRate, rcExpo, useSuperExpo, deadband, limit, maxAngularVel, context, opts);
+                    context.restore();
+                };
+
+                drawCurve(
+                    cr.collective_srate,
+                    cr.collective_rc_rate,
+                    cr.collective_rc_expo,
+                    cr.superexpo,
+                    0,
+                    cr.collective_rate_limit,
+                    this.maxCollectiveAngle,
+                    '#ffbb00',
+                    -4,
+                    ctx,
+                );
+
+                drawCurve(
+                    cr.yaw_srate,
+                    cr.yaw_rc_rate,
+                    cr.yaw_rc_expo,
+                    cr.superexpo,
+                    cr.yawDeadband,
+                    cr.yaw_rate_limit,
+                    maxAngularVel,
+                    '#0000ff',
+                    4,
+                    ctx,
+                );
+
+                if (this.polarRatesEnabled) {
+                    drawCurve(
+                        cr.pitch_srate,
+                        cr.pitch_rc_rate,
+                        cr.pitch_rc_expo,
+                        cr.superexpo,
+                        cr.deadband,
+                        cr.pitch_rate_limit,
+                        maxAngularVel,
+                        '#00ff00',
+                        0,
+                        ctx,
+                        {
+                            rcRange: 500 * Math.sqrt(2),
+                            maxAngularVel: cr.max_setpoint_polar_cyclic,
+                        },
+                    );
+                } else {
+                    drawCurve(
+                        cr.roll_srate,
+                        cr.roll_rc_rate,
+                        cr.roll_rc_expo,
+                        cr.superexpo,
+                        cr.deadband,
+                        cr.roll_rate_limit,
+                        maxAngularVel,
+                        '#ff0000',
+                        -2,
+                        ctx,
+                    );
+                    drawCurve(
+                        cr.pitch_srate,
+                        cr.pitch_rc_rate,
+                        cr.pitch_rc_expo,
+                        cr.superexpo,
+                        cr.deadband,
+                        cr.pitch_rate_limit,
+                        maxAngularVel,
+                        '#00ff00',
+                        2,
+                        ctx,
+                    );
+                }
+
+                this.updateRcPositions();
+                this.updateRatesLabels();
+            }
+
+            convertToCollective(rate) {
+                switch (this.currentRatesType) {
+                    case RATES_TYPE.NONE:
+                    case RATES_TYPE.BETAFLIGHT:
+                    case RATES_TYPE.KISS:
+                    case RATES_TYPE.QUICKRATES:
+                        rate /= 40;
+                        break;
+                    default:
+                        break;
+                }
+                return rate.toFixed(1);
+            }
+
+            updateRcPositions() {
+                const cr = this.currentRates;
+                if (!cr) return;
+                const rc = this.rcCommand;
+                this.liveData.raw_setpoint_roll = this.rateCurve.rcCommandRawToDegreesPerSecond(1500 + rc[0], this.currentRatesType, cr.roll_srate, cr.roll_rc_rate, cr.roll_rc_expo, cr.superexpo, cr.deadband, cr.roll_rate_limit);
+                this.liveData.raw_setpoint_pitch = this.rateCurve.rcCommandRawToDegreesPerSecond(1500 + rc[1], this.currentRatesType, cr.pitch_srate, cr.pitch_rc_rate, cr.pitch_rc_expo, cr.superexpo, cr.deadband, cr.pitch_rate_limit);
+                this.liveData.raw_setpoint_yaw = this.rateCurve.rcCommandRawToDegreesPerSecond(1500 + rc[2], this.currentRatesType, cr.yaw_srate, cr.yaw_rc_rate, cr.yaw_rc_expo, cr.superexpo, cr.yawDeadband, cr.yaw_rate_limit);
+                this.liveData.raw_setpoint_collective = this.rateCurve.rcCommandRawToDegreesPerSecond(1500 + rc[3], this.currentRatesType, cr.collective_srate, cr.collective_rc_rate, cr.collective_rc_expo, cr.superexpo, 0, cr.collective_rate_limit);
+
+                this.liveData.actual_setpoint_yaw = this.liveData.raw_setpoint_yaw;
+                this.liveData.actual_setpoint_collective = this.liveData.raw_setpoint_collective;
+
+                if (this.polarRatesEnabled) {
+                    const roll = rc[0] / 500;
+                    const pitch = rc[1] / 500;
+                    this.liveData.polar_rc_command = Math.sqrt(roll ** 2 + pitch ** 2);
+                    this.liveData.raw_setpoint_polar_cyclic = Math.min(this.rateCurve.rcCommandRawToDegreesPerSecond(1500 + this.liveData.polar_rc_command * 500, this.currentRatesType, cr.pitch_srate, cr.pitch_rc_rate, cr.pitch_rc_expo, cr.superexpo, cr.deadband, cr.pitch_rate_limit), cr.max_setpoint_pitch);
+                    const mult = (this.liveData.polar_rc_command > 1e-6) ? this.liveData.raw_setpoint_polar_cyclic / this.liveData.polar_rc_command : 0;
+                    this.liveData.actual_setpoint_roll = roll * mult;
+                    this.liveData.actual_setpoint_pitch = pitch * mult;
+                } else {
+                    this.liveData.actual_setpoint_roll = this.liveData.raw_setpoint_roll;
+                    this.liveData.actual_setpoint_pitch = this.liveData.raw_setpoint_pitch;
+                    const R = this.liveData.raw_setpoint_roll / cr.max_setpoint_roll;
+                    const P = this.liveData.raw_setpoint_pitch / cr.max_setpoint_pitch;
+                    const C = Math.sqrt(R ** 2 + P ** 2);
+                    if (C > 1.0) {
+                        this.liveData.actual_setpoint_roll /= C;
+                        this.liveData.actual_setpoint_pitch /= C;
+                    }
+                }
+            }
+
+            drawStickPosition(context, color, rcPos, value, maxValue) {
+                const DEFAULT_SIZE = 60;
+                const rateScaling = (context.canvas.height / 2) / maxValue;
+                context.save();
+                context.fillStyle = color;
+                context.translate(context.canvas.width / 2, context.canvas.height / 2);
+                context.beginPath();
+                context.arc(rcPos, -rateScaling * value, context.canvas.height / DEFAULT_SIZE, 0, 2 * Math.PI);
+                context.fill();
+                context.restore();
+            }
+
+            updateRatesLabels() {
+                const cr = this.currentRates;
+                if (!cr || !this.rateCurve.maxAngularVel) return;
+
+                const canvas = document.querySelector('#rate_curve_layer1');
+                const ctx = canvas.getContext('2d');
+                const curveHeight = canvas.height;
+                const curveWidth = canvas.width;
+                const maxAngularVel = this.rateCurve.maxAngularVel;
+                const rateScale = (curveHeight / 2) / maxAngularVel;
+                const rc = this.rcCommand;
+
+                ctx.clearRect(0, 0, curveWidth, curveHeight);
+
+                if (this.polarRatesEnabled) {
+                    this.drawStickPosition(ctx, '#80FF80', rc[0] / Math.sqrt(2), this.liveData.raw_setpoint_polar_cyclic, maxAngularVel);
+                } else {
+                    this.drawStickPosition(ctx, '#FF8080', rc[0], this.liveData.actual_setpoint_roll, maxAngularVel);
+                    this.drawStickPosition(ctx, '#80FF80', rc[1], this.liveData.actual_setpoint_pitch, maxAngularVel);
+                }
+                this.drawStickPosition(ctx, '#8080FF', rc[2], this.liveData.actual_setpoint_yaw, maxAngularVel);
+                this.drawStickPosition(ctx, '#FFBB00', rc[3], this.liveData.actual_setpoint_collective, this.maxCollectiveAngle);
+            }
+
+            // ---- form <-> data ----
+            getRateBase(axis, field, scaleKey) {
+                const input = document.querySelector(`input[name="${axis}_${field}"]`);
+                const display = parseFloat(input.value) || 0;
+                return display / DISPLAY_SCALE[this.currentRatesType][scaleKey];
+            }
+
+            formToData() {
+                const cr = this.msp.data.RC_TUNING;
+                cr.rates_type = parseInt(document.getElementById('ratesType').value);
+
+                cr.roll_response_time = parseInt(document.querySelector('input[name="roll_response"]').value) || 0;
+                cr.pitch_response_time = parseInt(document.querySelector('input[name="pitch_response"]').value) || 0;
+                cr.yaw_response_time = parseInt(document.querySelector('input[name="yaw_response"]').value) || 0;
+                cr.collective_response_time = parseInt(document.querySelector('input[name="coll_response"]').value) || 0;
+
+                cr.roll_setpoint_boost_gain = parseInt(document.getElementById('setpoint-boost-gain-roll').value) || 0;
+                cr.pitch_setpoint_boost_gain = parseInt(document.getElementById('setpoint-boost-gain-pitch').value) || 0;
+                cr.yaw_setpoint_boost_gain = parseInt(document.getElementById('setpoint-boost-gain-yaw').value) || 0;
+                cr.collective_setpoint_boost_gain = parseInt(document.getElementById('setpoint-boost-gain-collective').value) || 0;
+                cr.roll_setpoint_boost_cutoff = parseInt(document.getElementById('setpoint-boost-cutoff-roll').value) || 0;
+                cr.pitch_setpoint_boost_cutoff = parseInt(document.getElementById('setpoint-boost-cutoff-pitch').value) || 0;
+                cr.yaw_setpoint_boost_cutoff = parseInt(document.getElementById('setpoint-boost-cutoff-yaw').value) || 0;
+                cr.collective_setpoint_boost_cutoff = parseInt(document.getElementById('setpoint-boost-cutoff-collective').value) || 0;
+
+                cr.yaw_dynamic_ceiling_gain = parseInt(document.getElementById('yaw-dynamic-ceiling-gain').value) || 0;
+                cr.yaw_dynamic_deadband_gain = parseInt(document.getElementById('yaw-dynamic-deadband-gain').value) || 0;
+                cr.yaw_dynamic_deadband_filter = (parseFloat(document.getElementById('yaw-dynamic-deadband-filter').value) || 0) * 10;
+
+                const cRing = document.getElementById('enable-cyclic-ring');
+                cr.cyclic_ring = cRing.checked ? (parseInt(document.getElementById('cyclic-ring-level').value) || 0) : 0;
+                cr.cyclic_polar = document.getElementById('enable-polar-coordinates').checked;
+
+                cr.roll_rc_expo = this.getRateBase('roll', 'rc_expo', 'rc_expo');
+                cr.roll_rc_rate = this.getRateBase('roll', 'rc_rate', 'rc_rate');
+                cr.roll_srate = this.getRateBase('roll', 'srate', 'srate');
+                cr.pitch_rc_expo = this.getRateBase('pitch', 'rc_expo', 'rc_expo');
+                cr.pitch_rc_rate = this.getRateBase('pitch', 'rc_rate', 'rc_rate');
+                cr.pitch_srate = this.getRateBase('pitch', 'srate', 'srate');
+                cr.yaw_rc_expo = this.getRateBase('yaw', 'rc_expo', 'rc_expo');
+                cr.yaw_rc_rate = this.getRateBase('yaw', 'rc_rate', 'rc_rate');
+                cr.yaw_srate = this.getRateBase('yaw', 'srate', 'srate');
+                cr.collective_rc_expo = this.getRateBase('collective', 'rc_expo', 'col_expo');
+                cr.collective_rc_rate = this.getRateBase('collective', 'rc_rate', 'col_rate');
+                cr.collective_srate = this.getRateBase('collective', 'srate', 'col_srate');
+            }
+
+            async saveData() {
+                this.formToData();
+                this.stopPolling();
+                const savingDialog = document.querySelector('.dialogSaving');
+                savingDialog.showModal();
+                try {
+                    await this.serial.send(this.msp.buildSetRCTuning());
+                    await new Promise(r => setTimeout(r, 100));
+                    await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
+                } catch (e) {
+                    console.error('Save failed:', e);
+                    savingDialog.close();
+                    alert('Failed to save: ' + e.message);
+                    this.startPolling();
+                    return;
+                }
+                savingDialog.close();
+                this.savedRateProfile = this.currentRateProfile;
+                this.isChanged = false;
+                this.isDirty = false;
+                document.querySelector('.tab-rates').classList.add('toolbar_hidden');
+                this.startPolling();
+            }
+
+            async revert() {
+                if (this.currentRateProfile !== this.savedRateProfile) {
+                    await this.activateProfile(this.savedRateProfile);
+                }
+            }
+
+async activateProfile(index) {
+                this.stopPolling();
+                try {
+                    await this.msp.selectRateProfile(index);
+                    this.currentRateProfile = index;
+                    document.querySelectorAll('.tab-rates .tab-container > div.tab').forEach((tab, i) => {
+                        tab.classList.toggle('active', i === index);
+                    });
+                    await this.loadDataFromFC();
+                    this.isChanged = false;
+                    this.isDirty = false;
+                    document.querySelector('.tab-rates').classList.add('toolbar_hidden');
+                } catch (e) {
+                    console.error('Profile switch failed:', e);
+                    alert('Failed to switch profile: ' + e.message);
+                } finally {
+                    this.startPolling();
+                }
+            }
+
+            async copyProfile(dstProfile) {
+                this.stopPolling();
+                try {
+                    await this.msp.copyProfile(dstProfile, this.currentRateProfile);
+                    alert(`Profile ${this.currentRateProfile + 1} copied to Profile ${dstProfile + 1}`);
+                } catch (e) {
+                    console.error('Copy failed:', e);
+                    alert('Failed to copy profile: ' + e.message);
+                } finally {
+                    this.startPolling();
+                }
+            }
+
+            // ---- bindings ----
+            bindTabs() {
+                const tabs = document.querySelectorAll('.tab-rates .tab-container > div.tab');
+                tabs.forEach((tab, index) => {
+                    tab.addEventListener('click', async () => {
+                        if (index !== this.currentRateProfile) {
+                            if (this.isChanged) {
+                                const d = document.querySelector('.dialogProfileChange');
+                                d.showModal();
+                                document.querySelector('.dialogProfileChangeYesBtn').onclick = async (e) => {
+                                    e.preventDefault();
+                                    d.close();
+                                    await this.saveData();
+                                    await this.activateProfile(index);
+                                };
+                                document.querySelector('.dialogProfileChangeNoBtn').onclick = async (e) => {
+                                    e.preventDefault();
+                                    d.close();
+                                    await this.activateProfile(index);
+                                };
+                            } else {
+                                await this.activateProfile(index);
+                            }
+                        }
+                    });
+                });
+            }
+
+            bindButtons() {
+                document.querySelector('.content_toolbar .save_btn a').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await this.saveData();
+                });
+                document.querySelector('.content_toolbar .revert_btn a').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await this.revert();
+                });
+
+                document.getElementById('copyProfile').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (!this.isChanged) {
+                        const sel = document.getElementById('selectProfile');
+                        sel.innerHTML = '';
+                        this.TAB_NAMES.forEach((name, key) => {
+                            if (key !== this.currentRateProfile) {
+                                const opt = document.createElement('option');
+                                opt.value = key;
+                                opt.textContent = `Profile #${key + 1}`;
+                                sel.appendChild(opt);
+                            }
+                        });
+                        document.querySelector('.dialogCopyProfile').showModal();
+                    }
+                });
+                document.querySelector('.dialogCopyProfile-confirmbtn').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const dst = parseInt(document.getElementById('selectProfile').value);
+                    await this.copyProfile(dst);
+                    document.querySelector('.dialogCopyProfile').close();
+                });
+                document.querySelector('.dialogCopyProfile-cancelbtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelector('.dialogCopyProfile').close();
+                });
+            }
+
+            bindInputs() {
+                const tabArea = document.querySelector('.tab-area');
+                tabArea.addEventListener('change', () => { this.setChanged(); });
+
+                document.querySelectorAll('.rates_change').forEach(el => {
+                    el.addEventListener('input', (e) => { this.updateRates(e); });
+                    el.addEventListener('change', (e) => { this.updateRates(e); });
+                });
+
+                // cyclic ring
+                document.getElementById('enable-cyclic-ring').addEventListener('change', (e) => {
+                    this.cyclicRingEnabled = e.target.checked;
+                    const level = document.getElementById('cyclic-ring-level');
+                    if (e.target.checked && this.currentRates.cyclic_ring === 0) {
+                        level.value = 150;
+                    }
+                    level.closest('.field').style.display = e.target.checked ? '' : 'none';
+                    this.updateRates();
+                });
+                document.getElementById('cyclic-ring-level').addEventListener('change', (e) => {
+                    this.currentRates.cyclic_ring = parseInt(e.target.value) || 0;
+                    this.updateRates();
+                });
+                document.getElementById('enable-polar-coordinates').addEventListener('change', (e) => {
+                    this.polarRatesEnabled = e.target.checked;
+                    document.querySelector('.rates_setup .ROLL').style.display = e.target.checked ? 'none' : '';
+                    document.querySelector('.rates_setup .PITCH .axis_title').textContent = e.target.checked ? 'CYCLIC' : 'PITCH';
+                    this.updateRates();
+                });
+
+                // number input clamp
+                document.querySelectorAll('.tab-area input[type="number"]').forEach(input => {
+                    input.addEventListener('change', () => {
+                        const min = parseFloat(input.min);
+                        const max = parseFloat(input.max);
+                        let val = parseFloat(input.value);
+                        if (!isNaN(min) && val < min) val = min;
+                        if (!isNaN(max) && val > max) val = max;
+                        if (!isNaN(val)) input.value = val;
+                    });
+                });
+            }
+
+            setChanged() {
+                if (!this.isChanged) {
+                    this.isDirty = true;
+                    this.isChanged = true;
+                    document.querySelector('.tab-rates').classList.remove('toolbar_hidden');
+                }
+            }
+
+            // ---- polling ----
+            startPolling() {
+                this.stopPolling();
+                this.pollTimer = setInterval(async () => {
+                    if (!this.serial.connected) return;
+                    const rc = await this.msp.readRCCommand();
+                    if (rc && rc.length >= 4) {
+                        this.rcCommand = rc.slice(0, 4);
+                        if (this.currentRates) {
+                            this.updateRcPositions();
+                            this.updateRatesLabels();
+                        }
+                    }
+                }, 200);
+            }
+
+            stopPolling() {
+                if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+            }
+        }
+
+        RatesTab.prototype.TAB_NAMES = ['rateProfile1', 'rateProfile2', 'rateProfile3', 'rateProfile4', 'rateProfile5', 'rateProfile6'];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new RatesTab();
+        });
+    </script>
+    <script src="../bridge.js"></script>
+</body>
+</html>

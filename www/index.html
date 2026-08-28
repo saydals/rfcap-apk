@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>RFCap - Rotorflight Configurator</title>
+<script src="./hub.js?v=106"></script>
+<style>
+    :root { --hdr-h:48px; --nav-h:54px; }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html[data-theme="light"] {
+        --bg:#e6e8ec; --surface:#f5f6f8; --text:#1a1c20; --soft:#5a6070;
+        --border:#c9ccd4; --accent:hsl(202,100%,45%); --ok:#2e8b2e; --chip:#ffffff;
+    }
+    html[data-theme="dark"] {
+        --bg:#121417; --surface:#1d2025; --text:#e8eaee; --soft:#9aa0ad;
+        --border:#33373f; --accent:hsl(202,100%,55%); --ok:#5dcf5d; --chip:#24272d;
+    }
+    html,body { height:100%; overflow:hidden; }
+    body {
+        font-family:"Open Sans","Segoe UI",Tahoma,sans-serif; font-size:13px;
+        background:var(--bg); color:var(--text);
+        display:flex; flex-direction:column;
+    }
+    /* ---------- common header ---------- */
+    #app-header {
+        height:var(--hdr-h); flex:0 0 auto;
+        display:flex; align-items:center; gap:10px;
+        padding:0 12px; padding-top:env(safe-area-inset-top);
+        background:var(--surface); border-bottom:1px solid var(--border);
+        z-index:10;
+    }
+    #app-ver { font-size:9px; color:var(--soft); opacity:.7; white-space:nowrap; }
+    #app-logo { font-weight:bold; font-size:15px; letter-spacing:.5px; color:var(--accent); white-space:nowrap; }
+    #conn-chip {
+        display:flex; align-items:center; gap:6px;
+        background:var(--chip); border:1px solid var(--border);
+        border-radius:14px; padding:3px 10px; min-width:0;
+    }
+    #conn-dot { width:9px; height:9px; border-radius:50%; background:#999; flex:0 0 auto; transition:background .2s; }
+    #conn-dot.on-spp, #conn-dot.on-ble { background:var(--ok); box-shadow:0 0 6px var(--ok); }
+    #conn-text { font-size:11px; color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46vw; }
+    #disc-btn {
+        border:1px solid var(--border); background:transparent; color:var(--text);
+        font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer;
+    }
+    #disc-btn:disabled { opacity:.35; }
+    #theme-btn { margin-left:auto; background:transparent; border:none; font-size:16px; cursor:pointer; color:var(--text); padding:4px; }
+    /* ---------- tab area ---------- */
+    #tab-area { flex:1 1 auto; position:relative; min-height:0; }
+    /* All tabs stay mounted & sized (visibility toggle, NOT display:none)
+       so canvases (three.js heli) survive tab switches. */
+    #tab-area iframe {
+        position:absolute; inset:0; width:100%; height:100%;
+        border:none; background:var(--bg);
+        /* keep every tab PAINTING (opacity, not display/visibility) so the
+           three.js rAF loop never stalls and WebGL state is never lost */
+        opacity:0; pointer-events:none;
+    }
+    #tab-area iframe.active { opacity:1; pointer-events:auto; z-index:2; }
+    /* ---------- bottom nav ---------- */
+    #tab-nav {
+        height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+        flex:0 0 auto; display:flex;
+        background:var(--surface); border-top:1px solid var(--border);
+        padding-bottom:env(safe-area-inset-bottom);
+    }
+    .tab-btn {
+        flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+        gap:3px; background:none; border:none; color:var(--soft);
+        font-family:inherit; font-size:10px; cursor:pointer; user-select:none;
+        padding-top:6px;
+    }
+    .tab-btn .ico {
+        width:22px; height:22px; object-fit:contain; display:block;
+        opacity:.55; transition:.15s;
+        /* source SVGs are white - recolour per theme */
+        filter:invert(.72) grayscale(1);
+    }
+    html[data-theme="dark"] .tab-btn .ico { opacity:.5; filter:none; }
+    .tab-btn.active { color:var(--accent); }
+    html[data-theme="light"] .tab-btn.active .ico { opacity:1; filter:invert(.78) sepia(1) saturate(28) hue-rotate(172deg) brightness(.9); transform:scale(1.08); }
+    html[data-theme="dark"]  .tab-btn.active .ico { opacity:1; filter:none; transform:scale(1.08); }
+</style>
+</head>
+<body>
+    <header id="app-header">
+        <span id="app-logo">RFCap</span>
+        <span id="app-ver">v1.0.6</span>
+        <div id="conn-chip" title="Connection state (shared across all tabs)">
+            <span id="conn-dot"></span>
+            <span id="conn-text">Disconnected</span>
+        </div>
+        <button id="disc-btn" disabled>Disconnect</button>
+        <button id="theme-btn" title="Toggle theme">&#127769;</button>
+    </header>
+
+    <main id="tab-area">
+        <iframe id="tab-status"   src="./tabs/status.html?v=106"   class="active" title="Status"></iframe>
+        <iframe id="tab-mixer"    src="./tabs/mixer.html?v=106"    title="Mixer"></iframe>
+        <iframe id="tab-servos"   src="./tabs/servos.html?v=106"   title="Servos"></iframe>
+        <iframe id="tab-rates"    src="./tabs/Rates.html?v=106"    title="Rates"></iframe>
+        <iframe id="tab-profiles" src="./tabs/Profiles.html?v=106" title="Profiles"></iframe>
+    </main>
+
+    <nav id="tab-nav">
+        <button class="tab-btn active" data-tab="status"><img class="ico" src="./icons/cf_icon_data_white.svg" alt="">Status</button>
+        <button class="tab-btn" data-tab="mixer"><img class="ico" src="./icons/cf_icon_heli.svg" alt="">Mixer</button>
+        <button class="tab-btn" data-tab="servos"><img class="ico" src="./icons/cf_icon_servo_white.svg" alt="">Servos</button>
+        <button class="tab-btn" data-tab="rates"><img class="ico" src="./icons/cf_icon_pid_white.svg" alt="">Rates</button>
+        <button class="tab-btn" data-tab="profiles"><img class="ico" src="./icons/cf_icon_settings_white.svg" alt="">Profiles</button>
+    </nav>
+
+<script src="./shell.js?v=106"></script>
+</body>
+</html>

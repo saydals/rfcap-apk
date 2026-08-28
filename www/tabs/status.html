@@ -1,0 +1,2634 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotorflight Configurator - Status</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script src="../vendor/three.min.js"></script>
+    <script src="../vendor/GLTFLoader.js"></script>
+    <style>
+        :root {
+            --animation-speed: 0.2s ease;
+            --section-gap: 16px;
+            --section-padding: 8px;
+            --color-shadow: rgba(0,0,0,0.2);
+            --color-shadow-soft: rgba(0,0,0,0.12);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * { outline:none; user-select:none; -webkit-user-drag:none; -webkit-app-region:no-drag; box-sizing:border-box; }
+        ::-webkit-scrollbar { width:8px; height:8px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-500); }
+
+        html, body {
+            height:100%; margin:0; padding:0;
+            font-family:"Open Sans","Segoe UI",Tahoma,sans-serif;
+            font-size:12px;
+            color:var(--color-text);
+            background-color:var(--color-bg);
+            transition: background-color var(--animation-speed), color var(--animation-speed);
+        }
+
+        /* ============ LIGHT THEME ============ */
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 8%, 98%);
+            --color-neutral-100: hsl(220, 8%, 97%);
+            --color-neutral-200: hsl(220, 8%, 92%);
+            --color-neutral-300: hsl(220, 8%, 85%);
+            --color-neutral-400: hsl(220, 8%, 70%);
+            --color-neutral-500: hsl(220, 8%, 50%);
+            --color-neutral-600: hsl(220, 8%, 30%);
+            --color-neutral-700: hsl(220, 8%, 18%);
+            --color-neutral-800: hsl(220, 8%, 10%);
+            --color-neutral-900: hsl(220, 8%, 5%);
+            --color-neutral-950: hsl(220, 8%, 3%);
+
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-surface-hover: var(--color-neutral-200);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+            --quietHeader: #555555;
+            --quietText: #ffffff;
+
+            --color-roll: #e85d5d;
+            --color-pitch: #5dcf5d;
+            --color-yaw: #6b6bff;
+            --color-collective: #ffb700;
+            --color-roll-soft: #ff8080;
+            --color-pitch-soft: #80ff80;
+            --color-yaw-soft: #8080ff;
+            --color-collective-soft: #ffcc33;
+        }
+
+        /* ============ DARK THEME ============ */
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(240, 10%, 5%);
+            --color-neutral-900: hsl(240, 8%, 10%);
+            --color-neutral-800: hsl(240, 6%, 18%);
+            --color-neutral-700: hsl(240, 5%, 26%);
+            --color-neutral-600: hsl(240, 5%, 36%);
+            --color-neutral-500: hsl(240, 4%, 52%);
+            --color-neutral-400: hsl(240, 5%, 62%);
+            --color-neutral-300: hsl(240, 6%, 72%);
+            --color-neutral-200: hsl(240, 8%, 82%);
+            --color-neutral-100: hsl(240, 10%, 90%);
+            --color-neutral-50: hsl(240, 12%, 95%);
+
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-surface-hover: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 55%, 48%);
+
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-300);
+            --color-text-disabled: var(--color-neutral-500);
+
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+
+            --color-btn-fg: var(--color-neutral-50);
+            --color-btn-fg-disabled: var(--color-neutral-600);
+            --color-btn-bg: var(--color-neutral-700);
+            --color-btn-bg-hover: var(--color-neutral-600);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-800);
+
+            --color-switch: hsl(202, 45%, 45%);
+            --color-switch-handle: var(--color-neutral-100);
+
+            --accent: hsl(202, 50%, 50%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+            --quietHeader: #3a3a3a;
+            --quietText: #e0e0e0;
+
+            --color-roll: #a83232;
+            --color-pitch: #2e8b2e;
+            --color-yaw: #3a3ab8;
+            --color-collective: #b87a00;
+            --color-roll-soft: #ff6b6b;
+            --color-pitch-soft: #6bcf6b;
+            --color-yaw-soft: #7a7aff;
+            --color-collective-soft: #ffbb33;
+        }
+
+        body {
+            background-color: var(--color-bg);
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--color-border-accent);
+            font-weight: bold;
+        }
+
+        a.disabled {
+            pointer-events: none;
+            cursor: default;
+            color: var(--color-text-disabled);
+        }
+
+        /* ============ CONNECTION PANEL ============ */
+        #connection-panel {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #connection-panel .panel-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+
+        #connection-panel select,
+        #connection-panel input[type="text"] {
+            padding: 4px 8px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-input-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            height: 28px;
+        }
+
+        #connection-panel button {
+            padding: 4px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 28px;
+        }
+
+        #connection-panel button:hover:not(:disabled) {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        #connection-panel button:disabled {
+            background-color: var(--color-btn-bg-disabled);
+            color: var(--color-btn-fg-disabled);
+            cursor: not-allowed;
+        }
+
+        #connection-panel button.active {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-panel button.active:hover {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-status {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--color-text-soft);
+        }
+
+        #connection-status.connected {
+            color: #2e8b2e;
+        }
+
+        /* ============ MAIN LAYOUT ============ */
+        #main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #tab-content-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* ============ STATUS TAB ============ */
+        .tab-status {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .tab-status .section-row {
+            display: flex;
+            flex-flow: row wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: flex-start;
+        }
+
+        .tab-status .gui_box {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 5px;
+            padding-top: 28px;
+            padding-bottom: 8px;
+            position: relative;
+            overflow: visible;
+        }
+
+        html[data-theme="dark"] .tab-status .gui_box {
+            background-color: #1e1e2a;
+            border-color: var(--color-border);
+        }
+
+        .tab-status .gui_box_titlebar {
+            font-size: 13px;
+            font-weight: 700;
+            padding: 3px 14px;
+            background-color: #555555;
+            color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 22px;
+            border-radius: 5px 0 5px 0;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        html[data-theme="dark"] .tab-status .gui_box_titlebar {
+            background-color: #3a3a4a;
+            color: #e0e0e0;
+        }
+
+        /* ============ INFO BOX ============ */
+        .box-info {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .box-info table {
+            width: 100%;
+            border-collapse: collapse;
+            padding: 4px 10px;
+        }
+
+        .box-info table tr {
+            height: 24px;
+        }
+
+        .box-info table td {
+            padding: 2px 8px;
+            color: var(--color-text-soft);
+        }
+
+        .box-info table td:first-child {
+            font-weight: 600;
+            color: var(--color-text);
+            white-space: nowrap;
+            width: 45%;
+        }
+
+        .box-info table td:last-child {
+            color: var(--color-text-soft);
+        }
+
+        .config-state-badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .configBare { background-color: #e60000; color: #fff; }
+        .configDefaults { background-color: #f5a834; color: #fff; }
+        .configConfigured { background-color: #56ac1d; color: #fff; }
+
+        /* ============ ARMING BOX ============ */
+        .box-arming {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .box-arming .arm-enable-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 10px;
+        }
+
+        .box-arming .arm-enable-row label {
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .box-arming .disarm-flags-container {
+            padding: 4px 10px 8px 10px;
+        }
+
+        .box-arming .disarm-flags-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--color-text-soft);
+            padding: 2px 0;
+            margin-bottom: 4px;
+        }
+
+        .box-arming .disarm-flags {
+            display: flex;
+            flex-flow: row wrap;
+            gap: 4px;
+        }
+
+        /* ---- Sensor detection status bar (bottom of status page) ---- */
+        .box-sensors .sensor-status-row {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 12px 10px;
+            margin: 0;
+            justify-content: center;
+            align-items: center;
+        }
+        .box-sensors .sensor-status-row li {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 48px;
+            opacity: 0.6;                 /* off = bright grey */
+            transition: opacity .15s ease;
+        }
+        .box-sensors .sensor-status-row li.active {
+            opacity: 1;                    /* on = blue */
+        }
+        .box-sensors .sensor-status-row .sensor-label {
+            font-size: 10px;
+            line-height: 1;
+            color: var(--color-text, #ccc);
+            text-align: center;
+        }
+        .box-sensors .sensor-status-row .sensor-icon {
+            display: block;
+            width: 34px;
+            height: 34px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .box-sensors .sensor-acc   .sensor-icon { background-image: url(../icons/sensor_acc_off.png); }
+        .box-sensors .sensor-acc.active   .sensor-icon { background-image: url(../icons/sensor_acc_on.png); }
+        .box-sensors .sensor-gyro  .sensor-icon { background-image: url(../icons/sensor_gyro_off.png); }
+        .box-sensors .sensor-gyro.active  .sensor-icon { background-image: url(../icons/sensor_gyro_on.png); }
+        .box-sensors .sensor-baro  .sensor-icon { background-image: url(../icons/sensor_baro_off.png); }
+        .box-sensors .sensor-baro.active  .sensor-icon { background-image: url(../icons/sensor_baro_on.png); }
+        .box-sensors .sensor-mag   .sensor-icon { background-image: url(../icons/sensor_mag_off.png); }
+        .box-sensors .sensor-mag.active   .sensor-icon { background-image: url(../icons/sensor_mag_on.png); }
+        .box-sensors .sensor-gps   .sensor-icon { background-image: url(../icons/sensor_sat_off.png); }
+        .box-sensors .sensor-gps.active   .sensor-icon { background-image: url(../icons/sensor_sat_on.png); }
+
+        .disarm-flag {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background-color: #e53935;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .disarm-flag.inactive {
+            background-color: var(--color-neutral-300);
+            color: var(--color-neutral-600);
+            opacity: 0.5;
+        }
+
+        html[data-theme="dark"] .disarm-flag.inactive {
+            background-color: var(--color-neutral-700);
+            color: var(--color-neutral-400);
+        }
+
+        .arm-status-ok {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            color: #2e8b2e;
+            padding: 2px 8px;
+            background: rgba(46,139,46,0.1);
+            border-radius: 3px;
+            border: 1px solid #2e8b2e;
+        }
+
+        /* ============ TOGGLE SWITCH ============ */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--color-neutral-400);
+            transition: 0.2s;
+            border-radius: 22px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--color-switch);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(18px);
+        }
+
+        /* ============ HELICOPTER 3D BOX ============ */
+        .box-helicopter {
+            flex: 2;
+            min-width: 320px;
+        }
+
+        .heli-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 340px;
+            background: var(--color-surface-float);
+            border-radius: 0 0 4px 4px;
+            overflow: hidden;
+        }
+
+        html[data-theme="dark"] .heli-canvas-wrapper {
+            background: #12121a;
+        }
+
+        #heli-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .heli-attitude-info {
+            position: absolute;
+            bottom: 10px;
+            left: 12px;
+            background: rgba(0,0,0,0.45);
+            border-radius: 5px;
+            padding: 6px 12px;
+            color: #fff;
+            font-size: 11px;
+            backdrop-filter: blur(4px);
+        }
+
+        .heli-attitude-info dl {
+            margin: 0;
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 2px 10px;
+        }
+
+        .heli-attitude-info dt {
+            font-weight: 600;
+            color: #aac0ff;
+        }
+
+        .heli-attitude-info dd {
+            margin: 0;
+            text-align: right;
+        }
+
+        .heli-reset-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 12px;
+            background: #5a5a5a;
+            border: 1px solid #7a7a7a;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .heli-reset-btn:hover {
+            background: #6b6b6b;
+        }
+
+        .heli-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--color-text-disabled);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .heli-loading .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--color-border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 10px auto;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* ============ SPP / BLE BOXES ============ */
+        .ble-spp-row {
+            display: flex;
+            flex-flow: row wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .box-spp, .box-ble, .box-usb {
+            flex: 1;
+            min-width: 260px;
+        }
+
+        .bt-content {
+            padding: 8px 10px;
+        }
+
+        .bt-device-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            max-height: 160px;
+            overflow-y: auto;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-input-bg);
+        }
+
+        .bt-device-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 8px;
+            border-bottom: 1px solid var(--color-border-soft);
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .bt-device-list li:last-child {
+            border-bottom: none;
+        }
+
+        .bt-device-list li:hover {
+            background-color: var(--color-hover);
+        }
+
+        .bt-device-list li.connected {
+            background-color: rgba(46,139,46,0.12);
+        }
+
+        .bt-device-name {
+            font-weight: 600;
+            color: var(--color-text);
+            font-size: 12px;
+        }
+
+        .bt-device-addr {
+            font-size: 10px;
+            color: var(--color-text-disabled);
+        }
+
+        .bt-device-rssi {
+            font-size: 10px;
+            color: var(--color-text-soft);
+        }
+
+        .bt-connect-btn {
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--color-border);
+            border-radius: 3px;
+            cursor: pointer;
+            background: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            transition: background 0.15s;
+        }
+
+        .bt-connect-btn:hover {
+            background: var(--color-btn-bg-hover);
+        }
+
+        .bt-connect-btn.connected {
+            background: #e53935;
+            color: #fff;
+            border-color: #b71c1c;
+        }
+
+        .bt-status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+
+        .bt-status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--color-neutral-400);
+            flex-shrink: 0;
+        }
+
+        .bt-status-indicator.scanning {
+            background-color: #f5a834;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        .bt-status-indicator.connected {
+            background-color: #2e8b2e;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .bt-status-text {
+            color: var(--color-text-soft);
+            flex: 1;
+        }
+
+        .bt-action-row {
+            display: flex;
+            gap: 6px;
+            padding: 0 10px 8px 10px;
+        }
+
+        .bt-action-btn {
+            flex: 1;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            cursor: pointer;
+            background: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            transition: background 0.15s;
+            text-align: center;
+        }
+
+        .bt-action-btn:hover {
+            background: var(--color-btn-bg-hover);
+        }
+
+        .bt-action-btn.scan-active {
+            background: #f5a834;
+            color: #fff;
+            border-color: #e0931a;
+        }
+
+        .bt-action-btn.danger {
+            background: #e53935;
+            color: #fff;
+            border-color: #b71c1c;
+        }
+
+        .bt-empty-msg {
+            text-align: center;
+            padding: 20px;
+            color: var(--color-text-disabled);
+            font-size: 11px;
+        }
+
+        /* BLE UUID helper */
+        .bt-uuid-row {
+            padding: 2px 10px 6px 10px;
+            font-size: 10px;
+            color: var(--color-text-disabled);
+        }
+
+        /* SPP titlebar accent */
+        .box-spp .gui_box_titlebar {
+            background-color: #2e5a8a;
+        }
+
+        /* BLE titlebar accent */
+        .box-ble .gui_box_titlebar {
+            background-color: #1a6e3d;
+        }
+
+        /* divider */
+        .bt-divider {
+            border: none;
+            border-top: 1px solid var(--color-border-soft);
+            margin: 4px 10px;
+        }
+
+        /* ============ DIALOGS ============ */
+        dialog {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px 20px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            min-width: 280px;
+        }
+
+        dialog h3 {
+            margin: 0 0 8px 0;
+        }
+
+        dialog .buttons {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        dialog .buttons a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        dialog .buttons a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 800px) {
+            .tab-status .section-row { flex-direction: column; align-items: stretch; }
+            .ble-spp-row { flex-direction: column; }
+            .box-helicopter { min-width: 0; width: 100%; }
+            .heli-canvas-wrapper { height: 220px; }
+        }
+    </style>
+</head>
+<body>
+<div id="main-wrapper">
+
+    <!-- ====== CONNECTION PANEL ====== -->
+    <div id="connection-panel">
+        <span class="panel-title">Connection</span>
+        <select id="port-select">
+            <option value="none">Select Port</option>
+        </select>
+        <select id="baud-select">
+            <option value="1000000">1000000</option>
+            <option value="500000">500000</option>
+            <option value="250000">250000</option>
+            <option value="115200" selected>115200</option>
+            <option value="57600">57600</option>
+            <option value="38400">38400</option>
+        </select>
+        <button id="connect-btn">Connect</button>
+        <span id="connection-status">Disconnected</span>
+    </div>
+
+    <!-- ====== TAB CONTENT ====== -->
+    <div id="tab-content-container">
+        <div class="tab-status">
+
+            <!-- ROW 1: SPP + BLE -->
+            <div class="ble-spp-row">
+
+                <!-- SPP BOX -->
+                <div class="gui_box box-spp">
+                    <div class="gui_box_titlebar">📡 SPP (Bluetooth Classic)</div>
+
+                    <div class="bt-status-bar">
+                        <div class="bt-status-indicator" id="spp-status-dot"></div>
+                        <span class="bt-status-text" id="spp-status-text">Ready</span>
+                    </div>
+
+                    <div class="bt-action-row">
+                        <button class="bt-action-btn" id="spp-scan-btn">🔍 Scan</button>
+                    </div>
+
+                    <ul class="bt-device-list" id="spp-device-list">
+                        <li style="pointer-events:none;">
+                            <span class="bt-empty-msg">Press Scan to search for paired SPP devices</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- BLE BOX -->
+                <div class="gui_box box-ble">
+                    <div class="gui_box_titlebar">📶 BLE (Bluetooth Low Energy)</div>
+
+                    <div class="bt-status-bar">
+                        <div class="bt-status-indicator" id="ble-status-dot"></div>
+                        <span class="bt-status-text" id="ble-status-text">Ready</span>
+                    </div>
+
+                    <div class="bt-action-row">
+                        <button class="bt-action-btn" id="ble-scan-btn">🔍 Scan</button>
+                    </div>
+
+                    <ul class="bt-device-list" id="ble-device-list">
+                        <li style="pointer-events:none;">
+                            <span class="bt-empty-msg">Press Scan to search for BLE devices</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- USB SERIAL BOX -->
+                <div class="gui_box box-usb">
+                    <div class="gui_box_titlebar">🔌 USB Serial (OTG)</div>
+
+                    <div class="bt-status-bar">
+                        <div class="bt-status-indicator" id="usb-status-dot"></div>
+                        <span class="bt-status-text" id="usb-status-text">Ready</span>
+                    </div>
+
+                    <div class="bt-action-row">
+                        <button class="bt-action-btn" id="usb-scan-btn">🔍 Scan</button>
+                    </div>
+
+                    <ul class="bt-device-list" id="usb-device-list">
+                        <li style="pointer-events:none;">
+                            <span class="bt-empty-msg">Plug in a USB serial adapter, then Scan</span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div><!-- /ble-spp-row -->
+
+            <!-- ROW 2: 3D Model + Info + Arming -->
+            <div class="section-row">
+
+                <!-- HELICOPTER 3D BOX -->
+                <div class="gui_box box-helicopter">
+                    <div class="gui_box_titlebar">3D Model</div>
+                    <div class="heli-canvas-wrapper">
+                        <div class="heli-loading" id="heli-loading">
+                            <div class="spinner"></div>
+                            Loading model...
+                        </div>
+                        <canvas id="heli-canvas"></canvas>
+                        <div class="heli-attitude-info" id="heli-attitude-info">
+                            <dl>
+                                <dt>Roll</dt>   <dd id="att-roll">0°</dd>
+                                <dt>Pitch</dt>  <dd id="att-pitch">0°</dd>
+                                <dt>Heading</dt><dd id="att-heading">0°</dd>
+                            </dl>
+                        </div>
+                        <button class="heli-reset-btn" id="heli-reset-yaw">Reset Yaw</button>
+                    </div>
+                </div>
+
+                <!-- INFO BOX -->
+                <div class="gui_box box-info">
+                    <div class="gui_box_titlebar">Info</div>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>Craft Name</td>
+                                <td id="info-craft-name">—</td>
+                            </tr>
+                            <tr>
+                                <td>Target</td>
+                                <td id="info-target-name">—</td>
+                            </tr>
+                            <tr>
+                                <td>Board</td>
+                                <td id="info-board-name">—</td>
+                            </tr>
+                            <tr>
+                                <td>FC Version</td>
+                                <td id="info-fc-version">—</td>
+                            </tr>
+                            <tr>
+                                <td>API Version</td>
+                                <td id="info-api-version">—</td>
+                            </tr>
+                            <tr>
+                                <td>Flight Count</td>
+                                <td id="info-flight-count">—</td>
+                            </tr>
+                            <tr>
+                                <td>Flight Time</td>
+                                <td id="info-flight-time">—</td>
+                            </tr>
+                            <tr>
+                                <td>Battery</td>
+                                <td id="info-battery">0 V</td>
+                            </tr>
+                            <tr>
+                                <td>Current</td>
+                                <td id="info-current">0.00 A</td>
+                            </tr>
+                            <tr>
+                                <td>Charge</td>
+                                <td id="info-charge">0%</td>
+                            </tr>
+                            <tr>
+                                <td>Config State</td>
+                                <td id="info-config-state"><span class="config-state-badge configConfigured">OK</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ARMING BOX -->
+                <div class="gui_box box-arming">
+                    <div class="gui_box_titlebar">Arming</div>
+
+                    <div class="arm-enable-row">
+                        <label for="arming-enable-toggle">Enable Arming</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="arming-enable-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span id="arm-overall-status" class="arm-status-ok" style="display:none">ARMED</span>
+                    </div>
+
+                    <hr class="bt-divider">
+
+                    <div class="disarm-flags-container">
+                        <div class="disarm-flags-title">Arming Disable Flags</div>
+                        <div class="disarm-flags" id="disarm-flags-container">
+                            <!-- populated by JS -->
+                            <span style="color:var(--color-text-disabled);font-size:11px;">Disconnected</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SENSOR STATUS BOX -->
+                <div class="gui_box box-sensors">
+                    <div class="gui_box_titlebar">Sensors</div>
+                    <ul id="sensor-status" class="sensor-status-row">
+                        <li class="sensor-gyro"  title="Gyro"><span class="sensor-icon"></span><span class="sensor-label">Gyro</span></li>
+                        <li class="sensor-acc"   title="Accelerometer"><span class="sensor-icon"></span><span class="sensor-label">Accel</span></li>
+                        <li class="sensor-mag"   title="Magnetometer"><span class="sensor-icon"></span><span class="sensor-label">Mag</span></li>
+                        <li class="sensor-baro"  title="Barometer"><span class="sensor-icon"></span><span class="sensor-label">Baro</span></li>
+                        <li class="sensor-gps"   title="GPS"><span class="sensor-icon"></span><span class="sensor-label">GPS</span></li>
+                    </ul>
+                </div>
+
+            </div><!-- /section-row -->
+
+        </div><!-- /tab-status -->
+    </div><!-- /tab-content-container -->
+</div><!-- /main-wrapper -->
+
+<script>
+/* ============================================================
+   SERIAL CONNECTION (Web Serial API)
+   ============================================================ */
+class SerialConnection {
+    constructor() {
+        this.port = null;
+        this.reader = null;
+        this.writer = null;
+        this.connected = false;
+        this.baudRate = 115200;
+        this.onData = null;
+        this.onStatusChange = null;
+    }
+
+    async updatePorts() {
+        if (!navigator.serial) return;
+        const ports = await navigator.serial.getPorts();
+        const sel = document.getElementById('port-select');
+        const current = sel.value;
+        sel.innerHTML = '<option value="none">Select Port</option>';
+        ports.forEach((p, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            const info = p.getInfo ? p.getInfo() : {};
+            opt.textContent = info.usbProductId
+                ? `Port ${i} (USB ${info.usbVendorId?.toString(16)}:${info.usbProductId?.toString(16)})`
+                : `Port ${i}`;
+            sel.appendChild(opt);
+        });
+        if (current !== 'none') sel.value = current;
+    }
+
+    async connect(portIndex, baudRate) {
+        const ports = await navigator.serial.getPorts();
+        if (portIndex === 'none' || portIndex >= ports.length) {
+            this.port = await navigator.serial.requestPort();
+        } else {
+            this.port = ports[parseInt(portIndex)];
+        }
+        this.baudRate = parseInt(baudRate) || 115200;
+        await this.port.open({ baudRate: this.baudRate });
+        this.connected = true;
+        this.writer = this.port.writable.getWriter();
+        this.reader = this.port.readable.getReader();
+        this.onStatusChange && this.onStatusChange(true);
+        this.readLoop();
+        return true;
+    }
+
+    async disconnect() {
+        this.connected = false;
+        try { this.reader && await this.reader.cancel(); } catch(e){}
+        try { this.writer && await this.writer.close(); } catch(e){}
+        try { this.reader && await this.reader.releaseLock(); } catch(e){}
+        try { this.writer && await this.writer.releaseLock(); } catch(e){}
+        try { this.port && await this.port.close(); } catch(e){}
+        this.reader = null;
+        this.writer = null;
+        this.onStatusChange && this.onStatusChange(false);
+    }
+
+    async readLoop() {
+        while (this.port && this.reader && this.connected) {
+            try {
+                const { value, done } = await this.reader.read();
+                if (done) break;
+                if (value && this.onData) this.onData(value);
+            } catch(e) { break; }
+        }
+    }
+
+    async send(data) {
+        if (this.writer && this.connected) {
+            await this.writer.write(data);
+        }
+    }
+}
+
+/* ============================================================
+   MSP PROTOCOL
+   ============================================================ */
+function buildMSPMessage(code, payload = []) {
+    const len = payload.length;
+    let chk = len ^ code;
+    for (const b of payload) chk ^= b;
+    return new Uint8Array([0x24, 0x4D, 0x3C, len, code, ...payload, chk]);
+}
+
+class MSPParser {
+    /* BLE burst-safe: O(n) accumulator + CRC verification. The FC dumps all
+       queued MSP responses back-to-back; frames nobody waits for are dropped,
+       and corrupt frames resync instead of poisoning the stream. */
+    constructor() {
+        this.buf = new Uint8Array(1024);
+        this.len = 0;
+        this.pos = 0;
+        this.callbacks = {};
+    }
+
+    feed(data) {
+        const u8 = (data instanceof Uint8Array) ? data : new Uint8Array(data);
+        if (this.len + u8.length > this.buf.length) {
+            if (this.pos > 0) {
+                this.buf.copyWithin(0, this.pos, this.len);
+                this.len -= this.pos; this.pos = 0;
+            }
+            if (this.len + u8.length > this.buf.length) {
+                const cap = Math.max(this.buf.length * 2, this.len + u8.length);
+                const nb = new Uint8Array(cap);
+                nb.set(this.buf.subarray(0, this.len));
+                this.buf = nb;
+            }
+        }
+        this.buf.set(u8, this.len);
+        this.len += u8.length;
+        this.tryParse();
+    }
+
+    tryParse() {
+        let parsed = true;
+        while (parsed) {
+            parsed = false;
+            while (this.len - this.pos >= 6) {
+                if (this.buf[this.pos] !== 0x24 || this.buf[this.pos + 1] !== 0x4D ||
+                    (this.buf[this.pos + 2] !== 0x3E && this.buf[this.pos + 2] !== 0x3C)) {
+                    this.pos++;
+                    continue;
+                }
+                const b3 = this.buf[this.pos + 3];
+                const jumbo = b3 === 0xFF;   /* MSPv1 jumbo: $M> FF code lenLo lenHi payload crc */
+                let length, hdrEnd;
+                if (jumbo) {
+                    if (this.len - this.pos < 8) { parsed = false; break; }
+                    length = this.buf[this.pos + 5] | (this.buf[this.pos + 6] << 8);
+                    hdrEnd = 7;
+                } else {
+                    length = b3;
+                    hdrEnd = 5;
+                }
+                const ps = this.pos + hdrEnd;
+                const totalLen = hdrEnd + length + 1;
+                if (this.len - this.pos < totalLen) { parsed = false; break; }
+                const code = this.buf[this.pos + 4];
+                let crc;
+                if (jumbo) crc = 255 ^ code ^ (length & 0xFF) ^ ((length >> 8) & 0xFF);
+                else crc = length ^ code;
+                for (let i = 0; i < length; i++) crc ^= this.buf[ps + i];
+                if (crc !== this.buf[ps + length]) { this.pos++; continue; }
+                const payload = new Uint8Array(this.buf.slice(ps, ps + length));
+                this.pos += totalLen;
+                if (this.pos >= this.len) { this.pos = 0; this.len = 0; }
+                else if (this.pos > 4096) { this.buf.copyWithin(0, this.pos, this.len); this.len -= this.pos; this.pos = 0; }
+                const cb = this.callbacks[code];
+                if (cb) { delete this.callbacks[code]; cb({ code, payload }); }
+                parsed = true;
+                break;   // re-evaluate compaction state before next frame
+            }
+        }
+    }
+
+    waitResponse(code, timeout = 3000) {
+        return new Promise((resolve, reject) => {
+            const t = setTimeout(() => {
+                delete this.callbacks[code];
+                reject(new Error(`MSP timeout code=${code}`));
+            }, timeout);
+            this.callbacks[code] = (msg) => { clearTimeout(t); resolve(msg); };
+        });
+    }
+}
+
+function toInt16(low, high) {
+    const v = (high << 8) | low;
+    return v >= 32768 ? v - 65536 : v;
+}
+
+function toUint16(low, high) {
+    return (high << 8) | low;
+}
+
+function toUint32(b0, b1, b2, b3) {
+    return ((b3 << 24) >>> 0) | (b2 << 16) | (b1 << 8) | b0;
+}
+
+class StatusMSP {
+    constructor(serial) {
+        this.serial = serial;
+        this.parser = new MSPParser();
+        this.serial.onData = (bytes) => this.parser.feed(bytes);
+        this.data = {
+            CONFIG: {
+                armingDisableCount: 27
+            },
+            STATUS: {
+                isArmed: false,
+                armingDisableFlags: 0,
+                armingDisableCount: 27
+            },
+            SENSOR_DATA: { kinematics: [0, 0, 0] },
+            ANALOG: {},
+            FLIGHT_STATS: {}
+        };
+    }
+
+    async send(code, payload = []) {
+        await this.serial.send(buildMSPMessage(code, payload));
+        return await this.parser.waitResponse(code);
+    }
+
+    async readAPIVersion() {
+        const r = await this.send(1);
+        const p = r.payload;
+        if (p.length >= 3) {
+            this.data.CONFIG.apiVersion = `${p[1]}.${p[2]}.0`;
+        }
+    }
+
+    async readFCVariant() {
+        const r = await this.send(2);
+        const dec = new TextDecoder();
+        this.data.CONFIG.flightControllerIdentifier = dec.decode(r.payload.slice(0, 4));
+    }
+
+    async readBoardInfo() {
+        const r = await this.send(4);
+        const dec = new TextDecoder();
+        let idx = 0;
+        this.data.CONFIG.boardIdentifier = dec.decode(r.payload.slice(0, 4));
+        idx = 4;
+        const boardVersion = toUint16(r.payload[idx], r.payload[idx+1]); idx += 2;
+        const boardType = r.payload[idx++];
+        const targetCapabilities = r.payload[idx++];
+        const targetNameLen = r.payload[idx++];
+        this.data.CONFIG.targetName = dec.decode(r.payload.slice(idx, idx + targetNameLen));
+        idx += targetNameLen;
+        const boardNameLen = r.payload[idx++];
+        this.data.CONFIG.boardName = dec.decode(r.payload.slice(idx, idx + boardNameLen));
+        idx += boardNameLen;
+        if (idx < r.payload.length) {
+            const manuLen = r.payload[idx++];
+            this.data.CONFIG.manufacturerId = dec.decode(r.payload.slice(idx, idx + manuLen));
+        }
+    }
+
+    async readBuildInfo() {
+        const r = await this.send(5);
+        const dec = new TextDecoder();
+        const date = dec.decode(r.payload.slice(0, 11)).trim();
+        const time = dec.decode(r.payload.slice(11, 19)).trim();
+        const rev = dec.decode(r.payload.slice(19, 26)).trim();
+        this.data.CONFIG.flightControllerVersion = `${date} ${time}`;
+        this.data.CONFIG.buildKey = rev;
+    }
+
+    async readStatus() {
+        const r = await this.send(101); // MSP_STATUS
+        const p = r.payload;
+        if (p.length < 21) return;
+        
+        let idx = 0;
+        const cycleTime   = toUint16(p[idx], p[idx+1]); idx += 2; // 0..1 (TASK_PID delta time)
+        const gyroTime    = toUint16(p[idx], p[idx+1]); idx += 2; // 2..3 (TASK_GYRO delta time)
+        const sensors     = toUint16(p[idx], p[idx+1]); idx += 2; // 4..5 (sensors mask)
+        const mode        = toUint32(p[idx], p[idx+1], p[idx+2], p[idx+3]); idx += 4; // 6..9 (flightModeFlags)
+        const profile     = p[idx++]; // 10 (profile number compat)
+        const maxLoad     = toUint16(p[idx], p[idx+1]); idx += 2; // 11..12 (maxRealTimeLoad)
+        const avgLoad     = toUint16(p[idx], p[idx+1]); idx += 2; // 13..14 (averageCPULoad)
+        const extraFlags  = p[idx++]; // 15 (extra flight mode flags count)
+
+        // 16: ARMING_DISABLE_FLAGS_COUNT
+        this.data.STATUS.armingDisableCount = p[idx++];
+        // 17..20: uint32 armingDisableFlags
+        this.data.STATUS.armingDisableFlags = toUint32(p[idx], p[idx+1], p[idx+2], p[idx+3]);
+        idx += 4;
+
+        this.data.STATUS.isArmed = (mode & 1) !== 0;
+        this.data.STATUS.activeSensors = sensors; // sensor detection mask (acc=0,baro=1,mag=2,gps=3,sonar=4,gyro=5)
+    }
+
+    async readArmingConfig() {
+        // Handled in readStatus
+    }
+
+    async readName() {
+        const r = await this.send(10); // MSP_NAME
+        const dec = new TextDecoder();
+        this.data.CONFIG.name = dec.decode(r.payload).trim();
+    }
+
+    async readAttitude() {
+        const r = await this.send(108); // MSP_ATTITUDE
+        const p = r.payload;
+        if (p.length >= 6) {
+            // Signed 16-bit integers
+            const roll  = toInt16(p[0], p[1]) / 10.0;
+            const pitch = toInt16(p[2], p[3]) / 10.0;
+            const yaw   = toInt16(p[4], p[5]);
+            this.data.SENSOR_DATA.kinematics = [roll, pitch, yaw];
+        }
+    }
+
+    async readAnalog() {
+        const r = await this.send(110); // MSP_ANALOG
+        const p = r.payload;
+        if (p.length >= 9) {
+            this.data.ANALOG.voltage = p[0] / 10.0;
+            this.data.ANALOG.mAhDrawn = toUint16(p[1], p[2]);
+            this.data.ANALOG.rssi = toUint16(p[3], p[4]);
+            this.data.ANALOG.amperage = toInt16(p[5], p[6]) / 100.0;
+            this.data.ANALOG.chargeLevel = p[8] || 0;
+        }
+    }
+}
+
+/* ============================================================
+   DISARM FLAGS (Rotorflight firmware runtime_config.h exact)
+   ============================================================ */
+const DISARM_FLAGS = [
+    'NO_GYRO',         // 0: ARMING_DISABLED_NO_GYRO
+    'FAILSAFE',        // 1: ARMING_DISABLED_FAILSAFE
+    'RX_FAILSAFE',     // 2: ARMING_DISABLED_RX_FAILSAFE
+    'BAD_RX_RECOVERY', // 3: ARMING_DISABLED_BAD_RX_RECOVERY
+    'BOXFAILSAFE',     // 4: ARMING_DISABLED_BOXFAILSAFE
+    'GOVERNOR',        // 5: ARMING_DISABLED_GOVERNOR
+    'RPM_SIGNAL',      // 6: ARMING_DISABLED_RPM_SIGNAL
+    'THROTTLE',        // 7: ARMING_DISABLED_THROTTLE
+    'ANGLE',           // 8: ARMING_DISABLED_ANGLE
+    'BOOT_GRACE_TIME', // 9: ARMING_DISABLED_BOOT_GRACE_TIME
+    'NOPREARM',        // 10: ARMING_DISABLED_NOPREARM
+    'LOAD',            // 11: ARMING_DISABLED_LOAD
+    'CALIBRATING',     // 12: ARMING_DISABLED_CALIBRATING
+    'CLI',             // 13: ARMING_DISABLED_CLI
+    'CMS_MENU',        // 14: ARMING_DISABLED_CMS_MENU
+    'BST',             // 15: ARMING_DISABLED_BST
+    'MSP',             // 16: ARMING_DISABLED_MSP
+    'PARALYZE',        // 17: ARMING_DISABLED_PARALYZE
+    'GPS',             // 18: ARMING_DISABLED_GPS
+    'RESC',            // 19: ARMING_DISABLED_RESC
+    'RPMFILTER',       // 20: ARMING_DISABLED_RPMFILTER
+    'REBOOT_REQUIRED', // 21: ARMING_DISABLED_REBOOT_REQUIRED
+    'DSHOT_BITBANG',   // 22: ARMING_DISABLED_DSHOT_BITBANG
+    'ACC_CALIBRATION', // 23: ARMING_DISABLED_ACC_CALIBRATION
+    'MOTOR_PROTOCOL',  // 24: ARMING_DISABLED_MOTOR_PROTOCOL
+    'OVERRIDE',        // 25: ARMING_DISABLED_OVERRIDE
+    'ARM_SWITCH'       // 26: ARMING_DISABLED_ARM_SWITCH
+];
+
+/* Common BLE UART profiles tried in order until one connects */
+const BLE_PROFILES = [
+    { name: 'CC2541',      service: '0000ffe0-0000-1000-8000-00805f9b34fb', write: '0000ffe1-0000-1000-8000-00805f9b34fb', notify: '0000ffe2-0000-1000-8000-00805f9b34fb' },
+    { name: 'HM-10',       service: '0000ffe1-0000-1000-8000-00805f9b34fb', write: '0000ffe1-0000-1000-8000-00805f9b34fb', notify: '0000ffe1-0000-1000-8000-00805f9b34fb' },
+    { name: 'HC-05',       service: '00001101-0000-1000-8000-00805f9b34fb', write: '00001101-0000-1000-8000-00805f9b34fb', notify: '00001101-0000-1000-8000-00805f9b34fb' },
+    { name: 'Nordic NUS',  service: '6e400001-b5a3-f393-e0a9-e50e24dcca9e', write: '6e400002-b5a3-f393-e0a9-e50e24dcca9e', notify: '6e400003-b5a3-f393-e0a9-e50e24dcca9e' },
+    { name: 'DroneBridge', service: '0000db32-0000-1000-8000-00805f9b34fb', write: '0000db33-0000-1000-8000-00805f9b34fb', notify: '0000db34-0000-1000-8000-00805f9b34fb' },
+    { name: 'SpeedyBee V1',service: '00001000-0000-1000-8000-00805f9b34fb', write: '00001001-0000-1000-8000-00805f9b34fb', notify: '00001002-0000-1000-8000-00805f9b34fb' },
+    { name: 'SpeedyBee V2',service: '0000abf0-0000-1000-8000-00805f9b34fb', write: '0000abf1-0000-1000-8000-00805f9b34fb', notify: '0000abf2-0000-1000-8000-00805f9b34fb' },
+    { name: 'SpeedyBee FF00',service:'000000ff-0000-1000-8000-00805f9b34fb', write: '0000ff01-0000-1000-8000-00805f9b34fb', notify: '0000ff02-0000-1000-8000-00805f9b34fb' }
+];
+
+/* ============================================================
+   STATUS TAB CLASS
+   ============================================================ */
+class StatusTab {
+    constructor() {
+        this.serial = new SerialConnection();
+        this.msp = new StatusMSP(this.serial);
+        this.yawFix = 0;
+        this.pollInterval = null;
+        this.renderer = null;
+        this.heliScene = null;
+        this.heliModel = null;
+        this.heliCamera = null;
+        this.heliAnimId = null;
+        this.isDragging = false;
+        this.lastMouse = { x: 0, y: 0 };
+        this.camTheta = 0.5;
+        this.camPhi = 0.4;
+        this.camRadius = 5;
+
+        this.sppConnected = false;
+        this.bleConnected = false;
+        this.usbConnected = false;
+        this.sppDevice = null;
+        this.bleDevice = null;
+        this.usbDevice = null;
+        this.sppSetStatus = null;
+        this.bleSetStatus = null;
+        this.usbSetStatus = null;
+        this.sppRefreshList = null;
+        this.bleRefreshList = null;
+        this.usbRefreshList = null;
+        this.lastConn = null;
+
+        this.init();
+    }
+
+    init() {
+        this.bindConnection();
+        this.bindArming();
+        this.bindSPP();
+        this.bindBLE();
+        this.bindUSB();
+        this.initHeli3D();
+        // Start with sensors in the OFF state (no stale detection/attitude shown
+        // until the first live FC values arrive after connecting).
+        this.resetSensors();
+
+        // Update ports on serial device change
+        if (navigator.serial) {
+            navigator.serial.addEventListener('connect', () => this.serial.updatePorts());
+            navigator.serial.addEventListener('disconnect', () => this.serial.updatePorts());
+            this.serial.updatePorts();
+        }
+    }
+
+    /* ---- CONNECTION ---- */
+    bindConnection() {
+        const btn = document.getElementById('connect-btn');
+        const status = document.getElementById('connection-status');
+
+        this.setTopPanelState = (connected) => {
+            btn.textContent = connected ? 'Disconnect' : 'Connect';
+            btn.classList.toggle('active', connected);
+            status.textContent = connected ? 'Connected' : 'Disconnected';
+            status.classList.toggle('connected', connected);
+        };
+
+        /* Single funnel: every transport (Web Serial, SPP, BLE, USB) reports
+           through serial.onStatusChange, so the top panel AND the three
+           boxes stay in sync no matter where a connect/disconnect came
+           from. */
+        this.serial.onStatusChange = (connected) => {
+            this.setTopPanelState(connected);
+            if (connected) {
+                this.onConnect();
+            } else {
+                this.onDisconnect();
+            }
+            this.refreshTransportBoxes();
+        };
+
+        btn.addEventListener('click', async () => {
+            if (this.isAnyTransportConnected()) {
+                /* Reset immediately: bridge.js re-clicks this button while it
+                   still looks active after an unexpected hub-side drop, and a
+                   stale "active" class here would loop disconnect/reconnect. */
+                this.setTopPanelState(false);
+                await this.disconnectAllTransports();
+            } else {
+                await this.connectFromTopPanel();
+            }
+        });
+    }
+
+    isAnyTransportConnected() {
+        return !!(this.serial.connected || this.sppConnected || this.bleConnected || this.usbConnected);
+    }
+
+    /* Master disconnect: tears down BOTH the page session and the underlying
+       native transport, then repaints every box via refreshTransportBoxes. */
+    async disconnectAllTransports() {
+        this.stopPolling();
+
+        const br = window.__RF_BRIDGE__;
+        const nativeKind = (br && br.state && br.state.on) ? br.state.kind : null;
+
+        if (this.sppConnected || nativeKind === 'spp') {
+            this.sppDisconnect(this.sppSetStatus, null, () => {
+                this.sppConnected = false;
+                this.sppDevice = null;
+                this.afterTransportDown();
+            });
+        } else if (this.bleConnected || nativeKind === 'ble') {
+            const dev = this.bleDevice || { deviceId: (br && br.state && br.state.detail) || '' };
+            await this.bleDisconnect(dev, this.bleSetStatus, null, () => {
+                this.bleConnected = false;
+                this.bleDevice = null;
+                this.afterTransportDown();
+            });
+        } else if (this.usbConnected || nativeKind === 'usb') {
+            this.usbDisconnect(this.usbSetStatus, null, () => {
+                this.usbConnected = false;
+                if (this.usbUnsub) { try { this.usbUnsub(); } catch(e){} this.usbUnsub = null; }
+                this.afterTransportDown();
+            });
+        } else if (this.serial.connected && !this.serial.port) {
+            this.afterTransportDown();
+        }
+
+        if (this.serial.port) {
+            await this.serial.disconnect();
+        }
+
+        this.refreshTransportBoxes();
+    }
+
+    afterTransportDown() {
+        this.serial.connected = false;
+        this.setTopPanelState(false);
+        this.stopPolling();
+        this.onDisconnect();
+        this.refreshTransportBoxes();
+    }
+
+    /* Master connect: adopts an already-live shared link, redials the last
+       transport picked from a box, or falls back to Web Serial. */
+    async connectFromTopPanel() {
+        if (this.isAnyTransportConnected()) return;
+
+        const br = window.__RF_BRIDGE__;
+        const linkUp = !!(br && br.state && br.state.on);
+        const last = this.lastConn;
+
+        if (linkUp && last && (!br.state.kind || br.state.kind === last.type)) {
+            this.adoptLink(last.type, last.device);
+            return;
+        }
+
+        if (last && last.device) {
+            if (last.type === 'spp') {
+                this.sppConnect(last.device, this.sppSetStatus, null, (ok) => this.onSppConnectResult(last.device, ok));
+                return;
+            }
+            if (last.type === 'ble') {
+                const ok = await this.bleConnect(last.device, BLE_PROFILES, this.bleSetStatus, null);
+                this.onBleConnectResult(last.device, ok);
+                return;
+            }
+            if (last.type === 'usb') {
+                this.usbConnect(last.device, this.usbSetStatus, null, (ok) => this.onUsbConnectResult(last.device, ok));
+                return;
+            }
+        }
+
+        try {
+            const port = document.getElementById('port-select').value;
+            const baud = document.getElementById('baud-select').value;
+            await this.serial.connect(port, baud);
+        } catch(e) {
+            alert('Connection failed: ' + e.message);
+        }
+    }
+
+    /* Mark a box as owning an already-live shared link without re-dialling. */
+    adoptLink(type, device) {
+        if (device) {
+            if (type === 'spp') { this.sppDevice = device; this.sppConnected = true; }
+            else if (type === 'ble') { this.bleDevice = device; this.bleConnected = true; }
+            else if (type === 'usb') { this.usbDevice = device; this.usbConnected = true; }
+        }
+        this.serial.connected = true;
+        this.serial.onStatusChange && this.serial.onStatusChange(true);
+    }
+
+    /* Repaint the three transport boxes from current state: highlights the
+       box that owns the live link and rebuilds the device lists so each
+       per-device Connect/Disconnect button matches reality. */
+    refreshTransportBoxes() {
+        const br = window.__RF_BRIDGE__;
+        const st = (br && br.state) || {};
+        const kind = this.sppConnected ? 'spp'
+                   : this.bleConnected ? 'ble'
+                   : this.usbConnected ? 'usb'
+                   : (st.on ? st.kind : null);
+
+        if (kind === 'spp' && this.sppSetStatus) {
+            this.sppSetStatus('connected', `Connected: ${st.name || (this.sppDevice && this.sppDevice.name) || 'SPP'}`);
+        } else if (kind === 'ble' && this.bleSetStatus) {
+            this.bleSetStatus('connected', `Connected: ${st.name || (this.bleDevice && this.bleDevice.name) || 'BLE'}`);
+        } else if (kind === 'usb' && this.usbSetStatus) {
+            this.usbSetStatus('connected', `Connected: ${st.name || (this.usbDevice && this.usbDevice.name) || 'USB'}`);
+        }
+
+        this.sppRefreshList && this.sppRefreshList();
+        this.bleRefreshList && this.bleRefreshList();
+        this.usbRefreshList && this.usbRefreshList();
+    }
+
+    async onConnect() {
+        try {
+            await this.msp.readAPIVersion();
+            await this.msp.readFCVariant();
+        } catch(e) {}
+        try { await this.msp.readBoardInfo(); } catch(e) {}
+        try { await this.msp.readBuildInfo(); } catch(e) {}
+        try { await this.msp.readName(); } catch(e) {}
+        try { await this.msp.readStatus(); } catch(e) {}
+        try { await this.msp.readArmingConfig(); } catch(e) {}
+        try { await this.msp.readAnalog(); } catch(e) {}
+
+        this.updateInfoBox();
+        this.updateArmingBox();
+        this.updateSensorStatus();
+        this.startPolling();
+    }
+
+    onDisconnect() {
+        this.stopPolling();
+        this.resetInfoBox();
+        this.resetArmingBox();
+        this.resetSensors();
+    }
+
+    /* ---- INFO BOX ---- */
+    updateInfoBox() {
+        const d = this.msp.data;
+        const cfg = d.CONFIG || {};
+        const analog = d.ANALOG || {};
+        setText('info-craft-name', cfg.name || '—');
+        setText('info-target-name', cfg.targetName || '—');
+        setText('info-board-name', cfg.boardName || '—');
+        setText('info-fc-version', cfg.flightControllerVersion || '—');
+        setText('info-api-version', cfg.apiVersion || '—');
+        setText('info-battery', analog.voltage != null ? `${analog.voltage.toFixed(2)} V` : '0 V');
+        setText('info-current', analog.amperage != null ? `${analog.amperage.toFixed(2)} A` : '0.00 A');
+        setText('info-charge', analog.chargeLevel != null ? `${analog.chargeLevel}%` : '0%');
+    }
+
+    resetInfoBox() {
+        ['info-craft-name','info-target-name','info-board-name','info-fc-version',
+         'info-api-version','info-battery','info-current','info-charge'].forEach(id => setText(id, '—'));
+    }
+
+    /* Sensors (detection bar + attitude readouts) start in the OFF state and
+       only reflect live FC data after a value is received. On disconnect or
+       first page open we must clear any previously shown state instead of
+       leaving the last values/active flags frozen on screen. */
+    resetSensors() {
+        document.querySelectorAll('#sensor-status li').forEach(li => li.classList.remove('active'));
+        setText('att-roll', '—');
+        setText('att-pitch', '—');
+        setText('att-heading', '—');
+    }
+
+    /* ---- ARMING BOX ---- */
+    bindArming() {
+        document.getElementById('arming-enable-toggle').addEventListener('change', async (e) => {
+            if (!this.serial.connected) { e.target.checked = false; return; }
+            // MSP_ARMING_DISABLE: code 99, payload [disableRunaway, disableArmingFlags]
+            // just toggle visual for now; actual arming via MSP_SET_ARM would be code 217
+        });
+    }
+
+    updateArmingBox() {
+        const st = this.msp.data.STATUS || {};
+        const isArmed = st.isArmed || false;
+        const toggle = document.getElementById('arming-enable-toggle');
+        toggle.checked = isArmed;
+
+        const container = document.getElementById('disarm-flags-container');
+        container.innerHTML = '';
+
+        const flags = st.armingDisableFlags || 0;
+        const count = st.armingDisableCount || 0;
+
+        let anyActive = false;
+        const numFlags = Math.max(count, DISARM_FLAGS.length);
+        for (let i = 0; i < numFlags; i++) {
+            const active = (flags >> i) & 1;
+            if (active) anyActive = true;
+            const label = DISARM_FLAGS[i] || `FLAG_${i+1}`;
+            const span = document.createElement('span');
+            span.className = 'disarm-flag' + (active ? '' : ' inactive');
+            span.textContent = label;
+            span.title = label;
+            if (active) container.appendChild(span);
+        }
+
+        if (!anyActive) {
+            const ok = document.createElement('span');
+            ok.className = 'arm-status-ok';
+            ok.textContent = isArmed ? '✓ ARMED' : '✓ READY';
+            container.appendChild(ok);
+        }
+    }
+
+    resetArmingBox() {
+        document.getElementById('arming-enable-toggle').checked = false;
+        const container = document.getElementById('disarm-flags-container');
+        container.innerHTML = '<span style="color:var(--color-text-disabled);font-size:11px;">Disconnected</span>';
+    }
+
+    /* ---- POLLING ---- */
+    startPolling() {
+        if (this.pollInterval) return;
+        this.pollInterval = setInterval(async () => {
+            if (!this.serial.connected) { this.stopPolling(); return; }
+            try { await this.msp.readAttitude(); } catch(e) {}
+            try { await this.msp.readAnalog(); } catch(e) {}
+            try { await this.msp.readStatus(); } catch(e) {}
+            this.updateInfoBox();
+            this.updateArmingBox();
+            this.updateAttitude();
+            this.updateSensorStatus();
+        }, 100);
+    }
+
+    stopPolling() {
+        if (this.pollInterval) { clearInterval(this.pollInterval); this.pollInterval = null; }
+    }
+
+    hasSensor(bit) {
+        const m = this.msp.data.STATUS.activeSensors || 0;
+        return (m & (1 << bit)) !== 0;
+    }
+
+    updateSensorStatus() {
+        const map = [
+            ['acc', 0], ['gyro', 5], ['baro', 1], ['mag', 2], ['gps', 3],
+        ];
+        map.forEach(([id, bit]) => {
+            const el = document.querySelector('#sensor-status .sensor-' + id);
+            if (!el) return;
+            el.classList.toggle('active', this.hasSensor(bit));
+        });
+    }
+
+    updateAttitude() {
+        const kin = this.msp.data.SENSOR_DATA.kinematics;
+        const roll  = kin[0];
+        const pitch = kin[1];
+        const yaw   = kin[2];
+
+        setText('att-roll',    roll.toFixed(1) + '°');
+        setText('att-pitch',   pitch.toFixed(1) + '°');
+        setText('att-heading', ((yaw + this.yawFix + 360) % 360).toFixed(0) + '°');
+
+        if (this.heliModel && this.heliWrapper) {
+            const DEG_TO_RAD = 0.017453292519943295;
+            const x = (pitch * -1.0) * DEG_TO_RAD;
+            const y = ((yaw * -1.0) - this.yawFix) * DEG_TO_RAD;
+            // Roll sign matches the original configurator (roll * -1.0); this keeps the
+            // Z-axis (roll) attitude aligned. The constant Math.PI yaw offset used to be
+            // applied here and on the inner group, which pushed the heli 180 deg off.
+            const z = (roll * -1.0) * DEG_TO_RAD;
+
+            this.heliModel.rotation.x = x;
+            this.heliModel.rotation.y = 0;
+            this.heliModel.rotation.z = z;
+            this.heliWrapper.rotation.y = y;
+        }
+    }
+
+    /* ============================================================
+       3D HELICOPTER (WebGL / Three.js inline minimal loader)
+       ============================================================ */
+    initHeli3D() {
+        const canvas = document.getElementById('heli-canvas');
+        const loadingEl = document.getElementById('heli-loading');
+
+        // Reset Z-axis (Yaw) button - exact configurator logic
+        const resetBtn = document.getElementById('heli-reset-yaw');
+        if (resetBtn) {
+            resetBtn.textContent = `Reset Z-axis (${this.yawFix.toFixed(1)} deg)`;
+            resetBtn.addEventListener('click', () => {
+                const kin = this.msp.data.SENSOR_DATA.kinematics;
+                this.yawFix = kin[2] * -1.0;
+                resetBtn.textContent = `Reset Z-axis (${this.yawFix.toFixed(1)} deg)`;
+                setText('att-heading', '0°');
+                this.updateAttitude();
+            });
+        }
+
+        this.initThreeJS(canvas, loadingEl);
+    }
+
+    initThreeJS(canvas, loadingEl) {
+        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (!gl) {
+            loadingEl.innerHTML = '⚠ WebGL not available';
+            return;
+        }
+
+        this.loadThreeScene(canvas, loadingEl);
+    }
+
+    async loadThreeScene(canvas, loadingEl) {
+        try {
+            let THREE = window.THREE;
+            let GLTFLoader = window.THREE?.GLTFLoader;
+
+            if (!THREE || !GLTFLoader) {
+                try {
+                    THREE = await import('three');
+                    const gltfMod = await import('three/addons/loaders/GLTFLoader.js');
+                    GLTFLoader = gltfMod.GLTFLoader;
+                } catch(importErr) {
+                    const tMod = await import('https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js');
+                    THREE = tMod;
+                    const gMod = await import('https://cdn.jsdelivr.net/npm/three@0.166.0/examples/jsm/loaders/GLTFLoader.js');
+                    GLTFLoader = gMod.GLTFLoader;
+                }
+            }
+
+            // Setup renderer
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            this.renderer = renderer;
+
+            const scene = new THREE.Scene();
+            this.heliScene = scene;
+
+            // Background color
+            const bgColors = this.getBgColors();
+            renderer.setClearColor(bgColors.bg, 1);
+
+            // Camera setup - straight-on "due north" view, matching the original
+            // configurator (camera sits on +Z looking at the origin, no oblique angle).
+            this.camRadius = 4.2;
+            this.camTheta = 0;
+            this.camPhi = 0;
+
+            const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
+            this.heliCamera = camera;
+            this.updateCameraPosition(camera);
+
+            // Lights
+            const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(5, 10, 7);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+            const backLight = new THREE.DirectionalLight(0x8888ff, 0.4);
+            backLight.position.set(-5, -2, -5);
+            scene.add(backLight);
+
+            // Ground grid - theme-aware contrast so the reference axes stay readable
+            // in the light theme (dark grid lines on the light background).
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const grid = new THREE.GridHelper(6, 12, isDark ? 0x888888 : 0x555555, isDark ? 0x3a3a3a : 0xb5b5b5);
+            grid.position.y = -0.8;
+            scene.add(grid);
+
+            // Explicit X/Y/Z axis indicator. The Z (blue) axis is the heading /
+            // roll reference and is now clearly visible in both themes, fixing the
+            // "hard to see in light theme" problem.
+            scene.add(new THREE.AxesHelper(2.5));
+
+            // Model wrapper holds the dynamic yaw (heading). No constant offset - the
+            // heli's base orientation comes from the model itself, matching the original.
+            const modelWrapper = new THREE.Object3D();
+            modelWrapper.rotation.y = 0;
+            scene.add(modelWrapper);
+            this.heliWrapper = modelWrapper;
+
+            // Load GLB from embedded base64
+            const glbDataUri = window.__HELI_GLB_DATA_URI__;
+            if (glbDataUri) {
+                const loader = new GLTFLoader();
+                loader.load(glbDataUri, (gltf) => {
+                    const model = gltf.scene;
+
+                    // Center model and scale
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+                    const scale = 5.625 / maxDim; /* +50% size (additional, 2.25x) */
+
+                    model.scale.setScalar(scale);
+                    model.position.sub(center.multiplyScalar(scale));
+
+                    const innerGroup = new THREE.Group();
+                    innerGroup.rotation.y = 0;
+                    innerGroup.add(model);
+
+                    modelWrapper.add(innerGroup);
+                    this.heliModel = innerGroup;
+                    loadingEl.style.display = 'none';
+
+                    // Immediately sync attitude upon load
+                    this.updateAttitude();
+                }, (progress) => {
+                    if (progress.total > 0) {
+                        const pct = Math.round(progress.loaded / progress.total * 100);
+                        loadingEl.innerHTML = `<div class="spinner"></div>Loading ${pct}%`;
+                    }
+                }, (err) => {
+                    loadingEl.innerHTML = '⚠ Failed to load model';
+                    console.error('GLB load error:', err);
+                });
+            } else {
+                // Placeholder
+                const geometry = new THREE.BoxGeometry(2.5, 0.3, 0.8);
+                const material = new THREE.MeshLambertMaterial({ color: 0x4488cc });
+                const heli = new THREE.Mesh(geometry, material);
+                const rotorGeom = new THREE.CylinderGeometry(1.2, 1.2, 0.05, 32);
+                const rotorMat = new THREE.MeshLambertMaterial({ color: 0x888888, transparent: true, opacity: 0.5 });
+                const rotor = new THREE.Mesh(rotorGeom, rotorMat);
+                rotor.position.y = 0.3;
+                heliGroup.add(heli);
+                heliGroup.add(rotor);
+                loadingEl.style.display = 'none';
+            }
+
+            // Resize handling. Observe the wrapper (not the canvas) so changing the
+            // drawing buffer never feeds back into layout, and also react to
+            // orientation / visualViewport changes - this keeps the canvas full width
+            // after portrait -> landscape -> portrait on phones.
+            const wrapperEl = canvas.parentElement;
+            const resizeRenderer = () => {
+                const w = wrapperEl.clientWidth || canvas.clientWidth;
+                const h = wrapperEl.clientHeight || canvas.clientHeight;
+                if (!w || !h) return;
+                renderer.setSize(w, h, false);
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+            };
+            const resizeObserver = new ResizeObserver(resizeRenderer);
+            resizeObserver.observe(wrapperEl);
+            window.addEventListener('resize', resizeRenderer);
+            window.addEventListener('orientationchange', () => setTimeout(resizeRenderer, 60));
+            if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeRenderer);
+            resizeRenderer();
+
+            /* Camera is intentionally FIXED (original configurator behaviour):
+               no drag / touch / zoom handlers - the view never changes. */
+            const applyFixedCamera = () => { this.updateCameraPosition(camera); resizeRenderer(); };
+            window.addEventListener('resize', applyFixedCamera);
+            applyFixedCamera();
+
+            // Animate
+            const animate = () => {
+                this.heliAnimId = requestAnimationFrame(animate);
+                const bg = this.getBgColors();
+                renderer.setClearColor(bg.bg, 1);
+                renderer.render(scene, camera);
+            };
+            animate();
+
+        } catch(e) {
+            loadingEl.innerHTML = '<span>⚠ 3D unavailable<br><small>' + e.message + '</small></span>';
+            console.error('Three.js init error:', e);
+        }
+    }
+
+    getBgColors() {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        return dark ? { bg: 0x121218 } : { bg: 0xf0f2f5 };
+    }
+
+    updateCameraPosition(camera) {
+        const r = this.camRadius;
+        const phi = this.camPhi;
+        const theta = this.camTheta;
+        camera.position.set(
+            r * Math.sin(theta) * Math.cos(phi),
+            r * Math.sin(phi),
+            r * Math.cos(theta) * Math.cos(phi)
+        );
+        camera.lookAt(0, 0, 0);
+    }
+
+    /* ============================================================
+       SPP (Bluetooth Classic / Cordova Plugin)
+       ============================================================ */
+    bindSPP() {
+        let sppScanning = false;
+
+        const scanBtn = document.getElementById('spp-scan-btn');
+        const listEl = document.getElementById('spp-device-list');
+        const statusDot = document.getElementById('spp-status-dot');
+        const statusText = document.getElementById('spp-status-text');
+
+        this.sppSetStatus = (state, msg) => {
+            statusText.textContent = msg;
+            statusDot.className = 'bt-status-indicator' + (state ? ' ' + state : '');
+        };
+
+        const renderSppDevice = (dev) => {
+            const li = document.createElement('li');
+            if (this.sppConnected && this.sppDevice && this.sppDevice.address === dev.address) {
+                li.classList.add('connected');
+            }
+
+            const nameDiv = document.createElement('div');
+            nameDiv.innerHTML = `<div class="bt-device-name">${dev.name || 'Unknown'}</div>
+                                 <div class="bt-device-addr">${dev.address || ''}</div>`;
+
+            const connectBtn = document.createElement('button');
+            connectBtn.className = 'bt-connect-btn' + (this.sppConnected && this.sppDevice?.address === dev.address ? ' connected' : '');
+            connectBtn.textContent = this.sppConnected && this.sppDevice?.address === dev.address ? 'Disconnect' : 'Connect';
+            connectBtn.addEventListener('click', async () => {
+                if (this.sppConnected && this.sppDevice?.address === dev.address) {
+                    this.sppDisconnect(this.sppSetStatus, null, () => {
+                        this.sppConnected = false;
+                        this.sppDevice = null;
+                        this.serial.connected = false;
+                        this.serial.onStatusChange && this.serial.onStatusChange(false);
+                    });
+                } else {
+                    this.sppConnect(dev, this.sppSetStatus, null, (ok) => this.onSppConnectResult(dev, ok));
+                }
+            });
+
+            li.appendChild(nameDiv);
+            li.appendChild(connectBtn);
+            return li;
+        };
+
+        let currentDevices = [];
+
+        const refreshSppList = (devices) => {
+            currentDevices = devices;
+            listEl.innerHTML = '';
+            if (devices.length === 0) {
+                listEl.innerHTML = '<li style="pointer-events:none;"><span class="bt-empty-msg">No paired SPP devices found</span></li>';
+                return;
+            }
+            devices.forEach(dev => listEl.appendChild(renderSppDevice(dev)));
+        };
+        this.sppRefreshList = () => refreshSppList(currentDevices);
+
+        scanBtn.addEventListener('click', async () => {
+            if (sppScanning) return;
+            sppScanning = true;
+            scanBtn.classList.add('scan-active');
+            scanBtn.textContent = '⏳ Scanning...';
+            this.sppSetStatus('scanning', 'Scanning for paired SPP devices...');
+
+            try {
+                const devices = await this.sppListPaired();
+                this.sppSetStatus('', `Found ${devices.length} device(s)`);
+                refreshSppList(devices);
+            } catch(e) {
+                this.sppSetStatus('', 'Scan failed: ' + e.message);
+                refreshSppList([]);
+            } finally {
+                sppScanning = false;
+                scanBtn.classList.remove('scan-active');
+                scanBtn.textContent = '🔍 Scan';
+            }
+        });
+
+    }
+
+    async sppListPaired() {
+        // Capacitor / Cordova plugin: cordova-plugin-bluetooth-serial
+        // In Capacitor context: window.BluetoothSerial
+        // In browser: simulate with Web Bluetooth (limited)
+        return new Promise((resolve, reject) => {
+            if (window.BluetoothSerial) {
+                window.BluetoothSerial.list(
+                    (devices) => resolve(devices || []),
+                    (err) => reject(new Error(err || 'List failed'))
+                );
+            } else if (window.cordova && window.cordova.plugins && window.cordova.plugins.bluetoothSerial) {
+                window.cordova.plugins.bluetoothSerial.list(
+                    (devices) => resolve(devices || []),
+                    (err) => reject(new Error(err || 'List failed'))
+                );
+            } else {
+                // Browser fallback: try discoverUnpaired for native Android via WebView
+                reject(new Error('BluetoothSerial plugin not available. Use in Android app.'));
+            }
+        });
+    }
+
+    /* Shared SPP connect result: used by the box list AND by a top-panel
+       reconnect, so flags + box UI stay identical whichever path dials. */
+    onSppConnectResult(dev, ok) {
+        if (ok) {
+            this.sppDevice = dev;
+            this.sppConnected = true;
+            this.serial.connected = true;
+            this.lastConn = { type: 'spp', device: dev };
+            this.serial.onStatusChange && this.serial.onStatusChange(true);
+        } else {
+            this.sppConnected = false;
+            this.sppDevice = null;
+            this.serial.connected = false;
+            this.refreshTransportBoxes();
+        }
+    }
+
+    async sppConnect(device, setSppStatus, disconnectBtn, onResult) {
+        setSppStatus('scanning', `Connecting to ${device.name || device.address}...`);
+        return new Promise((resolve) => {
+            const connect = (cb) => {
+                if (window.BluetoothSerial) {
+                    window.BluetoothSerial.connect(device.address, cb.success, cb.fail);
+                } else if (window.cordova?.plugins?.bluetoothSerial) {
+                    window.cordova.plugins.bluetoothSerial.connect(device.address, cb.success, cb.fail);
+                } else {
+                    cb.fail('Plugin not available');
+                }
+            };
+
+            connect({
+                success: () => {
+                    setSppStatus('connected', `Connected: ${device.name || device.address}`);
+                    if (disconnectBtn) disconnectBtn.disabled = false;
+                    onResult(true);
+                    // Subscribe to incoming data
+                    const subscribe = window.BluetoothSerial || window.cordova?.plugins?.bluetoothSerial;
+                    if (subscribe) {
+                        subscribe.subscribeRawData(
+                            (data) => {
+                                if (this.msp && this.msp.parser) {
+                                    const bytes = new Uint8Array(data);
+                                    this.msp.parser.feed(bytes);
+                                }
+                            },
+                            (err) => console.warn('SPP subscribe error:', err)
+                        );
+                    }
+                    resolve(true);
+                },
+                fail: (err) => {
+                    setSppStatus('', 'Connection failed: ' + (err || 'Unknown error'));
+                    onResult(false);
+                    resolve(false);
+                }
+            });
+        });
+    }
+
+    sppDisconnect(setSppStatus, disconnectBtn, onDone) {
+        const plugin = window.BluetoothSerial || window.cordova?.plugins?.bluetoothSerial;
+        if (plugin) {
+            plugin.disconnect(
+                () => { setSppStatus('', 'Disconnected'); if (disconnectBtn) disconnectBtn.disabled = true; onDone(); },
+                (e) => { setSppStatus('', 'Disconnect error: ' + e); onDone(); }
+            );
+        } else {
+            setSppStatus('', 'Disconnected');
+            if (disconnectBtn) disconnectBtn.disabled = true;
+            onDone();
+        }
+    }
+
+    /* ============================================================
+       USB SERIAL (host OTG via usb-serial-for-android)
+       ============================================================ */
+    bindUSB() {
+        const scanBtn = document.getElementById('usb-scan-btn');
+        const listEl = document.getElementById('usb-device-list');
+        const statusDot = document.getElementById('usb-status-dot');
+        const statusText = document.getElementById('usb-status-text');
+
+        this.usbSetStatus = (state, msg) => {
+            statusText.textContent = msg;
+            statusDot.className = 'bt-status-indicator' + (state ? ' ' + state : '');
+        };
+
+        const renderUsbDevice = (dev) => {
+            const li = document.createElement('li');
+            const isConn = this.usbConnected && this.usbDevice && this.usbDevice.deviceId === dev.deviceId;
+            if (isConn) li.classList.add('connected');
+
+            const nameDiv = document.createElement('div');
+            nameDiv.innerHTML = `<div class="bt-device-name">${dev.name || 'USB Serial'} <span class="bt-device-addr">${dev.deviceId || ''}</span></div>`;
+
+            const connectBtn = document.createElement('button');
+            connectBtn.className = 'bt-connect-btn' + (isConn ? ' connected' : '');
+            connectBtn.textContent = isConn ? 'Disconnect' : 'Connect';
+            connectBtn.addEventListener('click', async () => {
+                if (isConn) {
+                    this.usbDisconnect(this.usbSetStatus, null, () => {
+                        this.usbConnected = false;
+                        if (this.usbUnsub) { try { this.usbUnsub(); } catch (e) {} this.usbUnsub = null; }
+                        this.serial.onStatusChange && this.serial.onStatusChange(false);
+                    });
+                } else {
+                    this.usbConnect(dev, this.usbSetStatus, null, (ok) => this.onUsbConnectResult(dev, ok));
+                }
+            });
+
+            li.appendChild(nameDiv);
+            li.appendChild(connectBtn);
+            return li;
+        };
+
+        let currentDevices = [];
+        const refreshUsbList = (devices) => {
+            currentDevices = devices;
+            listEl.innerHTML = '';
+            if (devices.length === 0) {
+                listEl.innerHTML = '<li style="pointer-events:none;"><span class="bt-empty-msg">No USB serial devices found</span></li>';
+                return;
+            }
+            devices.forEach(dev => listEl.appendChild(renderUsbDevice(dev)));
+        };
+        this.usbRefreshList = () => refreshUsbList(currentDevices);
+
+        scanBtn.addEventListener('click', async () => {
+            scanBtn.classList.add('scan-active');
+            scanBtn.textContent = '⏳ Scanning...';
+            this.usbSetStatus('scanning', 'Scanning USB serial devices...');
+            try {
+                const devices = await this.usbList();
+                this.usbSetStatus('', `Found ${devices.length} device(s)`);
+                refreshUsbList(devices);
+            } catch (e) {
+                this.usbSetStatus('', 'USB scan failed: ' + e.message);
+                refreshUsbList([]);
+            } finally {
+                scanBtn.classList.remove('scan-active');
+                scanBtn.textContent = '🔍 Scan';
+            }
+        });
+    }
+
+    async usbList() {
+        return new Promise((resolve, reject) => {
+            if (window.UsbSerial) {
+                window.UsbSerial.list(
+                    (devices) => resolve(devices || []),
+                    (err) => reject(new Error(err || 'List failed'))
+                );
+            } else {
+                reject(new Error('UsbSerial plugin not available. Use in Android app.'));
+            }
+        });
+    }
+
+    /* Shared USB connect result: used by the box list AND by a top-panel
+       reconnect. */
+    onUsbConnectResult(dev, ok) {
+        if (ok) {
+            this.usbDevice = dev;
+            this.usbConnected = true;
+            this.serial.connected = true;
+            this.lastConn = { type: 'usb', device: dev };
+            this.serial.send = (data) => new Promise((resolve, reject) => {
+                window.UsbSerial.write(data, () => resolve(), (e) => reject(new Error(e)));
+            });
+            this.usbUnsub = window.UsbSerial.subscribeRawData((data) => {
+                if (this.msp && this.msp.parser) this.msp.parser.feed(new Uint8Array(data));
+            });
+            this.serial.onStatusChange && this.serial.onStatusChange(true);
+        } else {
+            this.usbConnected = false;
+            this.serial.connected = false;
+            this.refreshTransportBoxes();
+        }
+    }
+
+    usbConnect(device, setUsbStatus, disconnectBtn, onResult) {
+        setUsbStatus('scanning', `Connecting to ${device.name || device.deviceId}...`);
+        const baud = parseInt(document.getElementById('baud-select').value) || 115200;
+        if (window.UsbSerial) {
+            window.UsbSerial.connect(device.deviceId, baud,
+                () => {
+                    setUsbStatus('connected', `Connected: ${device.name || device.deviceId}`);
+                    onResult(true);
+                },
+                (err) => {
+                    setUsbStatus('', 'Connection failed: ' + (err || 'Unknown error'));
+                    onResult(false);
+                }
+            );
+        } else {
+            setUsbStatus('', 'UsbSerial plugin not available');
+            onResult(false);
+        }
+    }
+
+    usbDisconnect(setUsbStatus, disconnectBtn, onDone) {
+        const plugin = window.UsbSerial;
+        if (plugin) {
+            plugin.disconnect(
+                () => { setUsbStatus('', 'Disconnected'); onDone(); },
+                (e) => { setUsbStatus('', 'Disconnect error: ' + e); onDone(); }
+            );
+        } else {
+            setUsbStatus('', 'Disconnected');
+            onDone();
+        }
+    }
+
+    /* ============================================================
+       BLE (Bluetooth Low Energy via Capacitor / Web Bluetooth)
+       ============================================================ */
+    bindBLE() {
+        let bleScanning = false;
+        let bleDevices = [];
+
+        const scanBtn = document.getElementById('ble-scan-btn');
+        const listEl = document.getElementById('ble-device-list');
+        const statusDot = document.getElementById('ble-status-dot');
+        const statusText = document.getElementById('ble-status-text');
+
+        this.bleSetStatus = (state, msg) => {
+            statusText.textContent = msg;
+            statusDot.className = 'bt-status-indicator' + (state ? ' ' + state : '');
+        };
+
+        const renderBleDevice = (dev) => {
+            const li = document.createElement('li');
+            const isConnected = this.bleConnected && this.bleDevice && this.bleDevice.deviceId === dev.deviceId;
+            if (isConnected) li.classList.add('connected');
+
+            const rssiStr = dev.rssi != null ? `${dev.rssi} dBm` : '';
+            const nameDiv = document.createElement('div');
+            nameDiv.innerHTML = `<div class="bt-device-name">${dev.name || dev.localName || 'Unknown'}</div>
+                                  <div class="bt-device-addr">${dev.deviceId || ''} <span class="bt-device-rssi">${rssiStr}</span></div>`;
+
+            const connectBtn = document.createElement('button');
+            connectBtn.className = 'bt-connect-btn' + (isConnected ? ' connected' : '');
+            connectBtn.textContent = isConnected ? 'Disconnect' : 'Connect';
+            connectBtn.addEventListener('click', async () => {
+                if (isConnected) {
+                    await this.bleDisconnect(dev, this.bleSetStatus, null, () => {
+                        this.bleConnected = false;
+                        this.bleDevice = null;
+                        this.serial.connected = false;
+                        this.serial.onStatusChange && this.serial.onStatusChange(false);
+                    });
+                } else {
+                    const ok = await this.bleConnect(dev, BLE_PROFILES, this.bleSetStatus, null);
+                    this.onBleConnectResult(dev, ok);
+                }
+            });
+
+            li.appendChild(nameDiv);
+            li.appendChild(connectBtn);
+            return li;
+        };
+
+        const refreshBleList = (devices) => {
+            bleDevices = devices;
+            listEl.innerHTML = '';
+            if (devices.length === 0) {
+                listEl.innerHTML = '<li style="pointer-events:none;"><span class="bt-empty-msg">No BLE devices found</span></li>';
+                return;
+            }
+            devices.forEach(d => listEl.appendChild(renderBleDevice(d)));
+        };
+        this.bleRefreshList = () => refreshBleList(bleDevices);
+
+        scanBtn.addEventListener('click', async () => {
+            if (bleScanning) {
+                await this.bleStopScan();
+                bleScanning = false;
+                scanBtn.classList.remove('scan-active');
+                scanBtn.textContent = '🔍 Scan';
+                this.bleSetStatus('', `Found ${bleDevices.length} device(s)`);
+                return;
+            }
+
+            bleScanning = true;
+            bleDevices = [];
+            scanBtn.classList.add('scan-active');
+            scanBtn.textContent = '⏹ Stop';
+            this.bleSetStatus('scanning', 'Scanning for BLE devices...');
+            refreshBleList([]);
+
+            try {
+                await this.bleScan((dev) => {
+                    // Skip unnamed ("Unknown") devices so they don't clutter the list
+                    if (!dev.name && !dev.localName) return;
+                    const idx = bleDevices.findIndex(d => d.deviceId === dev.deviceId);
+                    if (idx >= 0) {
+                        bleDevices[idx] = dev;
+                    } else {
+                        bleDevices.push(dev);
+                    }
+                    refreshBleList(bleDevices);
+                }, 8000);
+            } catch(e) {
+                this.bleSetStatus('', 'Scan error: ' + e.message);
+            } finally {
+                bleScanning = false;
+                scanBtn.classList.remove('scan-active');
+                scanBtn.textContent = '🔍 Scan';
+                if (!this.bleConnected) {
+                    this.bleSetStatus('', `Found ${bleDevices.length} device(s)`);
+                }
+            }
+        });
+
+    }
+
+    async bleScan(onDevice, timeoutMs = 8000) {
+        const knownUuids = [
+            '0000ffe0-0000-1000-8000-00805f9b34fb',
+            '0000ffe1-0000-1000-8000-00805f9b34fb',
+            '00001101-0000-1000-8000-00805f9b34fb',
+            '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+            '0000db32-0000-1000-8000-00805f9b34fb',
+            '00001000-0000-1000-8000-00805f9b34fb',
+            '0000abf0-0000-1000-8000-00805f9b34fb',
+            '000000ff-0000-1000-8000-00805f9b34fb'
+        ];
+
+        // Capacitor BleClient API
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BleClient) {
+            const BleClient = window.Capacitor.Plugins.BleClient;
+            await BleClient.initialize();
+            await BleClient.requestLEScan({
+                services: knownUuids
+            }, (result) => {
+                onDevice({
+                    deviceId: result.device.deviceId,
+                    name: result.device.name,
+                    rssi: result.rssi,
+                    localName: result.localName
+                });
+            });
+            return new Promise((resolve) => setTimeout(async () => {
+                await BleClient.stopLEScan();
+                resolve();
+            }, timeoutMs));
+        }
+
+        // Web Bluetooth API fallback (single device picker)
+        if (navigator.bluetooth) {
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: knownUuids
+                });
+                onDevice({ deviceId: device.id, name: device.name, rssi: null, _webBtDevice: device });
+            } catch(e) {
+                if (e.name !== 'NotFoundError') throw e;
+            }
+            return;
+        }
+
+        throw new Error('BLE not available. Use in Android app with Capacitor.');
+    }
+
+    async bleStopScan() {
+        if (window.Capacitor?.Plugins?.BleClient) {
+            try { await window.Capacitor.Plugins.BleClient.stopLEScan(); } catch(e) {}
+        }
+    }
+
+    /* Shared BLE connect result: used by the box list AND by a top-panel
+       reconnect. */
+    onBleConnectResult(dev, ok) {
+        if (ok) {
+            this.bleDevice = dev;
+            this.bleConnected = true;
+            this.serial.connected = true;
+            this.lastConn = { type: 'ble', device: dev };
+            this.serial.onStatusChange && this.serial.onStatusChange(true);
+        } else {
+            this.bleConnected = false;
+            this.bleDevice = null;
+            this.serial.connected = false;
+            this.refreshTransportBoxes();
+        }
+    }
+
+    async bleConnect(dev, profiles, setStatus, disconnectBtn) {
+        setStatus('scanning', `Connecting to ${dev.name || dev.deviceId}...`);
+
+        // Capacitor BleClient
+        if (window.Capacitor?.Plugins?.BleClient) {
+            const BleClient = window.Capacitor.Plugins.BleClient;
+            let lastError = null;
+
+            for (const profile of profiles) {
+                try {
+                    await BleClient.connect(dev.deviceId, () => {
+                        setStatus('', 'BLE disconnected (unexpected)');
+                        if (disconnectBtn) disconnectBtn.disabled = true;
+                        // Treat an unexpected BLE drop like a normal disconnect so
+                        // sensors reset to the OFF state instead of freezing on the
+                        // last values. Route through the same funnel as other paths.
+                        this.bleConnected = false;
+                        this.serial.onStatusChange && this.serial.onStatusChange(false);
+                    });
+                    await BleClient.startNotifications(dev.deviceId, profile.service, profile.notify, (value) => {
+                        const bytes = new Uint8Array(value.buffer || value);
+                        if (this.msp?.parser) this.msp.parser.feed(bytes);
+                    });
+
+                    // Override serial send to use BLE write
+                    const origSend = this.serial.send.bind(this.serial);
+                    this.serial.send = async (data) => {
+                        try {
+                            await BleClient.write(dev.deviceId, profile.service, profile.write, data);
+                        } catch(e) { console.warn('BLE write error:', e); }
+                    };
+
+                    setStatus('connected', `Connected: ${dev.name || dev.deviceId} (${profile.name})`);
+                    if (disconnectBtn) disconnectBtn.disabled = false;
+                    return true;
+                } catch(e) {
+                    lastError = e;
+                    continue;
+                }
+            }
+
+            setStatus('', 'BLE connect failed: ' + (lastError?.message || 'No matching profile'));
+            return false;
+        }
+
+        // Web Bluetooth API fallback
+        if (dev._webBtDevice) {
+            let lastError = null;
+
+            for (const profile of profiles) {
+                try {
+                    const server = await dev._webBtDevice.gatt.connect();
+                    const service = await server.getPrimaryService(profile.service);
+                    const notifyChar = await service.getCharacteristic(profile.notify);
+                    await notifyChar.startNotifications();
+                    notifyChar.addEventListener('characteristicvaluechanged', (e) => {
+                        const bytes = new Uint8Array(e.target.value.buffer);
+                        if (this.msp?.parser) this.msp.parser.feed(bytes);
+                    });
+                    dev._webBtDevice.gatt.addEventListener('disconnected', () => {
+                        setStatus('', 'BLE disconnected (unexpected)');
+                        if (disconnectBtn) disconnectBtn.disabled = true;
+                        this.bleConnected = false;
+                        this.serial.onStatusChange && this.serial.onStatusChange(false);
+                    });
+
+                    const writeChar = await service.getCharacteristic(profile.write);
+                    this.serial.send = async (data) => {
+                        try { await writeChar.writeValueWithoutResponse(data); } catch(e) {
+                            try { await writeChar.writeValue(data); } catch(e2) {}
+                        }
+                    };
+
+                    setStatus('connected', `Connected: ${dev.name} (${profile.name})`);
+                    if (disconnectBtn) disconnectBtn.disabled = false;
+                    return true;
+                } catch(e) {
+                    lastError = e;
+                    continue;
+                }
+            }
+
+            setStatus('', 'BLE connect failed: ' + (lastError?.message || 'No matching service UUID'));
+            return false;
+        }
+
+        setStatus('', 'BLE not available');
+        return false;
+    }
+
+    async bleDisconnect(dev, setStatus, disconnectBtn, onDone) {
+        if (window.Capacitor?.Plugins?.BleClient) {
+            try { await window.Capacitor.Plugins.BleClient.disconnect(dev.deviceId); } catch(e) {}
+        } else if (dev._webBtDevice?.gatt?.connected) {
+            dev._webBtDevice.gatt.disconnect();
+        }
+        setStatus('', 'Disconnected');
+        if (disconnectBtn) disconnectBtn.disabled = true;
+        if (onDone) onDone();
+    }
+}
+
+/* ============================================================
+   HELPER
+   ============================================================ */
+function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+/* ============================================================
+   LOAD GLB AS BASE64 DATA URI (embedded inline)
+   ============================================================ */
+// The helicopter.glb is embedded below as a base64 data URI.
+// This is set before StatusTab initializes so loadThreeScene can use it.
+/* Original rotorflight heli model (bell_cw) packed from rfconfigurator resources */
+window.__HELI_GLB_DATA_URI__ = '../models/heli.glb';
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+    window._statusTab = new StatusTab();
+});
+</script>
+    <script src="../bridge.js"></script>
+</body>
+</html>

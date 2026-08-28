@@ -59,12 +59,15 @@ appId: `org.rfcap.tabs` (기존 rfconfigurator 앱과 별도 앱으로 설치됨
 
 ## ⚠️ 중요사항 (반드시 읽을 것)
 
-### 1. `www/`는 Git에 커밋되어 있지 않다
-`.gitignore`에 `www/`가 있어 **웹 소스(hub.js/bridge.js/탭 HTML)는 버전 관리 대상이 아니다.**
-- `android/app/src/main/assets/public/`도 Capacitor가 생성하는 것이므로 무시됨.
-- **다른 PC에서 클론해 빌드하면 www가 없거나 오래된 상태가 된다** — 이 저장소만으로는 완전한 빌드가 안 됨.
-- www를 버전 관리에 넣으려면 `.gitignore`에서 `www/` 줄을 제거하고 `git add www/` 할 것.
-- 최소한 www 디렉터리는 별도 백업을 유지할 것. **hub.js 수정 이력이 Git에 없다.**
+### 1. `www/`는 이제 Git에 커밋된다 (2026-08-28부터)
+이전에는 `.gitignore`에 `www/`가 있어 **웹 소스(hub.js/bridge.js/탭 HTML)가 버전 관리되지 않았다.**
+hub.js 문법 오류 장애의 교훈으로, www 소스 전체를 저장소에 포함하도록 변경했다.
+- `www/`는 번들러가 생성하는 빌드 결과물이 아니라 **직접 편집하는 실제 소스**다.
+- 빌드 시 `npx cap sync android`가 `www/` → `android/app/src/main/assets/public/`로 복사한다.
+- www를 수정한 후에는 반드시 아래 명령으로 문법을 검증한 뒤 커밋할 것:
+```bash
+node --check www/hub.js && node --check www/bridge.js && node --check www/shell.js
+```
 
 ### 2. 빌드 전 반드시 `node --check` — JS 문법 오류 = 앱 전체 사망
 `hub.js`는 모든 탭↔네이티브 통신을 소유한다. **문법 오류가 하나만 있어도 hub.js 전체가 실행되지 않고**,

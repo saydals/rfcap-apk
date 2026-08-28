@@ -1,0 +1,3762 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotorflight Configurator - Profiles</title>
+    <style>
+        :root {
+            --animation-speed: 0.2s ease;
+            --section-gap: 16px;
+            --section-padding: 8px;
+            --color-shadow: rgba(0,0,0,0.2);
+            --color-shadow-soft: rgba(0,0,0,0.12);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * { outline:none; user-select:none; -webkit-user-drag:none; -webkit-app-region:no-drag; box-sizing:border-box; }
+        ::-webkit-scrollbar { width:8px; height:8px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-500); }
+
+        html, body {
+            height:100%; margin:0; padding:0;
+            font-family:"Open Sans","Segoe UI",Tahoma,sans-serif;
+            font-size:12px;
+            color:var(--color-text);
+            background-color:var(--color-bg);
+            transition: background-color var(--animation-speed), color var(--animation-speed);
+        }
+
+        /* ============ LIGHT THEME ============ */
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 8%, 98%);
+            --color-neutral-100: hsl(220, 8%, 97%);
+            --color-neutral-200: hsl(220, 8%, 92%);
+            --color-neutral-300: hsl(220, 8%, 85%);
+            --color-neutral-400: hsl(220, 8%, 70%);
+            --color-neutral-500: hsl(220, 8%, 50%);
+            --color-neutral-600: hsl(220, 8%, 30%);
+            --color-neutral-700: hsl(220, 8%, 18%);
+            --color-neutral-800: hsl(220, 8%, 10%);
+            --color-neutral-900: hsl(220, 8%, 5%);
+            --color-neutral-950: hsl(220, 8%, 3%);
+
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-surface-hover: var(--color-neutral-200);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+            --quietHeader: #555555;
+            --quietText: #ffffff;
+
+            /* rates + profiles unified axis colors */
+            --color-roll: #e85d5d;
+            --color-pitch: #5dcf5d;
+            --color-yaw: #6b6bff;
+            --color-collective: #ffb700;
+            --color-roll-soft: #ff8080;
+            --color-pitch-soft: #80ff80;
+            --color-yaw-soft: #8080ff;
+            --color-collective-soft: #ffcc33;
+        }
+
+        /* ============ DARK THEME ============ */
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(240, 10%, 5%);
+            --color-neutral-900: hsl(240, 8%, 10%);
+            --color-neutral-800: hsl(240, 6%, 18%);
+            --color-neutral-700: hsl(240, 5%, 26%);
+            --color-neutral-600: hsl(240, 5%, 36%);
+            --color-neutral-500: hsl(240, 4%, 52%);
+            --color-neutral-400: hsl(240, 5%, 62%);
+            --color-neutral-300: hsl(240, 6%, 72%);
+            --color-neutral-200: hsl(240, 8%, 82%);
+            --color-neutral-100: hsl(240, 10%, 90%);
+            --color-neutral-50: hsl(240, 12%, 95%);
+
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-surface-hover: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 55%, 48%);
+
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-300);
+            --color-text-disabled: var(--color-neutral-500);
+
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+
+            --color-btn-fg: var(--color-neutral-50);
+            --color-btn-fg-disabled: var(--color-neutral-600);
+            --color-btn-bg: var(--color-neutral-700);
+            --color-btn-bg-hover: var(--color-neutral-600);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-800);
+
+            --color-switch: hsl(202, 45%, 45%);
+            --color-switch-handle: var(--color-neutral-100);
+
+            --accent: hsl(202, 50%, 50%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+            --quietHeader: #3a3a3a;
+            --quietText: #e0e0e0;
+
+            --color-roll: #a83232;
+            --color-pitch: #2e8b2e;
+            --color-yaw: #3a3ab8;
+            --color-collective: #b87a00;
+            --color-roll-soft: #ff6b6b;
+            --color-pitch-soft: #6bcf6b;
+            --color-yaw-soft: #7a7aff;
+            --color-collective-soft: #ffbb33;
+        }
+
+        /* axis color scoping compatibility */
+        html[data-theme="light"] .tab-rates .dynamics-section,
+        html[data-theme="light"] .tab-profiles .dynamics-section {
+            --color-roll: var(--color-roll-soft);
+            --color-pitch: var(--color-pitch-soft);
+            --color-yaw: var(--color-yaw-soft);
+            --color-collective: var(--color-collective-soft);
+        }
+        html[data-theme="dark"] .tab-rates .dynamics-section,
+        html[data-theme="dark"] .tab-profiles .dynamics-section {
+            --color-roll: var(--color-roll);
+            --color-pitch: var(--color-pitch);
+            --color-yaw: var(--color-yaw);
+            --color-collective: var(--color-collective);
+        }
+
+body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
+            font-size: 12px;
+            color: var(--color-text);
+            background-color: var(--color-surface);
+        }
+
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 5%, 98%);
+            --color-neutral-100: hsl(220, 5%, 97%);
+            --color-neutral-200: hsl(220, 5%, 92%);
+            --color-neutral-300: hsl(220, 5%, 85%);
+            --color-neutral-400: hsl(220, 5%, 70%);
+            --color-neutral-500: hsl(220, 5%, 50%);
+            --color-neutral-600: hsl(220, 5%, 30%);
+            --color-neutral-700: hsl(220, 5%, 15%);
+            --color-neutral-800: hsl(220, 5%, 8%);
+            --color-neutral-900: hsl(220, 5%, 3%);
+            --color-neutral-950: hsl(220, 5%, 2%);
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+            --color-roll: hsl(2, 62%, 60%);
+            --color-pitch: hsl(122, 62%, 60%);
+            --color-yaw: hsl(242, 62%, 60%);
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+        }
+
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(248, 5%, 5%);
+            --color-neutral-900: hsl(248, 5%, 10%);
+            --color-neutral-800: hsl(248, 5%, 20%);
+            --color-neutral-700: hsl(248, 5%, 30%);
+            --color-neutral-600: hsl(248, 5%, 40%);
+            --color-neutral-500: hsl(248, 5%, 50%);
+            --color-neutral-400: hsl(248, 5%, 60%);
+            --color-neutral-300: hsl(248, 5%, 70%);
+            --color-neutral-200: hsl(248, 5%, 80%);
+            --color-neutral-100: hsl(248, 5%, 90%);
+            --color-neutral-50: hsl(248, 5%, 95%);
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 40%, 40%);
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-100);
+            --color-text-disabled: var(--color-neutral-300);
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+            --color-btn-fg: var(--color-neutral-900);
+            --color-btn-fg-disabled: var(--color-neutral-700);
+            --color-btn-bg: var(--color-neutral-200);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-400);
+            --color-switch: hsl(202, 40%, 40%);
+            --color-switch-handle: var(--color-neutral-100);
+            --color-roll: hsl(2, 48%, 45%);
+            --color-pitch: hsl(122, 48%, 40%);
+            --color-yaw: hsl(242, 48%, 55%);
+            --accent: hsl(202, 40%, 40%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+        }
+
+        body {
+            background-color: var(--color-bg);
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--color-border-accent);
+            font-weight: bold;
+        }
+
+        a.disabled {
+            pointer-events: none;
+            cursor: default;
+            color: var(--color-text-disabled);
+        }
+
+        /* Connection Panel */
+        #connection-panel {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #connection-panel .panel-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+
+        #connection-panel select,
+        #connection-panel input[type="text"] {
+            padding: 4px 8px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-input-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            height: 28px;
+        }
+
+        #connection-panel button {
+            padding: 4px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 28px;
+        }
+
+        #connection-panel button:hover:not(:disabled) {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        #connection-panel button:disabled {
+            background-color: var(--color-btn-bg-disabled);
+            color: var(--color-btn-fg-disabled);
+            cursor: not-allowed;
+        }
+
+        #connection-panel button.active {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-panel button.active:hover {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-status {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--color-text-soft);
+        }
+
+        #connection-status.connected {
+            color: #2e8b2e;
+        }
+
+        /* Main Layout */
+        #main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #tab-content-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Profiles Tab */
+        .tab-profiles {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .tab-profiles .tab-container {
+            border-bottom: 3px solid #0099FF;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: start;
+            width: 100%;
+        }
+
+        .tab-profiles .tab-container > div {
+            background-color: #555555;
+            padding: 6px 16px;
+            border-right: 1px solid #777777;
+            box-sizing: border-box;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tab-profiles .tab-container > div:first-child {
+            border-top-left-radius: 0px;
+        }
+
+        .tab-profiles .tab-container > div:last-child {
+            border-top-right-radius: 0px;
+            border-right: none;
+        }
+
+        .tab-profiles .tab-container > div a {
+            display: block;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tab-profiles .tab-container > div.active,
+        .tab-profiles .tab-container > div.active a {
+            background-color: #0099FF;
+            color: #ffffff;
+        }
+
+        .tab-profiles .tab-container > div.tab-copy {
+            background-color: #444444;
+            border-right: none;
+            margin-left: 20px;
+        }
+
+        .tab-profiles .tab-container > div.tab-copy a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .tab-profiles .tab-area {
+            width: 100%;
+            position: relative;
+            padding: 10px;
+            border: 1px solid #CCCCCC;
+            border-bottom-right-radius: 0px;
+            border-bottom-left-radius: 0px;
+            border-top: 1px solid #CCCCCC;
+            background: #F5F5F5;
+        }
+
+        html[data-theme="dark"] .tab-profiles .tab-area {
+            background: #1e1e1e;
+            border-color: #555555;
+        }
+
+        .tab-profiles .subtab {
+            display: flex;
+            flex-flow: row wrap;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .tab-profiles .subtab .cf_column {
+            min-width: 472px;
+            flex: 1;
+        }
+
+        .tab-profiles .gui_box {
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            display: block;
+            width: 100%;
+            background-color: #F5F5F5;
+            border: 1px solid #CCCCCC;
+            border-radius: 5px;
+            padding-top: 28px;
+            overflow: visible;
+            position: relative;
+        }
+
+        html[data-theme="dark"] .tab-profiles .gui_box {
+            background-color: #2a2a2a;
+            border-color: #555555;
+        }
+
+        .tab-profiles .gui_box span {
+            font-style: normal;
+            font-weight: normal;
+            line-height: 22px;
+            color: var(--color-text-soft);
+        }
+
+        .tab-profiles .gui_box_titlebar {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 0;
+            padding: 3px 14px;
+            background-color: #555555;
+            color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 22px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        html[data-theme="dark"] .tab-profiles .gui_box_titlebar {
+            background-color: #444444;
+            color: #ffffff;
+        }
+
+        /* Section divider lines */
+        .tab-profiles .section-divider {
+            border: none;
+            border-top: 1px solid #CCCCCC;
+            margin: 2px 8px 4px 8px;
+        }
+
+        html[data-theme="dark"] .tab-profiles .section-divider {
+            border-top-color: #555555;
+        }
+
+        /* Sub-section headings inside gui_box */
+        .tab-profiles .gui_box .sub-heading {
+            font-size: 12px;
+            font-weight: 700;
+            color: #333333;
+            padding: 4px 8px 4px 8px;
+            margin: 0;
+            line-height: 16px;
+        }
+
+        html[data-theme="dark"] .tab-profiles .gui_box .sub-heading {
+            color: #DDDDDD;
+        }
+
+        /* PID table row borders */
+        .tab-profiles .pid_table tr.ROLL,
+        .tab-profiles .pid_table tr.PITCH,
+        .tab-profiles .pid_table tr.YAW {
+            border-bottom: 1px solid #DDDDDD;
+        }
+
+        .tab-profiles .pid_table tr.YAW {
+            border-bottom: none;
+        }
+
+        html[data-theme="dark"] .tab-profiles .pid_table tr.ROLL,
+        html[data-theme="dark"] .tab-profiles .pid_table tr.PITCH,
+        html[data-theme="dark"] .tab-profiles .pid_table tr.YAW {
+            border-bottom-color: #444444;
+        }
+
+        .tab-profiles table {
+            width: 100%;
+            min-width: 130px;
+            margin: 0;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        .tab-profiles table input,
+        .tab-profiles table select {
+            display: block;
+            width: 100%;
+            height: 20px;
+            line-height: 20px;
+            text-align: right;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+            color: #000;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        html[data-theme="dark"] .tab-profiles table input,
+        html[data-theme="dark"] .tab-profiles table select {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+        .tab-profiles table input[type="checkbox"] {
+            width: auto;
+            height: auto;
+            text-align: left;
+            margin: 2px;
+        }
+
+        .tab-profiles table td {
+            padding: 2px 4px;
+            border-bottom: 0;
+        }
+
+        .tab-profiles table tr td:first-child {
+            text-align: left;
+            padding-left: 8px;
+        }
+
+        .tab-profiles table tr td:last-child {
+            border-right: 0;
+            padding-right: 8px;
+        }
+
+        .tab-profiles .pid_table tr.pid_titlebar th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: normal;
+            line-height: 16px;
+            height: 22px;
+            padding: 0 4px;
+        }
+
+        html[data-theme="light"] .tab-profiles .pid_table tr.pid_titlebar th {
+            background-color: #D0D0D0;
+            color: #333333;
+        }
+
+        html[data-theme="dark"] .tab-profiles .pid_table tr.pid_titlebar th {
+            color: #DDDDDD;
+            background-color: #444444;
+        }
+
+        .tab-profiles .pid_table td.pid_data {
+            padding-left: 3px;
+            padding-right: 3px;
+        }
+
+        .tab-profiles .settings_table tr {
+            height: 26px;
+        }
+
+        /* Prevent first row clipping after titlebar/divider/sub-heading */
+        .tab-profiles .gui_box > table:first-child,
+        .tab-profiles .gui_box > hr + table {
+            margin-top: 2px;
+        }
+
+        .tab-profiles .settings_table tr.border {
+            border-bottom: 1px solid #CCCCCC;
+        }
+
+        html[data-theme="dark"] .tab-profiles .settings_table tr.border {
+            border-bottom-color: #555555;
+        }
+
+        .tab-profiles .settings_table tr:last-child {
+            border-bottom: none !important;
+        }
+
+        .tab-profiles .settings_table td {
+            padding-left: 5px;
+            padding-right: 8px;
+            padding-bottom: 2px;
+        }
+
+        .tab-profiles .settings_table td:first-child {
+            width: 80px;
+            text-align: center;
+            vertical-align: top;
+            padding-top: 2px;
+            border-right: 1px solid #CCCCCC;
+        }
+
+        html[data-theme="dark"] .tab-profiles .settings_table td:first-child {
+            border-right-color: #555555;
+        }
+
+        .tab-profiles .settings_table td:last-child {
+            width: 100%;
+        }
+
+        .tab-profiles .settings_table .suboption {
+            margin-left: 2%;
+            display: flex;
+            flex-flow: row wrap-reverse;
+            align-items: center;
+            padding-bottom: 2px;
+            font-size: 11px;
+        }
+
+        .tab-profiles .settings_table .suboption select {
+            width: 80px;
+            height: 20px;
+            text-align: right;
+            font-size: 1.1em;
+            box-sizing: border-box;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+        }
+
+        html[data-theme="dark"] .tab-profiles .settings_table .suboption select {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+        .tab-profiles .settings_table .suboption input {
+            width: 80px;
+            height: 20px;
+            box-sizing: border-box;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+        }
+
+        html[data-theme="dark"] .tab-profiles .settings_table .suboption input {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+        .tab-profiles .settings_table .suboption label {
+            margin-left: 5px;
+        }
+
+        .tab-profiles .ROLL .axis_title {
+            background-color: #FF8080;
+        }
+
+        .tab-profiles .PITCH .axis_title {
+            background-color: #80FF80;
+        }
+
+        .tab-profiles .YAW .axis_title {
+            background-color: #8080FF;
+        }
+
+        .tab-profiles .spacer_left {
+            padding-left: 0;
+            float: right;
+            width: calc(100% - 20px);
+        }
+
+        .tab-profiles.toolbar_hidden .content_toolbar {
+            display: none;
+        }
+
+        .tab-profiles .content_toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding: 10px 0 2px 0;
+        }
+
+        .tab-profiles .content_toolbar .btn a {
+            display: inline-block;
+            padding: 6px 18px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-profiles .content_toolbar .btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-profiles .content_toolbar .save_btn a {
+            background-color: #2e7d32;
+            color: #fff;
+            border-color: #1b5e20;
+        }
+
+        .tab-profiles .resetbtn {
+            width: 150px;
+            margin-right: 10px;
+        }
+
+        .tab-profiles dialog {
+            width: 40em;
+            border-radius: 5px;
+            border: 1px solid var(--color-border);
+            padding: 16px;
+        }
+
+        .tab-profiles dialog h3 {
+            margin-top: 0;
+            margin-bottom: 0.5em;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        dialog {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px 20px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            min-width: 280px;
+        }
+
+        dialog h3 {
+            margin: 0 0 8px 0;
+        }
+
+        dialog .buttons {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        dialog .buttons a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        dialog .spinner {
+            display: block;
+        }
+
+        .tab-profiles .note {
+            margin-bottom: 2px;
+            text-align: left;
+            padding: 8px;
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            color: #856404;
+        }
+
+        html[data-theme="dark"] .tab-profiles .note {
+            background-color: #3d3010;
+            border-color: #b8860b;
+            color: #ffc107;
+        }
+
+        .tab-profiles .pid_titlebar .name-helpicon-flex {
+            display: flex;
+            flex-flow: row wrap;
+            justify-content: space-around;
+        }
+
+        .tab-profiles .pid_titlebar .name-helpicon-flex .helpicon {
+            margin-top: 1px;
+            margin-right: 0;
+        }
+
+        .tab-profiles .content_wrapper_header {
+            margin-bottom: 10px;
+        }
+
+        .tab-profiles .content_wrapper_header_btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tab-profiles .default_btn a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-profiles .default_btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-profiles .tab_title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .helpicon {
+            float: right;
+            margin-top: 7px;
+            margin-right: 7px;
+            display: block;
+            height: 14px;
+            width: 14px;
+            opacity: 0.2;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="gray"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>');
+            background-size: contain;
+            background-position: center;
+            cursor: help;
+        }
+
+        .helpicon:hover {
+            opacity: 0.9;
+        }
+
+        .cf_tip {
+            position: relative;
+        }
+
+        .tab-profiles .cf_column {
+            min-width: 472px;
+            flex: 1;
+        }
+
+        .tab-profiles .param-missing,
+        .tab-profiles tr.param-missing td {
+            color: var(--color-text-disabled) !important;
+            opacity: 0.5;
+        }
+
+        .tab-profiles input.param-missing,
+        .tab-profiles select.param-missing {
+            background-color: #c9c9c9 !important;
+            color: var(--color-text-disabled) !important;
+            border-color: #999999 !important;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        html[data-theme="dark"] .tab-profiles input.param-missing,
+        html[data-theme="dark"] .tab-profiles select.param-missing {
+            background-color: #2a2a2a !important;
+        }
+
+        .tab-profiles label.param-missing,
+        .tab-profiles label.param-missing span {
+            color: var(--color-text-disabled) !important;
+            text-decoration: line-through;
+        }
+
+        @media all and (max-width: 575px) {
+            .tab-rates .tab-container > div,
+            .tab-profiles .tab-container > div {
+                width: calc(100% / 3);
+            }
+
+            .tab-profiles .subtab .cf_column {
+                min-width: 100%;
+                width: 100%;
+            }
+
+            .tab-profiles .spacer_left {
+                width: 100%;
+            }
+        }
+    
+body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
+            font-size: 12px;
+            color: var(--color-text);
+            background-color: var(--color-surface);
+        }
+
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 5%, 98%);
+            --color-neutral-100: hsl(220, 5%, 97%);
+            --color-neutral-200: hsl(220, 5%, 92%);
+            --color-neutral-300: hsl(220, 5%, 85%);
+            --color-neutral-400: hsl(220, 5%, 70%);
+            --color-neutral-500: hsl(220, 5%, 50%);
+            --color-neutral-600: hsl(220, 5%, 30%);
+            --color-neutral-700: hsl(220, 5%, 15%);
+            --color-neutral-800: hsl(220, 5%, 8%);
+            --color-neutral-900: hsl(220, 5%, 3%);
+            --color-neutral-950: hsl(220, 5%, 2%);
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+            --quietHeader: #555555;
+            --quietText: #ffffff;
+        }
+
+        html[data-theme="light"] .tab-rates .dynamics-section {
+            --color-roll: #ff8080;
+            --color-pitch: #80ff80;
+            --color-yaw: #8080ff;
+            --color-collective: #ffbb00;
+        }
+
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(248, 5%, 5%);
+            --color-neutral-900: hsl(248, 5%, 10%);
+            --color-neutral-800: hsl(248, 5%, 20%);
+            --color-neutral-700: hsl(248, 5%, 30%);
+            --color-neutral-600: hsl(248, 5%, 40%);
+            --color-neutral-500: hsl(248, 5%, 50%);
+            --color-neutral-400: hsl(248, 5%, 60%);
+            --color-neutral-300: hsl(248, 5%, 70%);
+            --color-neutral-200: hsl(248, 5%, 80%);
+            --color-neutral-100: hsl(248, 5%, 90%);
+            --color-neutral-50: hsl(248, 5%, 95%);
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 40%, 40%);
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-100);
+            --color-text-disabled: var(--color-neutral-300);
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+            --color-btn-fg: var(--color-neutral-900);
+            --color-btn-fg-disabled: var(--color-neutral-700);
+            --color-btn-bg: var(--color-neutral-200);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-400);
+            --color-switch: hsl(202, 40%, 40%);
+            --color-switch-handle: var(--color-neutral-100);
+            --accent: hsl(202, 40%, 40%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+            --quietHeader: #444444;
+            --quietText: #ffffff;
+        }
+
+        html[data-theme="dark"] .tab-rates .dynamics-section {
+            --color-roll: #a00000;
+            --color-pitch: #00a000;
+            --color-yaw: #0000a0;
+            --color-collective: #c08000;
+        }
+
+        body {
+            background-color: var(--color-bg);
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--color-border-accent);
+            font-weight: bold;
+        }
+
+        a.disabled {
+            pointer-events: none;
+            cursor: default;
+            color: var(--color-text-disabled);
+        }
+
+        /* Connection Panel */
+        #connection-panel {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #connection-panel .panel-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+
+        #connection-panel select,
+        #connection-panel input[type="text"] {
+            padding: 4px 8px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-input-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            height: 28px;
+        }
+
+        #connection-panel button {
+            padding: 4px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 28px;
+        }
+
+        #connection-panel button:hover:not(:disabled) {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        #connection-panel button:disabled {
+            background-color: var(--color-btn-bg-disabled);
+            color: var(--color-btn-fg-disabled);
+            cursor: not-allowed;
+        }
+
+        #connection-panel button.active {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-panel button.active:hover {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-status {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--color-text-soft);
+        }
+
+        #connection-status.connected {
+            color: #2e8b2e;
+        }
+
+        /* Main Layout */
+        #main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #tab-content-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Rates Tab */
+        .tab-rates {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .tab-rates .content_wrapper_header {
+            margin-bottom: 10px;
+        }
+
+        .tab-rates .content_wrapper_header_btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tab-rates .default_btn a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-rates .default_btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-rates .tab_title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .tab-rates .tab-container {
+            border-bottom: 3px solid #0099FF;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: start;
+            width: 100%;
+        }
+
+        .tab-rates .tab-container > div {
+            background-color: #555555;
+            padding: 6px 16px;
+            border-right: 1px solid #777777;
+            box-sizing: border-box;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tab-rates .tab-container > div:first-child {
+            border-top-left-radius: 0px;
+        }
+
+        .tab-rates .tab-container > div.tab:last-child {
+            border-top-right-radius: 0px;
+            border-right: none;
+        }
+
+        .tab-rates .tab-container > div a {
+            display: block;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tab-rates .tab-container > div.active,
+        .tab-rates .tab-container > div.active a {
+            background-color: #0099FF;
+            color: #ffffff;
+        }
+
+        .tab-rates .tab-container > div.tab-copy {
+            background-color: #444444;
+            border-right: none;
+            margin-left: 20px;
+        }
+
+        .tab-rates .tab-container > div.tab-copy a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .tab-rates .tab-area {
+            width: 100%;
+            position: relative;
+            padding: 10px;
+            border: 1px solid #CCCCCC;
+            border-bottom-right-radius: 0px;
+            border-bottom-left-radius: 0px;
+            border-top: 1px solid #CCCCCC;
+            background: #F5F5F5;
+        }
+
+        html[data-theme="dark"] .tab-rates .tab-area {
+            background: #1e1e1e;
+            border-color: #555555;
+        }
+
+        .tab-rates .subtab {
+            display: flex;
+            flex-flow: row wrap;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .tab-rates .subtab .cf_column {
+            min-width: 472px;
+            flex: 1;
+        }
+
+        .tab-rates .gui_box {
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            display: block;
+            width: 100%;
+            background-color: #F5F5F5;
+            border: 1px solid #CCCCCC;
+            border-radius: 5px;
+            padding-top: 28px;
+            overflow: visible;
+            position: relative;
+        }
+
+        html[data-theme="dark"] .tab-rates .gui_box {
+            background-color: #2a2a2a;
+            border-color: #555555;
+        }
+
+        .tab-rates .gui_box.grey {
+            background-color: #ededed;
+        }
+
+        html[data-theme="dark"] .tab-rates .gui_box.grey {
+            background-color: #252525;
+        }
+
+        .tab-rates .gui_box span {
+            font-style: normal;
+            font-weight: normal;
+            line-height: 22px;
+            color: var(--color-text-soft);
+        }
+
+        .tab-rates .gui_box_titlebar {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 0;
+            padding: 3px 14px;
+            background-color: #555555;
+            color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 22px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        html[data-theme="dark"] .tab-rates .gui_box_titlebar {
+            background-color: #444444;
+            color: #ffffff;
+        }
+
+        .tab-rates table {
+            width: 100%;
+            min-width: 130px;
+            margin: 0;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        .tab-rates table input,
+        .tab-rates table select {
+            display: block;
+            width: 100%;
+            height: 20px;
+            line-height: 20px;
+            text-align: right;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            background-color: white;
+            color: #000;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        html[data-theme="dark"] .tab-rates table input,
+        html[data-theme="dark"] .tab-rates table select {
+            background-color: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555555;
+        }
+
+        .tab-rates table input[type="checkbox"] {
+            width: auto;
+            height: auto;
+            text-align: left;
+            margin: 2px;
+            display: inline-block;
+        }
+
+        .tab-rates table td {
+            padding: 2px 4px;
+            border-bottom: 0;
+        }
+
+        .tab-rates table th {
+            padding: 0;
+            border: 0;
+            height: 10px;
+            font-weight: normal;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        .tab-rates .cf th {
+            height: 19px;
+            font-weight: normal;
+            padding: 4px;
+            color: white;
+            text-align: left;
+            background: #666;
+            border-right: dotted 1px var(--superSubtleAccent);
+        }
+
+        .tab-rates .cf td:first-child {
+            border-bottom-left-radius: 3px;
+        }
+
+        .tab-rates .cf input {
+            margin: 4px;
+            width: calc(100% - 10px);
+            border: 1px solid var(--subtleAccent);
+            border-radius: 3px;
+        }
+
+        .tab-rates .cf select {
+            margin: 4px;
+            width: calc(100% - 10px);
+            border: 1px solid var(--subtleAccent);
+        }
+
+        .tab-rates .rates_titlebar th {
+            padding: 5px;
+            text-align: left;
+            border-right: 1px solid var(--subtleAccent);
+        }
+
+        .tab-rates .rates_setup .maxAngularVelRoll,
+        .tab-rates .rates_setup .maxAngularVelPitch,
+        .tab-rates .rates_setup .maxAngularVelYaw,
+        .tab-rates .rates_setup .maxCollectiveAngle {
+            background-color: #fff;
+            border: 1px solid #AAAAAA;
+            border-radius: 5px;
+            text-align: right;
+            padding: 0 4px;
+            height: 20px;
+            line-height: 20px;
+            box-sizing: border-box;
+            color: #000;
+        }
+
+        .tab-rates .rates_setup td.maxAngularVelRoll,
+        .tab-rates .rates_setup td.maxAngularVelPitch,
+        .tab-rates .rates_setup td.maxAngularVelYaw,
+        .tab-rates .rates_setup td.maxCollectiveAngle {
+            padding: 0;
+        }
+
+        html[data-theme="dark"] .tab-rates .rates_setup .maxAngularVelRoll,
+        html[data-theme="dark"] .tab-rates .rates_setup .maxAngularVelPitch,
+        html[data-theme="dark"] .tab-rates .rates_setup .maxAngularVelYaw,
+        html[data-theme="dark"] .tab-rates .rates_setup .maxCollectiveAngle {
+            background-color: #2e2e2e;
+            border-color: #555555;
+            color: var(--color-text);
+        }
+
+        .tab-rates table tr td:first-child {
+            text-align: left;
+            padding-left: 5px;
+        }
+
+        .tab-rates table tr td:last-child {
+            border-right: 0;
+            text-align: right;
+        }
+
+        .tab-rates .rates_setup table th.name {
+            width: 80px;
+        }
+
+        .tab-rates .field {
+            padding: 2px 6px;
+        }
+
+        .tab-rates .field > div {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .tab-rates .field label {
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+
+        /* Rates logo area */
+        .tab-rates .rates_logo_div {
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            color: var(--color-text);
+        }
+
+        /* Rate curve */
+        .tab-rates .rc_curve {
+            height: 100%;
+            min-height: 300px;
+        }
+
+        .tab-rates .rate_curve {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        html[data-theme="dark"] .tab-rates .rate_curve {
+            background: #1a1a1a;
+            border-color: #555;
+        }
+
+        .tab-rates .rate_curve canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Dynamics section */
+        .tab-rates .dynamics-section {
+            margin-bottom: 12px;
+        }
+
+        .tab-rates .dynamics-grid-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+        }
+
+        .tab-rates .dynamics-title-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .tab-rates .dynamics-axis-header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .tab-rates .roll-header {
+            background-color: #ff6b6b;
+        }
+
+        .tab-rates .pitch-header {
+            background-color: #51cf66;
+        }
+
+        .tab-rates .yaw-header {
+            background-color: #5c7cfa;
+        }
+
+        .tab-rates .collective-header {
+            background-color: #ffd43b;
+            color: #333;
+        }
+
+        .tab-rates .dynamics-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .tab-rates .dynamics-label {
+            font-size: 11px;
+            color: var(--color-text-soft);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+
+
+        .tab-rates .dynamics-row input {
+            width: 100%;
+            height: 22px;
+            text-align: right;
+            border: 1px solid #AAAAAA;
+            border-radius: 4px;
+            background: #fff;
+            color: #000;
+            padding: 0 4px;
+            box-sizing: border-box;
+            font-size: 11px;
+        }
+
+        html[data-theme="dark"] .tab-rates .dynamics-row input {
+            background: #2e2e2e;
+            color: var(--color-text);
+            border-color: #555;
+        }
+
+        .tab-rates .empty-cell {
+            /* Empty cell for yaw-only parameters */
+        }
+
+        /* Toolbar */
+        .tab-rates.toolbar_hidden .content_toolbar {
+            display: none;
+        }
+
+        .tab-rates .content_toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding: 10px 0 2px 0;
+        }
+
+        .tab-rates .content_toolbar .btn a {
+            display: inline-block;
+            padding: 6px 18px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-rates .content_toolbar .btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-rates .content_toolbar .save_btn a {
+            background-color: #2e7d32;
+            color: #fff;
+            border-color: #1b5e20;
+        }
+
+        /* Dialogs */
+        dialog {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px 20px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            min-width: 280px;
+        }
+
+        dialog h3 {
+            margin: 0 0 8px 0;
+        }
+
+        dialog .buttons {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        dialog .buttons a {
+            display: inline-block;
+            padding: 6px 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        dialog .spinner {
+            display: block;
+        }
+
+        dialog .buttons a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        /* Missing param styling */
+        .tab-rates .param-missing,
+        .tab-rates tr.param-missing td { color: var(--color-text-disabled) !important; opacity: 0.5; }
+        .tab-rates input.param-missing,
+        .tab-rates select.param-missing {
+            background-color: #c9c9c9 !important; color: var(--color-text-disabled) !important;
+            border-color: #999999 !important; cursor: not-allowed; text-decoration: line-through;
+        }
+        html[data-theme="dark"] .tab-rates input.param-missing,
+        html[data-theme="dark"] .tab-rates select.param-missing { background-color: #2a2a2a !important; }
+        .tab-rates label.param-missing,
+        .tab-rates label.param-missing span { color: var(--color-text-disabled) !important; text-decoration: line-through; }
+    
+        /* ===== RFCap mobile alignment (added) ===== */
+        @media all and (max-width: 700px) {
+            .tab-rates .subtab .cf_column,
+            .tab-profiles .subtab .cf_column {
+                min-width: 100%;
+                width: 100%;
+                flex: 1 1 100%;
+            }
+            .tab-rates .field input[type="number"] { width: 62px; }
+            .tab-rates .dynamics-grid-container {
+                grid-template-columns: max-content repeat(4, minmax(46px, 1fr));
+            }
+            .tab-rates .rate_curve { height: 230px; }
+            .tab-container { flex-wrap: wrap; }
+        }
+
+    </style>
+
+<script>
+(function(){
+  const STORAGE_KEY='rf-theme';
+  function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem(STORAGE_KEY,t); }
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initial = saved || (prefersDark ? 'dark' : 'light');
+  applyTheme(initial);
+  window.toggleTheme = function(){
+    const cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur==='dark' ? 'light' : 'dark');
+  };
+  // auto add toggle button if connection panel exists
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const panel = document.getElementById('connection-panel') || document.querySelector('.header');
+    if(panel && !document.getElementById('theme-toggle-btn')){
+      const btn=document.createElement('button');
+      btn.id='theme-toggle-btn';
+      btn.textContent='🌙 / ☀️';
+      btn.title='Toggle dark/light';
+      btn.style.cssText='margin-left:auto;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-btn-bg);color:var(--color-btn-fg);cursor:pointer;';
+      btn.onclick=window.toggleTheme;
+      panel.appendChild(btn);
+    }
+  });
+})();
+</script>
+</head>
+<body data-theme="light">
+    <div id="main-wrapper">
+        <!-- Connection Panel -->
+        <div id="connection-panel">
+            <span class="panel-title">Connection</span>
+            <select id="port-select">
+                <option value="none">Select Port</option>
+            </select>
+            <select id="baud-select">
+                <option value="1000000">1000000</option>
+                <option value="500000">500000</option>
+                <option value="250000">250000</option>
+                <option value="115200" selected>115200</option>
+                <option value="57600">57600</option>
+                <option value="38400">38400</option>
+            </select>
+            <button id="connect-btn">Connect</button>
+            <span id="connection-status">Disconnected</span>
+        </div>
+
+        <!-- Profiles Tab Content -->
+        <div id="tab-content-container">
+            <div class="tab-profiles">
+                <div class="content_wrapper">
+                    <div class="tab_title">Profiles</div>
+                    <div class="content_wrapper_header">
+                        <div class="content_wrapper_header_btns">
+                        </div>
+                    </div>
+
+                    <div class="tab-container">
+                        <div class="tab profile1 active"><a href="#">Profile #1</a></div>
+                        <div class="tab profile2"><a href="#">Profile #2</a></div>
+                        <div class="tab profile3"><a href="#">Profile #3</a></div>
+                        <div class="tab-copy">
+                            <a href="#" id="copyProfile">Copy Profile</a>
+                        </div>
+                    </div>
+
+                    <div class="tab-area">
+                        <form name="profile" id="profile">
+                            <div class="subtab">
+                                <div class="cf_column">
+                                    <div class="note profilesPIDWarning" style="display:none">
+                                        <p class="profilesPIDWarningText"></p>
+                                    </div>
+
+                                    <!-- PID Controller Gains -->
+                                    <div class="gui_box grey pid_config">
+                                        <div class="gui_box_titlebar">
+                                            <div class="spacer_box_title">PID Controller Gains</div>
+                                        </div>
+                                        <table id="pid_main" class="pid_table">
+                                            <tr class="pid_titlebar">
+                                                <th class="name"><div class="name-helpicon-flex"><div>PID Controller Gains</div></div></th>
+                                                <th class="proportional"><div class="name-helpicon-flex"><div>P</div></div></th>
+                                                <th class="integral"><div class="name-helpicon-flex"><div>I</div></div></th>
+                                                <th class="derivative"><div class="name-helpicon-flex"><div>D</div></div></th>
+                                                <th class="feedforward"><div class="name-helpicon-flex"><div>FF</div></div></th>
+                                                <th class="boost"><div class="name-helpicon-flex"><div>B</div></div></th>
+                                            </tr>
+                                            <tr class="ROLL">
+                                                <td class="axis_title">ROLL</td>
+                                                <td class="pid_data"><input type="number" name="P" step="1" min="0" max="1000" value="10" /></td>
+                                                <td class="pid_data"><input type="number" name="I" step="1" min="0" max="1000" value="50" /></td>
+                                                <td class="pid_data"><input type="number" name="D" step="1" min="0" max="1000" value="0" /></td>
+                                                <td class="pid_data"><input type="number" name="F" step="1" min="0" max="1000" value="50" /></td>
+                                                <td class="pid_data"><input type="number" name="B" step="1" min="0" max="1000" value="0" /></td>
+                                            </tr>
+                                            <tr class="PITCH">
+                                                <td class="axis_title">PITCH</td>
+                                                <td class="pid_data"><input type="number" name="P" step="1" min="0" max="1000" value="10" /></td>
+                                                <td class="pid_data"><input type="number" name="I" step="1" min="0" max="1000" value="50" /></td>
+                                                <td class="pid_data"><input type="number" name="D" step="1" min="0" max="1000" value="0" /></td>
+                                                <td class="pid_data"><input type="number" name="F" step="1" min="0" max="1000" value="50" /></td>
+                                                <td class="pid_data"><input type="number" name="B" step="1" min="0" max="1000" value="0" /></td>
+                                            </tr>
+                                            <tr class="YAW">
+                                                <td class="axis_title">YAW</td>
+                                                <td class="pid_data"><input type="number" name="P" step="1" min="0" max="1000" value="50" /></td>
+                                                <td class="pid_data"><input type="number" name="I" step="1" min="0" max="1000" value="50" /></td>
+                                                <td class="pid_data"><input type="number" name="D" step="1" min="0" max="1000" value="0" /></td>
+                                                <td class="pid_data"><input type="number" name="F" step="1" min="0" max="1000" value="0" /></td>
+                                                <td class="pid_data"><input type="number" name="B" step="1" min="0" max="1000" value="0" /></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- PID Controller Settings -->
+                                    <div class="gui_box grey pid_config">
+                                        <div class="gui_box_titlebar">
+                                            <div class="spacer_box_title">PID Controller Settings</div>
+                                        </div>
+                                        <table id="pid_advanced" class="settings_table">
+                                            <tr class="errorRotation border">
+                                                <td><input type="checkbox" id="errorRotation" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    <span>Piro Compensation</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="errorDecayGround border">
+                                                <td><input type="checkbox" id="errorDecayGround" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    <span>Error Decay (Ground)</span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="errorDecayTimeGround" step="0.1" min="0.1" max="25.0" value="1.0" />
+                                                        <label for="errorDecayTimeGround"><span>Decay Time [s]</span></label>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr class="itermRelax border">
+                                                <td><input type="checkbox" id="itermRelax" class="toggle" checked /></td>
+                                                <td colspan="2">
+                                                    
+                                                    <div><label for="itermRelax"><span>I-Term Relax</span></label></div>
+                                                    
+                                                    <span class="suboption">
+                                                        <select id="itermRelaxType">
+                                                            <option value="1" selected>RP</option>
+                                                            <option value="2">RPY</option>
+                                                        </select>
+                                                        <label for="itermRelaxType"><span>I-term Relax Type</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="itermRelaxCutoffRoll" step="1" min="1" max="100" value="20" />
+                                                        <label for="itermRelaxCutoffRoll"><span>Cutoff Point for Roll</span></label>
+                                                    </span>
+                                                    <span class="suboption">
+                                                        <input type="number" id="itermRelaxCutoffPitch" step="1" min="1" max="100" value="20" />
+                                                        <label for="itermRelaxCutoffPitch"><span>Cutoff Point for Pitch</span></label>
+                                                    </span>
+                                                    <span class="suboption itermRelaxYawOption">
+                                                        <input type="number" id="itermRelaxCutoffYaw" step="1" min="1" max="100" value="20" />
+                                                        <label for="itermRelaxCutoffYaw"><span>Cutoff Point for Yaw</span></label>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr class="errorLimit">
+                                                <td><input type="number" id="errorLimitRoll" step="1" min="0" max="180" value="45" /></td>
+                                                <td colspan="2">
+                                                    <label for="errorLimitRoll"><span>Error Limit for Roll Axis [&deg;]</span></label>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="errorLimit">
+                                                <td><input type="number" id="errorLimitPitch" step="1" min="0" max="180" value="45" /></td>
+                                                <td colspan="2">
+                                                    <label for="errorLimitPitch"><span>Error Limit for Pitch Axis [&deg;]</span></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="errorLimit border">
+                                                <td><input type="number" id="errorLimitYaw" step="1" min="0" max="180" value="45" /></td>
+                                                <td colspan="2">
+                                                    <label for="errorLimitYaw"><span>Error Limit for Yaw Axis [&deg;]</span></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="offsetLimit HSI">
+                                                <td><input type="number" id="offsetLimitRoll" step="1" min="0" max="180" value="0" /></td>
+                                                <td colspan="2">
+                                                    <label for="offsetLimitRoll"><span>HSI Offset Limit for Roll Axis [&deg;]</span></label>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="offsetLimit HSI border">
+                                                <td><input type="number" id="offsetLimitPitch" step="1" min="0" max="180" value="0" /></td>
+                                                <td colspan="2">
+                                                    <label for="offsetLimitPitch"><span>HSI Offset Limit for Pitch Axis [&deg;]</span></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="offsetGain HSI">
+                                                <td><input type="number" id="offsetGainRoll" step="1" min="0" max="250" value="0" /></td>
+                                                <td colspan="2">
+                                                    <label for="offsetGainRoll"><span>HSI Offset Gain for Roll Axis</span></label>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="offsetGain HSI border">
+                                                <td><input type="number" id="offsetGainPitch" step="1" min="0" max="250" value="0" /></td>
+                                                <td colspan="2">
+                                                    <label for="offsetGainPitch"><span>HSI Offset Gain for Pitch Axis</span></label>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- Main Rotor Settings -->
+                                    <div class="gui_box grey pid_config">
+                                        <div class="gui_box_titlebar">
+                                            <div class="spacer_box_title">Main Rotor Settings</div>
+                                        </div>
+                                        <table id="pid_cyclic_advanced" class="settings_table pid_settings">
+                                            <tr class="pitchFFCollective border">
+                                                <td><input type="checkbox" id="pitchFFCollective" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    
+                                                    <div><span>Collective to Pitch Compensation</span></div>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="pitchFFCollectiveGain" step="1" min="0" max="250" value="0" />
+                                                        <label for="pitchFFCollectiveGain"><span>Compensation Gain</span></label>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr class="cyclicCrossCoupling border">
+                                                <td><input type="checkbox" id="cyclicCrossCoupling" class="toggle" checked /></td>
+                                                <td colspan="2">
+                                                    
+                                                    <div><span>Cyclic Cross-Coupling</span></div>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="cyclicCrossCouplingGain" step="1" min="0" max="250" value="10" />
+                                                        <label for="cyclicCrossCouplingGain"><span>Cross-Coupling Gain</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="cyclicCrossCouplingRatio" step="1" min="0" max="200" value="100" />
+                                                        <label for="cyclicCrossCouplingRatio"><span>Cross-Coupling Ratio [%]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="cyclicCrossCouplingCutoff" step="1" min="1" max="250" value="10" />
+                                                        <label for="cyclicCrossCouplingCutoff"><span>Cross-Coupling Cutoff Frequency [Hz]</span></label>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr class="errorDecay">
+                                                <td><input type="number" id="errorDecayTimeCyclic" step="0.1" min="0" max="25" value="1.0" /></td>
+                                                <td colspan="2">
+                                                    <label for="errorDecayTimeCyclic"><span>Error Decay time [s]</span></label>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="errorDecay">
+                                                <td><input type="number" id="errorDecayLimitCyclic" step="1" min="0" max="250" value="10" /></td>
+                                                <td colspan="2">
+                                                    <label for="errorDecayLimitCyclic"><span>Error Decay maximum rate [&deg;/s]</span></label>
+                                                    
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- Tail Rotor Settings -->
+                                    <div class="gui_box grey pid_config">
+                                        <div class="gui_box_titlebar">
+                                            <div class="spacer_box_title">Tail Rotor Settings</div>
+                                        </div>
+                                        <table class="settings_table pid_settings">
+                                            <tr class="yawStopGainCW">
+                                                <td><input type="number" id="yawStopGainCW" step="1" min="0" max="250" value="10" /></td>
+                                                <td colspan="2">
+                                                    <span>CW Yaw Stop Gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="yawStopGainCCW border">
+                                                <td><input type="number" id="yawStopGainCCW" step="1" min="0" max="250" value="10" /></td>
+                                                <td colspan="2">
+                                                    <span>CCW Yaw Stop Gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="yawPrecompCutoff">
+                                                <td><input type="number" id="yawPrecompCutoff" step="1" min="0" max="250" value="10" /></td>
+                                                <td colspan="2">
+                                                    <div><span>Yaw Precomp Cutoff [Hz]</span></div>
+                                                </td>
+                                            </tr>
+                                            <tr class="yawFFCyclicGain">
+                                                <td><input type="number" id="yawFFCyclicGain" step="1" min="0" max="250" value="10" /></td>
+                                                <td colspan="2">
+                                                    <div><span>Cyclic Feedforward Gain</span></div>
+                                                </td>
+                                            </tr>
+                                            <tr class="yawFFCollectiveGain border">
+                                                <td><input type="number" id="yawFFCollectiveGain" step="1" min="0" max="250" value="10" /></td>
+                                                <td colspan="2">
+                                                    <div><span>Collective Feedforward Gain</span></div>
+                                                </td>
+                                            </tr>
+                                            <tr class="yawFFImpulseGain">
+                                                <td><input type="number" id="yawFFImpulseGain" step="1" min="-125" max="125" value="0" /></td>
+                                                <td colspan="2">
+                                                    <div><span>Collective Impulse Feedforward Gain</span></div>
+                                                </td>
+                                            </tr>
+                                            <tr class="yawFFImpulseDecay border">
+                                                <td><input type="number" id="yawFFImpulseDecay" step="1" min="1" max="250" value="10" /></td>
+                                                <td colspan="2">
+                                                    <div><span>Collective Impulse Feedforward Decay time</span></div>
+                                                </td>
+                                            </tr>
+                                            <tr class="yaw_inertia_precomp_gain">
+                                                <td><input type="number" id="yaw_inertia_precomp_gain" step="1" min="0" max="250" value="10" /></td>
+                                                <td colspan="2">
+                                                    <div><span>Inertia Precomp Gain</span></div>
+                                                </td>
+                                            </tr>
+                                            <tr class="yaw_inertia_precomp_cutoff border">
+                                                <td><input type="number" id="yaw_inertia_precomp_cutoff" step="0.1" min="0" max="25" value="5.0" /></td>
+                                                <td colspan="2">
+                                                    <div><span>Yaw Inertia Precomp Cutoff [Hz]</span></div>
+                                                </td>
+                                            </tr>
+                                            <tr class="govTTAGain">
+                                                <td><input type="number" id="govTTAGain" min="0" max="250" value="0" /></td>
+                                                <td colspan="2">
+                                                    <span>Tail Torque Assist (TTA) gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govTTALimit">
+                                                <td><input type="number" id="govTTALimit" min="0" max="250" value="0" /></td>
+                                                <td colspan="2">
+                                                    <span>Tail Torque Assist (TTA) limit [%]</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="cf_column">
+                                    <!-- PID Controller Bandwidth -->
+                                    <div class="gui_box grey spacer_left pid_config">
+                                        <div class="gui_box_titlebar">
+                                            <div class="spacer_box_title">PID Controller Bandwidth</div>
+                                        </div>
+                                        <table id="pid_bandwidth" class="settings_table pid_settings">
+                                            <tr class="gyroCutoff">
+                                                <td><input type="number" id="gyroCutoffRoll" step="1" min="0" max="250" value="80" /></td>
+                                                <td colspan="2">
+                                                    <label for="gyroCutoffRoll"><span>Gyro Cutoff Roll</span></label>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="gyroCutoff">
+                                                <td><input type="number" id="gyroCutoffPitch" step="1" min="0" max="250" value="80" /></td>
+                                                <td colspan="2">
+                                                    <label for="gyroCutoffPitch"><span>Gyro Cutoff Pitch</span></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="gyroCutoff border">
+                                                <td><input type="number" id="gyroCutoffYaw" step="1" min="0" max="250" value="80" /></td>
+                                                <td colspan="2">
+                                                    <label for="gyroCutoffYaw"><span>Gyro Cutoff Yaw</span></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="dtermCutoff">
+                                                <td><input type="number" id="dtermCutoffRoll" step="1" min="0" max="250" value="60" /></td>
+                                                <td colspan="2">
+                                                    <label for="dtermCutoffRoll"><span>Dterm Cutoff Roll</span></label>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="dtermCutoff">
+                                                <td><input type="number" id="dtermCutoffPitch" step="1" min="0" max="250" value="60" /></td>
+                                                <td colspan="2">
+                                                    <label for="dtermCutoffPitch"><span>Dterm Cutoff Pitch</span></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="dtermCutoff border">
+                                                <td><input type="number" id="dtermCutoffYaw" step="1" min="0" max="250" value="60" /></td>
+                                                <td colspan="2">
+                                                    <label for="dtermCutoffYaw"><span>Dterm Cutoff Yaw</span></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="btermCutoff">
+                                                <td><input type="number" id="btermCutoffRoll" step="1" min="0" max="250" value="30" /></td>
+                                                <td colspan="2">
+                                                    <label for="btermCutoffRoll"><span>Bterm Cutoff Roll</span></label>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="btermCutoff">
+                                                <td><input type="number" id="btermCutoffPitch" step="1" min="0" max="250" value="30" /></td>
+                                                <td colspan="2">
+                                                    <label for="btermCutoffPitch"><span>Bterm Cutoff Pitch</span></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="btermCutoff border">
+                                                <td><input type="number" id="btermCutoffYaw" step="1" min="0" max="250" value="30" /></td>
+                                                <td colspan="2">
+                                                    <label for="btermCutoffYaw"><span>Bterm Cutoff Yaw</span></label>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- Leveling Settings -->
+                                    <div class="gui_box grey spacer_left">
+                                        <div class="gui_box_titlebar">
+                                            <div class="spacer_box_title">Leveling Settings</div>
+                                        </div>
+                                        <table class="settings_table">
+                                            <tr class="acroTrainerGain">
+                                                <td><input type="number" id="acroTrainerGain" step="1" min="25" max="255" value="50" /></td>
+                                                <td colspan="2">
+                                                    <span>Acro Trainer Gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="acroTrainerLimit">
+                                                <td><input type="number" id="acroTrainerLimit" step="1" min="10" max="80" value="30" /></td>
+                                                <td colspan="2">
+                                                    <span>Acro Trainer Limit</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="angleModeGain">
+                                                <td><input type="number" id="angleModeGain" step="1" min="0" max="200" value="40" /></td>
+                                                <td colspan="2">
+                                                    <span>Angle Mode Gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="angleModeLimit">
+                                                <td><input type="number" id="angleModeLimit" step="1" min="10" max="90" value="45" /></td>
+                                                <td colspan="2">
+                                                    <span>Angle Mode Limit</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="horizonModeGain">
+                                                <td><input type="number" id="horizonModeGain" step="1" min="0" max="200" value="40" /></td>
+                                                <td colspan="2">
+                                                    <span>Horizon Mode Gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- Rescue Settings -->
+                                    <div class="gui_box grey spacer_left">
+                                        <div class="gui_box_titlebar">
+                                            <div class="spacer_box_title">Rescue Settings</div>
+                                        </div>
+                                        <table class="settings_table">
+                                            <tr class="rescueMode border">
+                                                <td><input type="checkbox" id="rescueEnable" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    <div><label for="rescueEnable"><span>Enable Rescue</span></label></div>
+                                                    
+                                                    <span class="suboption">
+                                                        <select id="rescueFlipMode">
+                                                            <option value="0" selected>Disable</option>
+                                                            <option value="1">Enable</option>
+                                                        </select>
+                                                        <label for="rescueFlipMode"><span>Flip to upright</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescuePullupCollective" step="1" min="0" max="100" value="50" />
+                                                        <label for="rescuePullupCollective"><span>Pull-up Collective [%]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescuePullupTime" step="0.1" min="0" max="25" value="2.0" />
+                                                        <label for="rescuePullupTime"><span>Pull-up Time [s]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueClimbCollective" step="1" min="0" max="100" value="50" />
+                                                        <label for="rescueClimbCollective"><span>Climb Collective [%]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueClimbTime" step="0.1" min="0" max="25" value="5.0" />
+                                                        <label for="rescueClimbTime"><span>Climb Time [s]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueHoverCollective" step="1" min="0" max="100" value="50" />
+                                                        <label for="rescueHoverCollective"><span>Hover Collective [%]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueFlipTime" step="0.1" min="0" max="25" value="1.0" />
+                                                        <label for="rescueFlipTime"><span>Flip Fail Time [s]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueExitTime" step="0.1" min="0" max="25" value="2.0" />
+                                                        <label for="rescueExitTime"><span>Exit Time [s]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueLevelGain" step="1" min="5" max="250" value="50" />
+                                                        <label for="rescueLevelGain"><span>Leveling Gain</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueFlipGain" step="1" min="5" max="250" value="50" />
+                                                        <label for="rescueFlipGain"><span>Flip-to-Upright Gain</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueMaxRate" step="1" min="5" max="1000" value="200" />
+                                                        <label for="rescueMaxRate"><span>Max Levelling Rate [&deg;/s]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueMaxAccel" step="10" min="1" max="10000" value="500" />
+                                                        <label for="rescueMaxAccel"><span>Max Leveling Acceleration [&deg;/s&sup2;]</span></label>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <hr class="section-divider">
+                                        <table class="settings_table">
+                                            <tr class="rescueAltHold">
+                                                <td><input type="checkbox" id="rescueAltHold" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    <div><label for="rescueAltHold"><span>Enable Altitude Hold</span></label></div>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueHoverAltitude" step="0.1" min="0" max="100" value="5.0" />
+                                                        <label for="rescueHoverAltitude"><span>Hover Altitude [m]</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueAltitudePGain" step="10" min="0" max="10000" value="500" />
+                                                        <label for="rescueAltitudePGain"><span>Altitude P-Gain</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueAltitudeIGain" step="10" min="0" max="10000" value="100" />
+                                                        <label for="rescueAltitudeIGain"><span>Altitude I-Gain</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueAltitudeDGain" step="10" min="0" max="10000" value="50" />
+                                                        <label for="rescueAltitudeDGain"><span>Altitude D-Gain</span></label>
+                                                    </span>
+                                                    
+                                                    <span class="suboption">
+                                                        <input type="number" id="rescueMaxCollective" step="1" min="0" max="100" value="80" />
+                                                        <label for="rescueMaxCollective"><span>Maximum Collective [%]</span></label>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- Governor Settings -->
+                                    <div class="gui_box grey spacer_left">
+                                        <div class="gui_box_titlebar">
+                                            <div class="spacer_box_title">Governor Settings</div>
+                                        </div>
+                                        <table class="settings_table pid_settings">
+                                            <tr class="govHeadspeed border">
+                                                <td><input type="number" id="govHeadspeed" min="100" max="50000" step="10" value="100" /></td>
+                                                <td colspan="2">
+                                                    <span>Full Headspeed</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govMinThrottle">
+                                                <td><input type="number" id="govMinThrottle" min="0" max="100" step="1" value="10" /></td>
+                                                <td colspan="2">
+                                                    <span>Minimum Throttle</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govMaxThrottle border">
+                                                <td><input type="number" id="govMaxThrottle" min="0" max="100" step="1" value="100" /></td>
+                                                <td colspan="2">
+                                                    <span>Maximum Throttle</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govFallbackDrop">
+                                                <td><input type="number" id="govFallbackDrop" min="0" max="50" step="1" value="10" /></td>
+                                                <td colspan="2">
+                                                    <span>Throttle Fallback Drop</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <div class="sub-heading">PID</div>
+                                        <hr class="section-divider">
+                                        <table class="settings_table pid_settings">
+                                            <tr class="govMasterGain">
+                                                <td><input type="number" id="govMasterGain" min="0" max="250" step="1" value="40" /></td>
+                                                <td colspan="2">
+                                                    <span>Master Gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govPGain">
+                                                <td><input type="number" id="govPGain" min="0" max="250" step="1" value="40" /></td>
+                                                <td colspan="2">
+                                                    <span>P-gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govIGain">
+                                                <td><input type="number" id="govIGain" min="0" max="250" step="1" value="50" /></td>
+                                                <td colspan="2">
+                                                    <span>I-gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govDGain">
+                                                <td><input type="number" id="govDGain" min="0" max="250" step="1" value="0" /></td>
+                                                <td colspan="2">
+                                                    <span>D-gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govFGain">
+                                                <td><input type="number" id="govFGain" min="0" max="250" step="1" value="10" /></td>
+                                                <td colspan="2">
+                                                    <span>Feedforward Gain</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <div class="sub-heading">Precompensation</div>
+                                        <hr class="section-divider">
+                                        <table class="settings_table pid_settings">
+                                            <tr class="govCollectiveFFWeight">
+                                                <td><input type="number" id="govCollectiveFFWeight" min="0" max="250" step="1" value="100" /></td>
+                                                <td colspan="2">
+                                                    <span>Collective</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govCyclicFFWeight">
+                                                <td><input type="number" id="govCyclicFFWeight" min="0" max="250" step="1" value="100" /></td>
+                                                <td colspan="2">
+                                                    <span>Cyclic</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govYawFFWeight">
+                                                <td><input type="number" id="govYawFFWeight" min="0" max="250" step="1" value="100" /></td>
+                                                <td colspan="2">
+                                                    <span>Yaw</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <div class="sub-heading">Behaviour</div>
+                                        <hr class="section-divider">
+                                        <table class="settings_table pid_settings">
+                                            <tr class="govFlagFallbackPrecomp">
+                                                <td><input type="checkbox" id="govFlagFallbackPrecomp" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    <span>Fallback Precompensation</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govFlagPIDSpoolup">
+                                                <td><input type="checkbox" id="govFlagPIDSpoolup" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    <span>Governed Spoolup</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govFlagVoltageComp">
+                                                <td><input type="checkbox" id="govFlagVoltageComp" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    <span>Voltage Compensation</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                            <tr class="govFlagDynMinThrottle">
+                                                <td><input type="checkbox" id="govFlagDynMinThrottle" class="toggle" /></td>
+                                                <td colspan="2">
+                                                    <span>Dynamic Minimum Throttle</span>
+                                                    
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="content_toolbar">
+                        <div class="btn revert_btn">
+                            <a class="revert" href="#" id="revert-btn">Revert</a>
+                        </div>
+                        <div class="btn save_btn">
+                            <a class="save" href="#" id="save-btn">Save</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <dialog class="dialogCopyProfile">
+        <h3>Copy Profile</h3>
+        <div class="content">
+            <div style="margin-top: 10px">Copy the current profile to another profile.</div>
+            <div style="margin-top:20px;">
+                <span>Copy to: </span> <select class="selectProfile" id="selectProfile"></select>
+            </div>
+        </div>
+        <div class="buttons">
+            <a href="#" class="dialogCopyProfile-confirmbtn">Copy</a>
+            <a href="#" class="dialogCopyProfile-cancelbtn">Cancel</a>
+        </div>
+    </dialog>
+
+    <dialog class="dialogProfileChange">
+        <h3>Save changes?</h3>
+        <div class="content">
+            <div>Do you want to save changes before switching profiles?</div>
+        </div>
+        <div class="buttons">
+            <a href="#" class="dialogProfileChangeYesBtn">Yes</a>
+            <a href="#" class="dialogProfileChangeNoBtn">No</a>
+        </div>
+    </dialog>
+
+    <dialog class="dialogSaving">
+        <h3>Saving...</h3>
+        <div class="content">
+            <div style="margin-top: 10px">Writing to FC, please wait...</div>
+            <div class="spinner" style="margin: 20px auto; width: 30px; height: 30px; border: 3px solid var(--color-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        </div>
+    </dialog>
+    </dialog>
+
+    <script>
+        // ==================== Web Serial API Connection ====================
+        class SerialConnection {
+            constructor() {
+                this.port = null;
+                this.reader = null;
+                this.writer = null;
+                this.connected = false;
+                this.baudRate = 115200;
+                this.onData = null;
+                this.onStatusChange = null;
+            }
+
+            async requestPort() {
+                try {
+                    this.port = await navigator.serial.requestPort();
+                    await this.updatePorts();
+                    return this.port;
+                } catch (e) {
+                    console.error('Error requesting port:', e);
+                    throw e;
+                }
+            }
+
+            async updatePorts() {
+                const ports = await navigator.serial.getPorts();
+                const select = document.getElementById('port-select');
+                select.innerHTML = '<option value="none">Select Port</option>';
+                ports.forEach((port, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = port.getInfo().usbVendorId ? 
+                        `USB Device (VID: ${port.getInfo().usbVendorId?.toString(16).padStart(4, '0')})` :
+                        `Serial Port ${index + 1}`;
+                    select.appendChild(option);
+                });
+            }
+
+            async connect(portIndex, baudRate) {
+                try {
+                    const ports = await navigator.serial.getPorts();
+                    if (portIndex >= ports.length) {
+                        throw new Error('Invalid port');
+                    }
+                    this.port = ports[portIndex];
+                    this.baudRate = parseInt(baudRate);
+                    await this.port.open({ baudRate: this.baudRate });
+                    this.connected = true;
+                    this.writer = this.port.writable.getWriter();
+                    this.reader = this.port.readable.getReader();
+                    this.onStatusChange?.(true);
+                    this.readLoop();
+                    return true;
+                } catch (e) {
+                    console.error('Connection error:', e);
+                    this.onStatusChange?.(false);
+                    return false;
+                }
+            }
+
+            async disconnect() {
+                if (this.reader) {
+                    await this.reader.cancel();
+                    this.reader.releaseLock();
+                    this.reader = null;
+                }
+                if (this.writer) {
+                    this.writer.releaseLock();
+                    this.writer = null;
+                }
+                if (this.port) {
+                    await this.port.close();
+                    this.port = null;
+                }
+                this.connected = false;
+                this.onStatusChange?.(false);
+            }
+
+            async readLoop() {
+                try {
+                    while (this.port && this.reader) {
+                        const { value, done } = await this.reader.read();
+                        if (done) break;
+                        if (value && this.onData) {
+                            this.onData(value);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Read error:', e);
+                }
+            }
+
+            async send(data) {
+                if (this.writer && this.connected) {
+                    await this.writer.write(data);
+                }
+            }
+        }
+
+        // ==================== Real MSP Protocol ====================
+        const MSP_HEADER = '$M';
+        const MSP_DIR_REQUEST = '<';
+        const MSP_DIR_RESPONSE = '>';
+        const MSP_CRC_MASK = 0xFF;
+
+        function mspChecksum(length, code, payload) {
+            let checksum = length ^ code;
+            for (let i = 0; i < payload.length; i++) {
+                checksum ^= payload[i];
+            }
+            return checksum & MSP_CRC_MASK;
+        }
+
+        function bitCheck(num, bit) {
+            return ((num >> bit) & 1) !== 0;
+        }
+
+        function bitSet(num, bit) {
+            return num | (1 << bit);
+        }
+
+        function bitClear(num, bit) {
+            return num & ~(1 << bit);
+        }
+
+        function buildMSPMessage(code, payload = []) {
+            const length = payload.length;
+            const buf = new Uint8Array(6 + length);
+            buf[0] = 0x24; // $
+            buf[1] = 0x4D; // M
+            buf[2] = 0x3C; // <
+            buf[3] = length & 0xFF;
+            buf[4] = code & 0xFF;
+            payload.forEach((b, i) => { buf[5 + i] = b & 0xFF; });
+            buf[5 + length] = mspChecksum(length, code, payload);
+            return buf;
+        }
+
+        class MSPParser {
+            /* BLE burst-safe parser (bleblackbox module): O(n) accumulator,
+               CRC verification, multi-frame drain per chunk, and stale-frame
+               filtering - the FC dumps ALL queued MSP responses back-to-back,
+               so leftovers from a previous burst must never be delivered as
+               the answer to the next request. */
+            constructor() {
+                this.buf = new Uint8Array(1024);
+                this.len = 0;
+                this.pos = 0;
+                this.expectedCode = null;
+                this.pendingResponse = null;
+                this.timeout = null;
+            }
+
+            feed(data) {
+                if (this.len + data.length > this.buf.length) {
+                    if (this.pos > 0) {
+                        this.buf.copyWithin(0, this.pos, this.len);
+                        this.len -= this.pos; this.pos = 0;
+                    }
+                    if (this.len + data.length > this.buf.length) {
+                        const cap = Math.max(this.buf.length * 2, this.len + data.length);
+                        const nb = new Uint8Array(cap);
+                        nb.set(this.buf.subarray(0, this.len));
+                        this.buf = nb;
+                    }
+                }
+                this.buf.set(data, this.len);
+                this.len += data.length;
+                while (this.tryParseOne()) {}
+            }
+
+            tryParseOne() {
+                while (this.len - this.pos >= 6) {
+                    if (this.buf[this.pos] !== 0x24 || this.buf[this.pos + 1] !== 0x4D || this.buf[this.pos + 2] !== 0x3E) { this.pos++; continue; }
+                    const b3 = this.buf[this.pos + 3];
+                    const jumbo = (b3 === 0xFF);          /* MSPv1 jumbo: $M> FF code lenLo lenHi payload crc */
+                    let length;
+                    if (jumbo) {
+                        if (this.len - this.pos < 8) return false;
+                        length = this.buf[this.pos + 5] | (this.buf[this.pos + 6] << 8);
+                    } else {
+                        length = b3;
+                    }
+                    const hdrEnd = jumbo ? 7 : 5;
+                    const totalLen = hdrEnd + length + 1;
+                    if (this.len - this.pos < totalLen) return false;
+                    const code = this.buf[this.pos + 4];
+                    const ps = this.pos + hdrEnd;
+                    let crc;
+                    if (jumbo) crc = 255 ^ code ^ (length & 0xFF) ^ ((length >> 8) & 0xFF);
+                    else crc = length ^ code;
+                    for (let i = 0; i < length; i++) crc ^= this.buf[ps + i];
+                    if (crc !== this.buf[ps + length]) { this.pos++; continue; }
+                    const payload = new Uint8Array(this.buf.slice(ps, ps + length));
+                    this.pos += totalLen;
+                    if (this.pos >= this.len) { this.pos = 0; this.len = 0; }
+                    else if (this.pos > 4096) { this.buf.copyWithin(0, this.pos, this.len); this.len -= this.pos; this.pos = 0; }
+                    if (this.pendingResponse && (this.expectedCode === null || this.expectedCode === code)) {
+                        clearTimeout(this.timeout);
+                        const cb = this.pendingResponse;
+                        this.pendingResponse = null;
+                        this.expectedCode = null;
+                        cb({ code, payload });
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            waitResponse(code, timeout = 5000) {
+                this.expectedCode = (code === undefined || code === null) ? null : code;
+                return new Promise((resolve, reject) => {
+                    this.pendingResponse = resolve;
+                    this.timeout = setTimeout(() => {
+                        this.pendingResponse = null;
+                        this.expectedCode = null;
+                        reject(new Error('MSP response timeout'));
+                    }, timeout);
+                });
+            }
+        }
+
+        class RealMSP {
+            constructor(serialConnection) {
+                this.serial = serialConnection;
+                this.parser = new MSPParser();
+                this.queue = [];
+                this.processing = false;
+                this.missingParams = new Set();
+                this.data = {
+                    PIDS: [
+                        [10, 50, 0, 50, 0, 0],
+                        [10, 50, 0, 50, 0, 0],
+                        [50, 50, 0, 0, 0, 0]
+                    ],
+                    PID_PROFILE: {
+                        pid_mode: 2,
+                        gyroCutoffRoll: 80,
+                        gyroCutoffPitch: 80,
+                        gyroCutoffYaw: 80,
+                        dtermCutoffRoll: 60,
+                        dtermCutoffPitch: 60,
+                        dtermCutoffYaw: 60,
+                        btermCutoffRoll: 30,
+                        btermCutoffPitch: 30,
+                        btermCutoffYaw: 30,
+                        errorLimitRoll: 45,
+                        errorLimitPitch: 45,
+                        errorLimitYaw: 45,
+                        offsetLimitRoll: 0,
+                        offsetLimitPitch: 0,
+                        error_decay_time_ground: 10,
+                        error_decay_time_cyclic: 10,
+                        error_decay_limit_cyclic: 10,
+                        error_rotation: 0,
+                        itermRelaxType: 1,
+                        itermRelaxCutoffRoll: 20,
+                        itermRelaxCutoffPitch: 20,
+                        itermRelaxCutoffYaw: 20,
+                        yawStopGainCW: 10,
+                        yawStopGainCCW: 10,
+                        yawPrecompCutoff: 10,
+                        yawFFCyclicGain: 10,
+                        yawFFCollectiveGain: 10,
+                        yawFFImpulseGain: 0,
+                        yawFFImpulseDecay: 10,
+                        yaw_inertia_precomp_gain: 10,
+                        yaw_inertia_precomp_cutoff: 50,
+                        pitchFFCollectiveGain: 0,
+                        cyclicCrossCouplingGain: 10,
+                        cyclicCrossCouplingRatio: 100,
+                        cyclicCrossCouplingCutoff: 10,
+                        acroTrainerGain: 50,
+                        acroTrainerLimit: 30,
+                        levelAngleStrength: 40,
+                        levelAngleLimit: 45,
+                        horizonLevelStrength: 40,
+                        rescueMode: 0,
+                        rescueFlipMode: 0,
+                        rescuePullupCollective: 50,
+                        rescueClimbCollective: 50,
+                        rescueHoverCollective: 50,
+                        rescuePullupTime: 20,
+                        rescueClimbTime: 50,
+                        rescueFlipTime: 10,
+                        rescueExitTime: 20,
+                        rescueFlipGain: 50,
+                        rescueLevelGain: 50,
+                        rescueMaxRate: 200,
+                        rescueMaxAccel: 500,
+                        rescueHoverAltitude: 50,
+                        rescueAltitudePGain: 500,
+                        rescueAltitudeIGain: 100,
+                        rescueAltitudeDGain: 50,
+                        rescueMaxCollective: 80
+                    },
+                    GOVERNOR: {
+                        gov_tta_gain: 0,
+                        gov_tta_limit: 0
+                    }
+                };
+
+                this.serial.onData = (bytes) => {
+                    this.parser.feed(bytes);
+                };
+            }
+
+            async sendCommand(codeOrMsg, payload = []) {
+                let msg;
+                if (codeOrMsg instanceof Uint8Array) {
+                    msg = codeOrMsg;
+                } else {
+                    msg = buildMSPMessage(codeOrMsg, payload);
+                }
+                await this.serial.send(msg);
+                const expectCode = (codeOrMsg instanceof Uint8Array) ? ((codeOrMsg.length > 4) ? codeOrMsg[4] : null) : codeOrMsg;
+                    const response = await this.parser.waitResponse(expectCode);
+                return response;
+            }
+
+            async readPID() {
+                const resp = await this.sendCommand(112);
+                const pids = [[], [], []];
+                let idx = 0;
+                for (let i = 0; i < 3; i++) {        // RPY
+                    for (let j = 0; j < 4; j++) {    // PIDF
+                        pids[i].push((resp.payload[idx + 1] << 8) | resp.payload[idx]);
+                        idx += 2;
+                    }
+                }
+                for (let i = 0; i < 3; i++) {        // B-term
+                    pids[i].push((resp.payload[idx + 1] << 8) | resp.payload[idx]);
+                    idx += 2;
+                }
+                for (let i = 0; i < 2; i++) {        // O-term (RP only)
+                    pids[i].push((resp.payload[idx + 1] << 8) | resp.payload[idx]);
+                    idx += 2;
+                }
+                this.data.PIDS = pids;
+            }
+
+            _rd(payload, fields) {
+                const obj = {};
+                let idx = 0;
+                for (const f of fields) {
+                    if (f.type === 'u16') {
+                        if (idx + 1 >= payload.length) {
+                            this.missingParams.add(f.key);
+                            obj[f.key] = 0;
+                        } else {
+                            obj[f.key] = (payload[idx + 1] << 8) | payload[idx];
+                        }
+                        idx += 2;
+                    } else {
+                        if (idx >= payload.length) {
+                            this.missingParams.add(f.key);
+                            obj[f.key] = 0;
+                        } else {
+                            obj[f.key] = payload[idx];
+                        }
+                        idx += 1;
+                    }
+                }
+                return obj;
+            }
+
+            async readPIDProfile() {
+                const resp = await this.sendCommand(94);
+                const fields = [
+                    { key: 'pid_mode', type: 'u8' },
+                    { key: 'error_decay_time_ground', type: 'u8' },
+                    { key: 'error_decay_time_cyclic', type: 'u8' },
+                    { key: 'error_decay_time_yaw', type: 'u8' },
+                    { key: 'error_decay_limit_cyclic', type: 'u8' },
+                    { key: 'error_decay_limit_yaw', type: 'u8' },
+                    { key: 'error_rotation', type: 'u8' },
+                    { key: 'errorLimitRoll', type: 'u8' },
+                    { key: 'errorLimitPitch', type: 'u8' },
+                    { key: 'errorLimitYaw', type: 'u8' },
+                    { key: 'gyroCutoffRoll', type: 'u8' },
+                    { key: 'gyroCutoffPitch', type: 'u8' },
+                    { key: 'gyroCutoffYaw', type: 'u8' },
+                    { key: 'dtermCutoffRoll', type: 'u8' },
+                    { key: 'dtermCutoffPitch', type: 'u8' },
+                    { key: 'dtermCutoffYaw', type: 'u8' },
+                    { key: 'itermRelaxType', type: 'u8' },
+                    { key: 'itermRelaxCutoffRoll', type: 'u8' },
+                    { key: 'itermRelaxCutoffPitch', type: 'u8' },
+                    { key: 'itermRelaxCutoffYaw', type: 'u8' },
+                    { key: 'yawStopGainCW', type: 'u8' },
+                    { key: 'yawStopGainCCW', type: 'u8' },
+                    { key: 'yawPrecompCutoff', type: 'u8' },
+                    { key: 'yawFFCyclicGain', type: 'u8' },
+                    { key: 'yawFFCollectiveGain', type: 'u8' },
+                    { key: 'yawFFImpulseGain', type: 'u8' },
+                    { key: 'yawFFImpulseDecay', type: 'u8' },
+                    { key: 'pitchFFCollectiveGain', type: 'u8' },
+                    { key: 'levelAngleStrength', type: 'u8' },
+                    { key: 'levelAngleLimit', type: 'u8' },
+                    { key: 'horizonLevelStrength', type: 'u8' },
+                    { key: 'acroTrainerGain', type: 'u8' },
+                    { key: 'acroTrainerLimit', type: 'u8' },
+                    { key: 'cyclicCrossCouplingGain', type: 'u8' },
+                    { key: 'cyclicCrossCouplingRatio', type: 'u8' },
+                    { key: 'cyclicCrossCouplingCutoff', type: 'u8' },
+                    { key: 'offsetLimitRoll', type: 'u8' },
+                    { key: 'offsetLimitPitch', type: 'u8' },
+                    { key: 'btermCutoffRoll', type: 'u8' },
+                    { key: 'btermCutoffPitch', type: 'u8' },
+                    { key: 'btermCutoffYaw', type: 'u8' },
+                    { key: 'yaw_inertia_precomp_gain', type: 'u8' },
+                    { key: 'yaw_inertia_precomp_cutoff', type: 'u8' }
+                ];
+                this.data.PID_PROFILE = this._rd(resp.payload, fields);
+                return this.data.PID_PROFILE;
+            }
+
+            async readRescueProfile() {
+                const resp = await this.sendCommand(146);
+                const fields = [
+                    { key: 'rescueMode', type: 'u8' },
+                    { key: 'rescueFlipMode', type: 'u8' },
+                    { key: 'rescueFlipGain', type: 'u8' },
+                    { key: 'rescueLevelGain', type: 'u8' },
+                    { key: 'rescuePullupTime', type: 'u8' },
+                    { key: 'rescueClimbTime', type: 'u8' },
+                    { key: 'rescueFlipTime', type: 'u8' },
+                    { key: 'rescueExitTime', type: 'u8' },
+                    { key: 'rescuePullupCollective', type: 'u16' },
+                    { key: 'rescueClimbCollective', type: 'u16' },
+                    { key: 'rescueHoverCollective', type: 'u16' },
+                    { key: 'rescueHoverAltitude', type: 'u16' },
+                    { key: 'rescueAltitudePGain', type: 'u16' },
+                    { key: 'rescueAltitudeIGain', type: 'u16' },
+                    { key: 'rescueAltitudeDGain', type: 'u16' },
+                    { key: 'rescueMaxCollective', type: 'u16' },
+                    { key: 'rescueMaxRate', type: 'u16' },
+                    { key: 'rescueMaxAccel', type: 'u16' }
+                ];
+                const r = this._rd(resp.payload, fields);
+                this.data.PID_PROFILE = { ...this.data.PID_PROFILE, ...r };
+                return r;
+            }
+
+            async readGovernorProfile() {
+                const resp = await this.sendCommand(148);
+                const fields = [
+                    { key: 'gov_headspeed', type: 'u16' },
+                    { key: 'gov_gain', type: 'u8' },
+                    { key: 'gov_p_gain', type: 'u8' },
+                    { key: 'gov_i_gain', type: 'u8' },
+                    { key: 'gov_d_gain', type: 'u8' },
+                    { key: 'gov_f_gain', type: 'u8' },
+                    { key: 'gov_tta_gain', type: 'u8' },
+                    { key: 'gov_tta_limit', type: 'u8' },
+                    { key: 'gov_yaw_ff_weight', type: 'u8' },
+                    { key: 'gov_cyclic_ff_weight', type: 'u8' },
+                    { key: 'gov_collective_ff_weight', type: 'u8' },
+                    { key: 'gov_max_throttle', type: 'u8' },
+                    { key: 'gov_min_throttle', type: 'u8' },
+                    { key: 'gov_fallback_drop', type: 'u8' },
+                    { key: 'gov_flags', type: 'u16' }
+                ];
+                this.data.GOVERNOR = this._rd(resp.payload, fields);
+                return this.data.GOVERNOR;
+            }
+
+            async readGovernorConfig() {
+                const resp = await this.sendCommand(142);
+                const fields = [
+                    { key: 'gov_mode', type: 'u8' },
+                    { key: 'gov_startup_time', type: 'u16' },
+                    { key: 'gov_spoolup_time', type: 'u16' },
+                    { key: 'gov_tracking_time', type: 'u16' },
+                    { key: 'gov_recovery_time', type: 'u16' }
+                ];
+                if (!this.data.GOVERNOR) this.data.GOVERNOR = {};
+                Object.assign(this.data.GOVERNOR, this._rd(resp.payload, fields));
+            }
+
+            buildSetPIDProfile() {
+                const p = this.data.PID_PROFILE;
+                const payload = [
+                    p.pid_mode,
+                    p.error_decay_time_ground,
+                    p.error_decay_time_cyclic,
+                    p.error_decay_time_yaw,
+                    p.error_decay_limit_cyclic,
+                    p.error_decay_limit_yaw,
+                    p.error_rotation,
+                    p.errorLimitRoll,
+                    p.errorLimitPitch,
+                    p.errorLimitYaw,
+                    p.gyroCutoffRoll,
+                    p.gyroCutoffPitch,
+                    p.gyroCutoffYaw,
+                    p.dtermCutoffRoll,
+                    p.dtermCutoffPitch,
+                    p.dtermCutoffYaw,
+                    p.itermRelaxType,
+                    p.itermRelaxCutoffRoll,
+                    p.itermRelaxCutoffPitch,
+                    p.itermRelaxCutoffYaw,
+                    p.yawStopGainCW,
+                    p.yawStopGainCCW,
+                    p.yawPrecompCutoff,
+                    p.yawFFCyclicGain,
+                    p.yawFFCollectiveGain,
+                    p.yawFFImpulseGain,
+                    p.yawFFImpulseDecay,
+                    p.pitchFFCollectiveGain,
+                    p.levelAngleStrength,
+                    p.levelAngleLimit,
+                    p.horizonLevelStrength,
+                    p.acroTrainerGain,
+                    p.acroTrainerLimit,
+                    p.cyclicCrossCouplingGain,
+                    p.cyclicCrossCouplingRatio,
+                    p.cyclicCrossCouplingCutoff,
+                    p.offsetLimitRoll,
+                    p.offsetLimitPitch,
+                    p.btermCutoffRoll,
+                    p.btermCutoffPitch,
+                    p.btermCutoffYaw,
+                    p.yaw_inertia_precomp_gain,
+                    p.yaw_inertia_precomp_cutoff
+                ];
+                return buildMSPMessage(95, payload);
+            }
+
+            buildSetPIDTuning() {
+                const p = this.data.PIDS;
+                const payload = [];
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        payload.push(p[i][j] & 0xFF);
+                        payload.push((p[i][j] >> 8) & 0xFF);
+                    }
+                }
+                for (let i = 0; i < 3; i++) {
+                    payload.push(p[i][4] & 0xFF);
+                    payload.push((p[i][4] >> 8) & 0xFF);
+                }
+                for (let i = 0; i < 2; i++) {        // O-term (RP only)
+                    payload.push(p[i][5] & 0xFF);
+                    payload.push((p[i][5] >> 8) & 0xFF);
+                }
+                return buildMSPMessage(202, payload);
+            }
+
+            buildSetRescueProfile() {
+                const p = this.data.PID_PROFILE;
+                const payload = [
+                    p.rescueMode,
+                    p.rescueFlipMode,
+                    p.rescueFlipGain,
+                    p.rescueLevelGain,
+                    p.rescuePullupTime,
+                    p.rescueClimbTime,
+                    p.rescueFlipTime,
+                    p.rescueExitTime,
+                    (p.rescuePullupCollective >> 0) & 0xFF,
+                    (p.rescuePullupCollective >> 8) & 0xFF,
+                    (p.rescueClimbCollective >> 0) & 0xFF,
+                    (p.rescueClimbCollective >> 8) & 0xFF,
+                    (p.rescueHoverCollective >> 0) & 0xFF,
+                    (p.rescueHoverCollective >> 8) & 0xFF,
+                    (p.rescueHoverAltitude >> 0) & 0xFF,
+                    (p.rescueHoverAltitude >> 8) & 0xFF,
+                    (p.rescueAltitudePGain >> 0) & 0xFF,
+                    (p.rescueAltitudePGain >> 8) & 0xFF,
+                    (p.rescueAltitudeIGain >> 0) & 0xFF,
+                    (p.rescueAltitudeIGain >> 8) & 0xFF,
+                    (p.rescueAltitudeDGain >> 0) & 0xFF,
+                    (p.rescueAltitudeDGain >> 8) & 0xFF,
+                    (p.rescueMaxCollective >> 0) & 0xFF,
+                    (p.rescueMaxCollective >> 8) & 0xFF,
+                    (p.rescueMaxRate >> 0) & 0xFF,
+                    (p.rescueMaxRate >> 8) & 0xFF,
+                    (p.rescueMaxAccel >> 0) & 0xFF,
+                    (p.rescueMaxAccel >> 8) & 0xFF
+                ];
+                return buildMSPMessage(147, payload);
+            }
+
+            buildSetGovernorProfile() {
+                const g = this.data.GOVERNOR;
+                const payload = [
+                    (g.gov_headspeed >> 0) & 0xFF,
+                    (g.gov_headspeed >> 8) & 0xFF,
+                    g.gov_gain,
+                    g.gov_p_gain,
+                    g.gov_i_gain,
+                    g.gov_d_gain,
+                    g.gov_f_gain,
+                    g.gov_tta_gain,
+                    g.gov_tta_limit,
+                    g.gov_yaw_ff_weight,
+                    g.gov_cyclic_ff_weight,
+                    g.gov_collective_ff_weight,
+                    g.gov_max_throttle,
+                    g.gov_min_throttle,
+                    g.gov_fallback_drop,
+                    (g.gov_flags >> 0) & 0xFF,
+                    (g.gov_flags >> 8) & 0xFF
+                ];
+                return buildMSPMessage(149, payload);
+            }
+
+            readGovernorFlags() {
+                const flags = this.data.GOVERNOR.gov_flags || 0;
+                return {
+                    fallbackPrecomp: bitCheck(flags, 2),
+                    pidSpoolup: bitCheck(flags, 4),
+                    voltageComp: bitCheck(flags, 3),
+                    dynMinThrottle: bitCheck(flags, 6)
+                };
+            }
+        }
+
+        // ==================== Profiles Tab Logic ====================
+        class ProfilesTab {
+            constructor() {
+                this.currentProfile = 0;
+                this.savedProfile = 0;
+                this.isChanged = false;
+                this.isDirty = false;
+                this.serial = new SerialConnection();
+                this.msp = new RealMSP(this.serial);
+                this.init();
+            }
+
+            init() {
+                this.bindConnection();
+                this.bindTabs();
+                this.bindButtons();
+                this.bindInputs();
+            }
+
+            bindConnection() {
+                const connectBtn = document.getElementById('connect-btn');
+                const portSelect = document.getElementById('port-select');
+                const baudSelect = document.getElementById('baud-select');
+                const statusEl = document.getElementById('connection-status');
+
+                connectBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (this.serial.connected) {
+                        await this.serial.disconnect();
+                        connectBtn.textContent = 'Connect';
+                        connectBtn.classList.remove('active');
+                        statusEl.textContent = 'Disconnected';
+                        statusEl.classList.remove('connected');
+                    } else {
+                        let portIndex = parseInt(portSelect.value);
+                        if (portSelect.value === 'none' || isNaN(portIndex)) {
+                            try {
+                                await this.serial.requestPort();
+                                await this.serial.updatePorts();
+                                portIndex = 0;
+                            } catch (e) {
+                                console.log('Port selection cancelled');
+                                return;
+                            }
+                        }
+                        const baudRate = baudSelect.value;
+                        const success = await this.serial.connect(portIndex, baudRate);
+                        if (success) {
+                            connectBtn.textContent = 'Disconnect';
+                            connectBtn.classList.add('active');
+                            statusEl.textContent = 'Connected';
+                            statusEl.classList.add('connected');
+                            this.onConnect();
+                        }
+                    }
+                });
+
+                // Auto-populate ports
+                this.serial.updatePorts();
+
+                this.serial.onStatusChange = (connected) => {
+                    if (!connected) {
+                        connectBtn.textContent = 'Connect';
+                        connectBtn.classList.remove('active');
+                        statusEl.textContent = 'Disconnected';
+                        statusEl.classList.remove('connected');
+                    }
+                };
+            }
+
+            async onConnect() {
+                await this.detectActiveProfile();
+                await this.loadDataFromFC();
+            }
+
+            profilesEqual(a, b) {
+                if (!a || !b) return false;
+                return a.pid_mode === b.pid_mode &&
+                       a.gyroCutoffRoll === b.gyroCutoffRoll &&
+                       a.gyroCutoffPitch === b.gyroCutoffPitch &&
+                       a.gyroCutoffYaw === b.gyroCutoffYaw &&
+                       a.dtermCutoffRoll === b.dtermCutoffRoll &&
+                       a.dtermCutoffPitch === b.dtermCutoffPitch &&
+                       a.dtermCutoffYaw === b.dtermCutoffYaw &&
+                       a.errorLimitRoll === b.errorLimitRoll &&
+                       a.errorLimitPitch === b.errorLimitPitch &&
+                       a.errorLimitYaw === b.errorLimitYaw;
+            }
+
+            async detectActiveProfile() {
+                try {
+                    const reference = await this.msp.readPIDProfile();
+                    let activeIndex = 0;
+                    for (let i = 0; i < 6; i++) {
+                        await this.msp.sendCommand(210, [i]);
+                        const profile = await this.msp.readPIDProfile();
+                        if (this.profilesEqual(profile, reference)) {
+                            activeIndex = i;
+                            break;
+                        }
+                    }
+                    this.currentProfile = activeIndex;
+                    document.querySelectorAll('.tab-profiles .tab-container > div.tab').forEach((tab, i) => {
+                        tab.classList.toggle('active', i === activeIndex);
+                    });
+                } catch (e) {
+                    console.error('Failed to detect active profile:', e);
+                }
+            }
+
+            async loadDataFromFC() {
+                try {
+                    // Clear previously greyed (missing) fields
+                    document.querySelectorAll('.param-missing').forEach(el => {
+                        el.classList.remove('param-missing');
+                        if (el.tagName === 'INPUT' || el.tagName === 'SELECT') el.disabled = false;
+                    });
+                    this.msp.missingParams.clear();
+
+                    await this.msp.readPID();
+                    await this.msp.readPIDProfile();
+                    await this.msp.readRescueProfile();
+                    await this.msp.readGovernorProfile();
+                    await this.msp.readGovernorConfig();
+                } catch (e) {
+                    console.error('Failed to read from FC:', e);
+                    alert('Failed to read data from FC: ' + e.message);
+                    return;
+                }
+
+                const data = this.msp.data;
+
+                // Load PID gains
+                document.querySelectorAll('#pid_main tr.ROLL input').forEach((input, i) => {
+                    input.value = data.PIDS[0][i];
+                });
+                document.querySelectorAll('#pid_main tr.PITCH input').forEach((input, i) => {
+                    input.value = data.PIDS[1][i];
+                });
+                document.querySelectorAll('#pid_main tr.YAW input').forEach((input, i) => {
+                    input.value = data.PIDS[2][i];
+                });
+
+                // Load PID profile settings
+                const p = data.PID_PROFILE;
+                document.getElementById('gyroCutoffRoll').value = p.gyroCutoffRoll;
+                document.getElementById('gyroCutoffPitch').value = p.gyroCutoffPitch;
+                document.getElementById('gyroCutoffYaw').value = p.gyroCutoffYaw;
+                document.getElementById('dtermCutoffRoll').value = p.dtermCutoffRoll;
+                document.getElementById('dtermCutoffPitch').value = p.dtermCutoffPitch;
+                document.getElementById('dtermCutoffYaw').value = p.dtermCutoffYaw;
+                document.getElementById('btermCutoffRoll').value = p.btermCutoffRoll;
+                document.getElementById('btermCutoffPitch').value = p.btermCutoffPitch;
+                document.getElementById('btermCutoffYaw').value = p.btermCutoffYaw;
+                document.getElementById('errorLimitRoll').value = p.errorLimitRoll;
+                document.getElementById('errorLimitPitch').value = p.errorLimitPitch;
+                document.getElementById('errorLimitYaw').value = p.errorLimitYaw;
+                document.getElementById('offsetLimitRoll').value = p.offsetLimitRoll;
+                document.getElementById('offsetLimitPitch').value = p.offsetLimitPitch;
+                document.getElementById('errorDecayTimeGround').value = (p.error_decay_time_ground / 10).toFixed(1);
+                document.getElementById('errorDecayTimeCyclic').value = (p.error_decay_time_cyclic / 10).toFixed(1);
+                document.getElementById('errorDecayLimitCyclic').value = p.error_decay_limit_cyclic;
+                document.getElementById('errorRotation').checked = p.error_rotation !== 0;
+                document.getElementById('itermRelax').checked = p.itermRelaxType > 0;
+                document.getElementById('itermRelaxType').value = p.itermRelaxType < 2 ? 1 : 2;
+                document.getElementById('itermRelaxCutoffRoll').value = p.itermRelaxCutoffRoll;
+                document.getElementById('itermRelaxCutoffPitch').value = p.itermRelaxCutoffPitch;
+                document.getElementById('itermRelaxCutoffYaw').value = p.itermRelaxCutoffYaw;
+
+                // Yaw settings
+                document.getElementById('yawStopGainCW').value = p.yawStopGainCW;
+                document.getElementById('yawStopGainCCW').value = p.yawStopGainCCW;
+                document.getElementById('yawPrecompCutoff').value = p.yawPrecompCutoff;
+                document.getElementById('yawFFCyclicGain').value = p.yawFFCyclicGain;
+                document.getElementById('yawFFCollectiveGain').value = p.yawFFCollectiveGain;
+                document.getElementById('yawFFImpulseGain').value = p.yawFFImpulseGain;
+                document.getElementById('yawFFImpulseDecay').value = p.yawFFImpulseDecay;
+                document.getElementById('yaw_inertia_precomp_gain').value = p.yaw_inertia_precomp_gain;
+                document.getElementById('yaw_inertia_precomp_cutoff').value = (p.yaw_inertia_precomp_cutoff / 10).toFixed(1);
+
+                // Main rotor
+                document.getElementById('pitchFFCollective').checked = p.pitchFFCollectiveGain > 0;
+                document.getElementById('pitchFFCollectiveGain').value = p.pitchFFCollectiveGain;
+                document.getElementById('cyclicCrossCoupling').checked = p.cyclicCrossCouplingGain > 0;
+                document.getElementById('cyclicCrossCouplingGain').value = p.cyclicCrossCouplingGain;
+                document.getElementById('cyclicCrossCouplingRatio').value = p.cyclicCrossCouplingRatio;
+                document.getElementById('cyclicCrossCouplingCutoff').value = p.cyclicCrossCouplingCutoff;
+
+                // Leveling
+                document.getElementById('acroTrainerGain').value = p.acroTrainerGain;
+                document.getElementById('acroTrainerLimit').value = p.acroTrainerLimit;
+                document.getElementById('angleModeGain').value = p.levelAngleStrength;
+                document.getElementById('angleModeLimit').value = p.levelAngleLimit;
+                document.getElementById('horizonModeGain').value = p.horizonLevelStrength;
+
+                // Rescue
+                document.getElementById('rescueEnable').checked = p.rescueMode > 0;
+                document.getElementById('rescueAltHold').checked = p.rescueMode > 1;
+                document.getElementById('rescueFlipMode').value = p.rescueFlipMode;
+                document.getElementById('rescuePullupCollective').value = (p.rescuePullupCollective / 100).toFixed(1);
+                document.getElementById('rescueClimbCollective').value = (p.rescueClimbCollective / 100).toFixed(1);
+                document.getElementById('rescueHoverCollective').value = (p.rescueHoverCollective / 100).toFixed(1);
+                document.getElementById('rescuePullupTime').value = (p.rescuePullupTime / 10).toFixed(1);
+                document.getElementById('rescueClimbTime').value = (p.rescueClimbTime / 10).toFixed(1);
+                document.getElementById('rescueFlipTime').value = (p.rescueFlipTime / 10).toFixed(1);
+                document.getElementById('rescueExitTime').value = (p.rescueExitTime / 10).toFixed(1);
+                document.getElementById('rescueFlipGain').value = p.rescueFlipGain;
+                document.getElementById('rescueLevelGain').value = p.rescueLevelGain;
+                document.getElementById('rescueMaxRate').value = p.rescueMaxRate;
+                document.getElementById('rescueMaxAccel').value = p.rescueMaxAccel;
+                document.getElementById('rescueHoverAltitude').value = (p.rescueHoverAltitude / 100).toFixed(1);
+                document.getElementById('rescueAltitudePGain').value = p.rescueAltitudePGain;
+                document.getElementById('rescueAltitudeIGain').value = p.rescueAltitudeIGain;
+                document.getElementById('rescueAltitudeDGain').value = p.rescueAltitudeDGain;
+                document.getElementById('rescueMaxCollective').value = (p.rescueMaxCollective / 100).toFixed(1);
+
+                // Governor
+                document.getElementById('govTTAGain').value = data.GOVERNOR.gov_tta_gain;
+                document.getElementById('govTTALimit').value = data.GOVERNOR.gov_tta_limit;
+                document.getElementById('govHeadspeed').value = data.GOVERNOR.gov_headspeed || 100;
+                document.getElementById('govMinThrottle').value = data.GOVERNOR.gov_min_throttle ?? 10;
+                document.getElementById('govMaxThrottle').value = data.GOVERNOR.gov_max_throttle ?? 100;
+                document.getElementById('govFallbackDrop').value = data.GOVERNOR.gov_fallback_drop ?? 10;
+
+                // Governor PID
+                document.getElementById('govMasterGain').value = data.GOVERNOR.gov_gain ?? 40;
+                document.getElementById('govPGain').value = data.GOVERNOR.gov_p_gain ?? 40;
+                document.getElementById('govIGain').value = data.GOVERNOR.gov_i_gain ?? 50;
+                document.getElementById('govDGain').value = data.GOVERNOR.gov_d_gain ?? 0;
+                document.getElementById('govFGain').value = data.GOVERNOR.gov_f_gain ?? 10;
+
+                // Governor Behaviour flags
+                const govFlags = data.GOVERNOR.gov_flags || 0;
+                document.getElementById('govFlagFallbackPrecomp').checked = bitCheck(govFlags, 2);
+                document.getElementById('govFlagPIDSpoolup').checked = bitCheck(govFlags, 4);
+                document.getElementById('govFlagVoltageComp').checked = bitCheck(govFlags, 3);
+                document.getElementById('govFlagDynMinThrottle').checked = bitCheck(govFlags, 6);
+
+                this.updateSubOptions();
+
+                // Grey out any parameters that were not returned by the FC
+                this.msp.missingParams.forEach((fieldName) => {
+                    this.markParamMissing(fieldName);
+                });
+                this.msp.missingParams.clear();
+
+                this.savedProfile = this.currentProfile;
+            }
+
+            fieldToDomId(name) {
+                const map = {
+                    // PID profile
+                    error_decay_time_ground: 'errorDecayTimeGround',
+                    error_decay_time_cyclic: 'errorDecayTimeCyclic',
+                    error_decay_time_yaw: 'errorDecayTimeYaw',
+                    error_decay_limit_cyclic: 'errorDecayLimitCyclic',
+                    error_decay_limit_yaw: 'errorDecayLimitYaw',
+                    error_rotation: 'errorRotation',
+                    // Governor profile
+                    gov_tta_gain: 'govTTAGain',
+                    gov_tta_limit: 'govTTALimit',
+                    gov_headspeed: 'govHeadspeed',
+                    gov_min_throttle: 'govMinThrottle',
+                    gov_max_throttle: 'govMaxThrottle',
+                    gov_fallback_drop: 'govFallbackDrop',
+                    gov_gain: 'govMasterGain',
+                    gov_p_gain: 'govPGain',
+                    gov_i_gain: 'govIGain',
+                    gov_d_gain: 'govDGain',
+                    gov_f_gain: 'govFGain'
+                };
+                return map[name] || name;
+            }
+
+            markParamMissing(fieldName) {
+                const domId = this.fieldToDomId(fieldName);
+                const input = document.getElementById(domId);
+                if (input) {
+                    input.classList.add('param-missing');
+                    input.disabled = true;
+                    if (input.type === 'checkbox') {
+                        input.checked = false;
+                    } else if (input.tagName !== 'SELECT') {
+                        input.value = 0;
+                    }
+                }
+                const row = input ? input.closest('tr') : null;
+                if (row) row.classList.add('param-missing');
+                const label = document.querySelector('label[for="' + domId + '"]');
+                if (label) label.classList.add('param-missing');
+            }
+
+            bindTabs() {
+                const tabs = document.querySelectorAll('.tab-profiles .tab-container > div.tab');
+                    tabs.forEach((tab, index) => {
+                        tab.addEventListener('click', async () => {
+                            if (index !== this.currentProfile) {
+                                if (this.isChanged) {
+                                    document.querySelector('.dialogProfileChange').showModal();
+                                    const yesBtn = document.querySelector('.dialogProfileChangeYesBtn');
+                                    const noBtn = document.querySelector('.dialogProfileChangeNoBtn');
+                                    yesBtn.onclick = async (e) => {
+                                        e.preventDefault();
+                                        document.querySelector('.dialogProfileChange').close();
+                                        await this.saveData();
+                                        await this.activateProfile(index);
+                                    };
+                                    noBtn.onclick = async (e) => {
+                                        e.preventDefault();
+                                        document.querySelector('.dialogProfileChange').close();
+                                        await this.activateProfile(index);
+                                    };
+                                } else {
+                                    await this.activateProfile(index);
+                                }
+                            }
+                        });
+                    });
+            }
+
+            async activateProfile(index) {
+                try {
+                    await this.msp.sendCommand(210, [index]);
+                    this.currentProfile = index;
+                    document.querySelectorAll('.tab-profiles .tab-container > div.tab').forEach((tab, i) => {
+                        tab.classList.toggle('active', i === index);
+                    });
+                    await this.loadDataFromFC();
+                    this.isChanged = false;
+                    this.isDirty = false;
+                    document.querySelector('.tab-profiles').classList.add('toolbar_hidden');
+                } catch (e) {
+                    console.error('Profile switch failed:', e);
+                }
+            }
+
+            bindButtons() {
+                // Save
+                document.getElementById('save-btn').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await this.saveData();
+                });
+
+                // Revert
+                document.getElementById('revert-btn').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (this.currentProfile !== this.savedProfile) {
+                        await this.activateProfile(this.savedProfile);
+                    }
+                });
+                // Copy Profile
+                document.getElementById('copyProfile').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (!this.isChanged) {
+                        const sel = document.getElementById('selectProfile');
+                        sel.innerHTML = '';
+                        this.TAB_NAMES.forEach((name, key) => {
+                            if (key !== this.currentProfile) {
+                                const opt = document.createElement('option');
+                                opt.value = key;
+                                opt.textContent = `Profile #${key + 1}`;
+                                sel.appendChild(opt);
+                            }
+                        });
+                        document.querySelector('.dialogCopyProfile').showModal();
+                    }
+                });
+
+                document.querySelector('.dialogCopyProfile-confirmbtn').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const dstProfile = parseInt(document.getElementById('selectProfile').value);
+                    await this.copyProfile(dstProfile);
+                    document.querySelector('.dialogCopyProfile').close();
+                });
+
+                document.querySelector('.dialogCopyProfile-cancelbtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelector('.dialogCopyProfile').close();
+                });
+            }
+
+            bindInputs() {
+                const tabArea = document.querySelector('.tab-area');
+                tabArea.addEventListener('change', () => {
+                    this.setChanged();
+                });
+
+                // Toggle suboptions
+                document.getElementById('errorDecayGround')?.addEventListener('change', (e) => {
+                    document.querySelectorAll('.errorDecayGround .suboption').forEach(el => {
+                        el.style.display = e.target.checked ? 'flex' : 'none';
+                    });
+                });
+
+                document.getElementById('itermRelax')?.addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    document.querySelectorAll('.itermRelax .suboption').forEach(el => {
+                        el.style.display = checked ? 'flex' : 'none';
+                    });
+                    document.querySelectorAll('.itermRelax .subhelp').forEach(el => {
+                        el.style.display = checked ? 'block' : 'none';
+                    });
+                });
+
+                document.getElementById('itermRelaxType')?.addEventListener('change', (e) => {
+                    const yawOption = document.querySelector('.itermRelaxYawOption');
+                    if (yawOption) {
+                        yawOption.style.display = parseInt(e.target.value) > 1 ? 'flex' : 'none';
+                    }
+                });
+
+                document.getElementById('pitchFFCollective')?.addEventListener('change', (e) => {
+                    document.querySelectorAll('.pitchFFCollective .suboption').forEach(el => {
+                        el.style.display = e.target.checked ? 'flex' : 'none';
+                    });
+                    document.querySelectorAll('.pitchFFCollective .subhelp').forEach(el => {
+                        el.style.display = e.target.checked ? 'block' : 'none';
+                    });
+                });
+
+                document.getElementById('cyclicCrossCoupling')?.addEventListener('change', (e) => {
+                    document.querySelectorAll('.cyclicCrossCoupling .suboption').forEach(el => {
+                        el.style.display = e.target.checked ? 'flex' : 'none';
+                    });
+                    document.querySelectorAll('.cyclicCrossCoupling .subhelp').forEach(el => {
+                        el.style.display = e.target.checked ? 'block' : 'none';
+                    });
+                });
+
+                document.getElementById('rescueEnable')?.addEventListener('change', (e) => {
+                    document.querySelectorAll('.rescueMode .suboption').forEach(el => {
+                        el.style.display = e.target.checked ? 'flex' : 'none';
+                    });
+                    document.querySelectorAll('.rescueMode .subhelp').forEach(el => {
+                        el.style.display = e.target.checked ? 'block' : 'none';
+                    });
+                });
+
+                document.getElementById('rescueAltHold')?.addEventListener('change', (e) => {
+                    document.querySelectorAll('.rescueAltHold .suboption').forEach(el => {
+                        el.style.display = e.target.checked ? 'flex' : 'none';
+                    });
+                    document.querySelectorAll('.rescueAltHold .subhelp').forEach(el => {
+                        el.style.display = e.target.checked ? 'block' : 'none';
+                    });
+                });
+
+                // Number input validation
+                document.querySelectorAll('.tab-area input[type="number"]').forEach(input => {
+                    input.addEventListener('change', () => {
+                        const min = parseFloat(input.min);
+                        const max = parseFloat(input.max);
+                        let val = parseFloat(input.value);
+                        if (!isNaN(min) && val < min) val = min;
+                        if (!isNaN(max) && val > max) val = max;
+                        input.value = val;
+                    });
+                });
+            }
+
+            updateSubOptions() {
+                const errorDecayChecked = document.getElementById('errorDecayGround')?.checked;
+                document.querySelectorAll('.errorDecayGround .suboption').forEach(el => {
+                    el.style.display = errorDecayChecked ? 'flex' : 'none';
+                });
+
+                const itermRelaxChecked = document.getElementById('itermRelax')?.checked;
+                document.querySelectorAll('.itermRelax .suboption').forEach(el => {
+                    el.style.display = itermRelaxChecked ? 'flex' : 'none';
+                });
+                document.querySelectorAll('.itermRelax .subhelp').forEach(el => {
+                    el.style.display = itermRelaxChecked ? 'block' : 'none';
+                });
+
+                const pitchFFChecked = document.getElementById('pitchFFCollective')?.checked;
+                document.querySelectorAll('.pitchFFCollective .suboption').forEach(el => {
+                    el.style.display = pitchFFChecked ? 'flex' : 'none';
+                });
+                document.querySelectorAll('.pitchFFCollective .subhelp').forEach(el => {
+                    el.style.display = pitchFFChecked ? 'block' : 'none';
+                });
+
+                const cyclicChecked = document.getElementById('cyclicCrossCoupling')?.checked;
+                document.querySelectorAll('.cyclicCrossCoupling .suboption').forEach(el => {
+                    el.style.display = cyclicChecked ? 'flex' : 'none';
+                });
+                document.querySelectorAll('.cyclicCrossCoupling .subhelp').forEach(el => {
+                    el.style.display = cyclicChecked ? 'block' : 'none';
+                });
+
+                const rescueChecked = document.getElementById('rescueEnable')?.checked;
+                document.querySelectorAll('.rescueMode .suboption').forEach(el => {
+                    el.style.display = rescueChecked ? 'flex' : 'none';
+                });
+                document.querySelectorAll('.rescueMode .subhelp').forEach(el => {
+                    el.style.display = rescueChecked ? 'block' : 'none';
+                });
+
+                const rescueAltChecked = document.getElementById('rescueAltHold')?.checked;
+                document.querySelectorAll('.rescueAltHold .suboption').forEach(el => {
+                    el.style.display = rescueAltChecked ? 'flex' : 'none';
+                });
+                document.querySelectorAll('.rescueAltHold .subhelp').forEach(el => {
+                    el.style.display = rescueAltChecked ? 'block' : 'none';
+                });
+            }
+
+            setChanged() {
+                if (!this.isChanged) {
+                    this.isDirty = true;
+                    this.isChanged = true;
+                    document.querySelector('.tab-profiles').classList.remove('toolbar_hidden');
+                }
+            }
+
+            async saveData() {
+                const data = this.readFormData();
+
+                this.msp.data.PID_PROFILE = { ...this.msp.data.PID_PROFILE, ...data.pidProfile };
+                this.msp.data.PIDS = data.pids;
+                this.msp.data.GOVERNOR = { ...this.msp.data.GOVERNOR, ...data.governor };
+
+                const savingDialog = document.querySelector('.dialogSaving');
+                savingDialog.showModal();
+                try {
+                    await this.msp.sendCommand(this.msp.buildSetPIDTuning());
+                    await this.msp.sendCommand(this.msp.buildSetPIDProfile());
+                    await this.msp.sendCommand(this.msp.buildSetRescueProfile());
+                    await this.msp.sendCommand(this.msp.buildSetGovernorProfile());
+                    await this.msp.sendCommand(250, []);
+                    await this.msp.sendCommand(210, [this.currentProfile]);
+                    await this.loadDataFromFC();
+                } catch (e) {
+                    console.error('Save failed:', e);
+                    savingDialog.close();
+                    alert('Failed to save profile: ' + e.message);
+                    return;
+                }
+                savingDialog.close();
+
+                this.savedProfile = this.currentProfile;
+                this.isChanged = false;
+                this.isDirty = false;
+                document.querySelector('.tab-profiles').classList.add('toolbar_hidden');
+            }
+
+            readFormData() {
+                const getVal = (id, scale = 1) => {
+                    const el = document.getElementById(id);
+                    if (!el) return 0;
+                    let val = parseFloat(el.value) * scale;
+                    if (isNaN(val)) val = 0;
+                    return val;
+                };
+
+                const getCheck = (id) => document.getElementById(id)?.checked || false;
+
+                const pids = [
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0]
+                ];
+
+                document.querySelectorAll('#pid_main tr.ROLL input').forEach((input, i) => {
+                    pids[0][i] = parseFloat(input.value) || 0;
+                });
+                document.querySelectorAll('#pid_main tr.PITCH input').forEach((input, i) => {
+                    pids[1][i] = parseFloat(input.value) || 0;
+                });
+                document.querySelectorAll('#pid_main tr.YAW input').forEach((input, i) => {
+                    pids[2][i] = parseFloat(input.value) || 0;
+                });
+
+                const pidProfile = {
+                    gyroCutoffRoll: getVal('gyroCutoffRoll'),
+                    gyroCutoffPitch: getVal('gyroCutoffPitch'),
+                    gyroCutoffYaw: getVal('gyroCutoffYaw'),
+                    dtermCutoffRoll: getVal('dtermCutoffRoll'),
+                    dtermCutoffPitch: getVal('dtermCutoffPitch'),
+                    dtermCutoffYaw: getVal('dtermCutoffYaw'),
+                    btermCutoffRoll: getVal('btermCutoffRoll'),
+                    btermCutoffPitch: getVal('btermCutoffPitch'),
+                    btermCutoffYaw: getVal('btermCutoffYaw'),
+                    errorLimitRoll: getVal('errorLimitRoll'),
+                    errorLimitPitch: getVal('errorLimitPitch'),
+                    errorLimitYaw: getVal('errorLimitYaw'),
+                    offsetLimitRoll: getVal('offsetLimitRoll'),
+                    offsetLimitPitch: getVal('offsetLimitPitch'),
+                    error_decay_time_ground: getCheck('errorDecayGround') ? getVal('errorDecayTimeGround') * 10 : 0,
+                    error_decay_time_cyclic: getVal('errorDecayTimeCyclic') * 10,
+                    error_decay_limit_cyclic: getVal('errorDecayLimitCyclic'),
+                    error_rotation: getCheck('errorRotation') ? 1 : 0,
+                    itermRelaxType: getCheck('itermRelax') ? (parseInt(document.getElementById('itermRelaxType')?.value) || 1) : 0,
+                    itermRelaxCutoffRoll: getVal('itermRelaxCutoffRoll'),
+                    itermRelaxCutoffPitch: getVal('itermRelaxCutoffPitch'),
+                    itermRelaxCutoffYaw: getVal('itermRelaxCutoffYaw'),
+                    yawStopGainCW: getVal('yawStopGainCW'),
+                    yawStopGainCCW: getVal('yawStopGainCCW'),
+                    yawPrecompCutoff: getVal('yawPrecompCutoff'),
+                    yawFFCyclicGain: getVal('yawFFCyclicGain'),
+                    yawFFCollectiveGain: getVal('yawFFCollectiveGain'),
+                    yawFFImpulseGain: getVal('yawFFImpulseGain'),
+                    yawFFImpulseDecay: getVal('yawFFImpulseDecay'),
+                    yaw_inertia_precomp_gain: getVal('yaw_inertia_precomp_gain'),
+                    yaw_inertia_precomp_cutoff: getVal('yaw_inertia_precomp_cutoff') * 10,
+                    pitchFFCollectiveGain: getCheck('pitchFFCollective') ? getVal('pitchFFCollectiveGain') : 0,
+                    cyclicCrossCouplingGain: getCheck('cyclicCrossCoupling') ? getVal('cyclicCrossCouplingGain') : 0,
+                    cyclicCrossCouplingRatio: getVal('cyclicCrossCouplingRatio'),
+                    cyclicCrossCouplingCutoff: getVal('cyclicCrossCouplingCutoff'),
+                    acroTrainerGain: getVal('acroTrainerGain'),
+                    acroTrainerLimit: getVal('acroTrainerLimit'),
+                    levelAngleStrength: getVal('angleModeGain'),
+                    levelAngleLimit: getVal('angleModeLimit'),
+                    horizonLevelStrength: getVal('horizonModeGain'),
+                    rescueMode: getCheck('rescueEnable') ? (getCheck('rescueAltHold') ? 2 : 1) : 0,
+                    rescueFlipMode: parseInt(document.getElementById('rescueFlipMode')?.value || 0),
+                    rescuePullupCollective: getVal('rescuePullupCollective') * 100,
+                    rescueClimbCollective: getVal('rescueClimbCollective') * 100,
+                    rescueHoverCollective: getVal('rescueHoverCollective') * 100,
+                    rescuePullupTime: getVal('rescuePullupTime') * 10,
+                    rescueClimbTime: getVal('rescueClimbTime') * 10,
+                    rescueFlipTime: getVal('rescueFlipTime') * 10,
+                    rescueExitTime: getVal('rescueExitTime') * 10,
+                    rescueFlipGain: getVal('rescueFlipGain'),
+                    rescueLevelGain: getVal('rescueLevelGain'),
+                    rescueMaxRate: getVal('rescueMaxRate'),
+                    rescueMaxAccel: getVal('rescueMaxAccel'),
+                    rescueHoverAltitude: getVal('rescueHoverAltitude') * 100,
+                    rescueAltitudePGain: getVal('rescueAltitudePGain'),
+                    rescueAltitudeIGain: getVal('rescueAltitudeIGain'),
+                    rescueAltitudeDGain: getVal('rescueAltitudeDGain'),
+                    rescueMaxCollective: getVal('rescueMaxCollective') * 100
+                };
+
+                const governor = {
+                    gov_tta_gain: getVal('govTTAGain'),
+                    gov_tta_limit: getVal('govTTALimit'),
+                    gov_headspeed: getVal('govHeadspeed'),
+                    gov_min_throttle: getVal('govMinThrottle'),
+                    gov_max_throttle: getVal('govMaxThrottle'),
+                    gov_fallback_drop: getVal('govFallbackDrop'),
+                    gov_gain: getVal('govMasterGain'),
+                    gov_p_gain: getVal('govPGain'),
+                    gov_i_gain: getVal('govIGain'),
+                    gov_d_gain: getVal('govDGain'),
+                    gov_f_gain: getVal('govFGain'),
+                    gov_flags: (document.getElementById('govFlagFallbackPrecomp')?.checked ? bitSet(0, 2) : 0) |
+                               (document.getElementById('govFlagVoltageComp')?.checked ? bitSet(0, 3) : 0) |
+                               (document.getElementById('govFlagPIDSpoolup')?.checked ? bitSet(0, 4) : 0) |
+                               (document.getElementById('govFlagDynMinThrottle')?.checked ? bitSet(0, 6) : 0)
+                };
+
+                return { pids, pidProfile, governor };
+            }
+
+            async copyProfile(dstProfile) {
+                try {
+                    await this.msp.sendCommand(183, [0, dstProfile, this.currentProfile]);
+                    await this.msp.sendCommand(250, []);
+                    alert(`Profile ${this.currentProfile + 1} copied to Profile ${dstProfile + 1}`);
+                } catch (e) {
+                    console.error('Copy failed:', e);
+                    alert('Failed to copy profile: ' + e.message);
+                }
+            }
+        }
+
+        ProfilesTab.prototype.TAB_NAMES = ['profile1', 'profile2', 'profile3', 'profile4', 'profile5', 'profile6'];
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            new ProfilesTab();
+        });
+    </script>
+    <script src="../bridge.js"></script>
+</body>
+</html>

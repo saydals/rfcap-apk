@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotorflight Configurator - Mixer</title>
+    <style>
+        :root {
+            --animation-speed: 0.2s ease;
+            --section-gap: 16px;
+            --section-padding: 8px;
+            --color-shadow: rgba(0, 0, 0, 0.2);
+            --color-shadow-soft: rgba(0, 0, 0, 0.12);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            outline: none;
+            user-select: none;
+            -webkit-user-drag: none;
+            -webkit-app-region: no-drag;
+            box-sizing: border-box;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--color-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-neutral-500);
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
+            font-size: 12px;
+            color: var(--color-text);
+            background-color: var(--color-surface);
+            transition: background-color var(--animation-speed), color var(--animation-speed);
+        }
+
+        /* ============ LIGHT THEME ============ */
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220, 5%, 98%);
+            --color-neutral-100: hsl(220, 5%, 97%);
+            --color-neutral-200: hsl(220, 5%, 92%);
+            --color-neutral-300: hsl(220, 5%, 85%);
+            --color-neutral-400: hsl(220, 5%, 70%);
+            --color-neutral-500: hsl(220, 5%, 50%);
+            --color-neutral-600: hsl(220, 5%, 30%);
+            --color-neutral-700: hsl(220, 5%, 15%);
+            --color-neutral-800: hsl(220, 5%, 8%);
+            --color-neutral-900: hsl(220, 5%, 3%);
+            --color-neutral-950: hsl(220, 5%, 2%);
+            --color-bg: var(--color-neutral-200);
+            --color-surface: var(--color-neutral-100);
+            --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50);
+            --color-hover: var(--color-neutral-200);
+            --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300);
+            --color-border-accent: hsl(202, 100%, 50%);
+            --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-700);
+            --color-text-disabled: var(--color-neutral-500);
+            --color-input-bg: var(--color-neutral-50);
+            --color-input-bg-disabled: var(--color-neutral-200);
+            --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300);
+            --color-btn-fg: var(--color-neutral-800);
+            --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200);
+            --color-switch: hsl(202, 100%, 50%);
+            --color-switch-handle: var(--color-neutral-50);
+            --color-roll: hsl(2, 62%, 60%);
+            --color-pitch: hsl(122, 62%, 60%);
+            --color-yaw: hsl(242, 62%, 60%);
+            --accent: hsl(202, 100%, 50%);
+            --subtleAccent: var(--color-neutral-400);
+            --superSubtleAccent: var(--color-neutral-300);
+        }
+
+        /* ============ DARK THEME ============ */
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(248, 5%, 5%);
+            --color-neutral-900: hsl(248, 5%, 10%);
+            --color-neutral-800: hsl(248, 5%, 20%);
+            --color-neutral-700: hsl(248, 5%, 30%);
+            --color-neutral-600: hsl(248, 5%, 40%);
+            --color-neutral-500: hsl(248, 5%, 50%);
+            --color-neutral-400: hsl(248, 5%, 60%);
+            --color-neutral-300: hsl(248, 5%, 70%);
+            --color-neutral-200: hsl(248, 5%, 80%);
+            --color-neutral-100: hsl(248, 5%, 90%);
+            --color-neutral-50: hsl(248, 5%, 95%);
+            --color-bg: var(--color-neutral-950);
+            --color-surface: var(--color-neutral-900);
+            --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800);
+            --color-hover: var(--color-neutral-800);
+            --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700);
+            --color-border-accent: hsl(202, 40%, 40%);
+            --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100);
+            --color-text-soft: var(--color-neutral-100);
+            --color-text-disabled: var(--color-neutral-300);
+            --color-input-bg: var(--color-neutral-800);
+            --color-input-bg-disabled: var(--color-neutral-700);
+            --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600);
+            --color-btn-fg: var(--color-neutral-900);
+            --color-btn-fg-disabled: var(--color-neutral-700);
+            --color-btn-bg: var(--color-neutral-200);
+            --color-btn-bg-hover: var(--color-neutral-400);
+            --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-400);
+            --color-switch: hsl(202, 40%, 40%);
+            --color-switch-handle: var(--color-neutral-100);
+            --color-roll: hsl(2, 48%, 45%);
+            --color-pitch: hsl(122, 48%, 40%);
+            --color-yaw: hsl(242, 48%, 55%);
+            --accent: hsl(202, 40%, 40%);
+            --subtleAccent: var(--color-neutral-700);
+            --superSubtleAccent: var(--color-neutral-700);
+        }
+
+        body {
+            background-color: var(--color-bg);
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--color-border-accent);
+            font-weight: bold;
+        }
+
+        a.disabled {
+            pointer-events: none;
+            cursor: default;
+            color: var(--color-text-disabled);
+        }
+
+        /* ============ Connection Panel ============ */
+        #connection-panel {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #connection-panel .panel-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+
+        #connection-panel select,
+        #connection-panel input[type="text"] {
+            padding: 4px 8px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-input-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            height: 28px;
+        }
+
+        #connection-panel button {
+            padding: 4px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 28px;
+        }
+
+        #connection-panel button:hover:not(:disabled) {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        #connection-panel button:disabled {
+            background-color: var(--color-btn-bg-disabled);
+            color: var(--color-btn-fg-disabled);
+            cursor: not-allowed;
+        }
+
+        #connection-panel button.active {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #b71c1c;
+        }
+
+        #connection-panel button.active:hover {
+            background-color: #b71c1c;
+        }
+
+        #connection-panel #connection-status {
+            font-weight: bold;
+            color: var(--color-text-soft);
+        }
+
+        #connection-panel #connection-status.connected {
+            color: #2e8b2e;
+        }
+
+        #theme-toggle-btn {
+            margin-left: auto;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
+            background: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        /* ============ Tab / Layout ============ */
+        /* Same shell layout as rates/profiles: the content area is a REAL
+           scroll container so the numeric keypad can auto-scroll fields clear
+           of its fixed overlay. */
+        #main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #tab-content-container {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px;
+        }
+
+        .tab-mixer {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .tab-mixer .tab_title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: var(--color-text);
+        }
+
+        .tab-mixer .grid-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .tab-mixer .grid-col {
+            flex: 1;
+            min-width: 320px;
+        }
+
+        .tab-mixer .gui_box {
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            padding-top: 28px;
+            position: relative;
+            border: 1px solid #CCCCCC;
+            background-color: #F5F5F5;
+            border-radius: 5px;
+            overflow: visible;
+        }
+
+        html[data-theme="dark"] .tab-mixer .gui_box {
+            background-color: #2a2a2a;
+            border-color: #555555;
+        }
+
+        .tab-mixer .gui_box.grey {
+            background-color: #F5F5F5;
+        }
+
+        html[data-theme="dark"] .tab-mixer .gui_box.grey {
+            background-color: #2a2a2a;
+        }
+
+        .tab-mixer .gui_box_titlebar {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 0;
+            padding: 3px 14px;
+            background-color: #555555;
+            color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 22px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        html[data-theme="dark"] .tab-mixer .gui_box_titlebar {
+            background-color: #444444;
+            color: #ffffff;
+        }
+
+        .tab-mixer .spacer_box {
+            padding: 10px 12px;
+        }
+
+        .tab-mixer .spacer_box table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tab-mixer .mixerConfigTable td {
+            padding: 4px 6px;
+            vertical-align: middle;
+        }
+
+        .tab-mixer .mixerConfigTable tr.border td {
+            border-top: 1px solid var(--color-border-soft);
+        }
+
+        .tab-mixer .mixerConfigTable tr.noborder td {
+            border-top: none;
+        }
+
+        .tab-mixer .configCol1 {
+            width: 130px;
+        }
+
+        .tab-mixer table input[type="number"],
+        .tab-mixer table input[type="text"],
+        .tab-mixer table select {
+            width: 100%;
+            padding: 3px 6px;
+            border: 1px solid var(--subtleAccent);
+            border-radius: var(--radius-sm);
+            background-color: var(--color-input-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            height: 24px;
+        }
+
+        .tab-mixer table input[type="number"]:focus,
+        .tab-mixer table select:focus {
+            border-color: var(--color-border-accent);
+        }
+
+        .tab-mixer .configCol2 {
+            color: var(--color-text-soft);
+        }
+
+        .tab-mixer .configCol2 span.unit {
+            color: var(--color-text-disabled);
+        }
+
+        .tab-mixer .cf_tip {
+            position: relative;
+        }
+
+        /* ============ Override ============ */
+        .tab-mixer .mixerOverrideAxis {
+            display: none;
+            padding: 4px 12px 12px 12px;
+        }
+
+        .tab-mixer .mixerOverrideAxis.visible {
+            display: block;
+        }
+
+        .tab-mixer .mixerOverrideTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tab-mixer .mixerOverrideTable th,
+        .tab-mixer .mixerOverrideTable td {
+            padding: 5px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border-soft);
+        }
+
+        .tab-mixer .mixerOverrideTable th {
+            background-color: var(--color-surface-alt);
+            color: var(--color-text-alt);
+            font-weight: 600;
+        }
+
+        .tab-mixer .mixerOverrideTable td .mixerOverrideSlider {
+            width: 220px;
+        }
+
+        .tab-mixer .mixerOverrideTable td .mixerOverrideValue {
+            width: 90px;
+        }
+
+        .tab-mixer .mixerOverrideTable td .mixerOverrideSliderLabels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--color-text-disabled);
+            width: 220px;
+        }
+
+        .tab-mixer .mixerOverrideSwitch td {
+            padding: 6px 8px;
+        }
+
+        /* Portrait: the slider column is hidden by the header but each slider
+           is moved onto its own full-width row directly beneath its axis so it
+           is no longer clipped in narrow (portrait) layouts. */
+        @media (orientation: portrait) {
+            .tab-mixer .mixerOverrideTable,
+            .tab-mixer .mixerOverrideTable tbody,
+            .tab-mixer .mixerOverrideTable tr.mixerOverrideRow {
+                display: block;
+                width: 100%;
+            }
+            .tab-mixer .mixerOverrideTable tr.mixerOverrideRow {
+                border-bottom: 1px solid var(--color-border-soft);
+                padding-bottom: 8px;
+                margin-bottom: 8px;
+            }
+            .tab-mixer .mixerOverrideTable tr.mixerOverrideRow:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+            }
+            .tab-mixer .mixerOverrideTable thead {
+                display: none;
+            }
+            .tab-mixer .mixerOverrideTable tr.mixerOverrideRow td {
+                display: inline-block;
+                border-bottom: none;
+                vertical-align: middle;
+            }
+            .tab-mixer .mixerOverrideTable tr.mixerOverrideRow td.sliderCell {
+                display: block;
+                width: 100%;
+                padding-top: 2px;
+            }
+            .tab-mixer .mixerOverrideTable tr.mixerOverrideRow td.sliderCell .mixerOverrideSlider,
+            .tab-mixer .mixerOverrideTable tr.mixerOverrideRow td.sliderCell .mixerOverrideSliderLabels {
+                width: 100%;
+            }
+        }
+
+        /* ============ Toolbar ============ */
+        /* Same look/position as the rates/profiles toolbar:
+           right-aligned at the bottom of the content. */
+        .tab-mixer.toolbar_hidden .content_toolbar {
+            display: none;
+        }
+
+        .tab-mixer .content_toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding: 10px 0 2px 0;
+        }
+
+        .tab-mixer .content_toolbar .btn a {
+            display: inline-block;
+            padding: 6px 18px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+        }
+
+        .tab-mixer .content_toolbar .btn a:hover {
+            background-color: var(--color-btn-bg-hover);
+        }
+
+        .tab-mixer .content_toolbar .save_btn a {
+            background-color: #2e7d32;
+            color: #fff;
+            border-color: #1b5e20;
+        }
+
+        /* ============ Notes ============ */
+        .tab-mixer .note {
+            margin-bottom: 8px;
+            text-align: left;
+            padding: 8px;
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            color: #856404;
+        }
+
+        html[data-theme="dark"] .tab-mixer .note {
+            background-color: #3d3010;
+            border-color: #b8860b;
+            color: #ffc107;
+        }
+
+        .tab-mixer .note p {
+            margin: 0;
+        }
+
+        /* ============ Dialog ============ */
+        .tab-mixer dialog {
+            width: 40em;
+            border-radius: 5px;
+            border: 1px solid var(--color-border);
+            padding: 16px;
+            background-color: var(--color-surface-float);
+            color: var(--color-text);
+        }
+
+        .tab-mixer dialog::backdrop {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .tab-mixer dialog h3 {
+            margin-top: 0;
+            margin-bottom: 0.5em;
+        }
+
+        .tab-mixer dialog .buttons {
+            margin-top: 2em;
+        }
+
+        .tab-mixer dialog .regular-button {
+            display: inline-block;
+            padding: 6px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background-color: var(--color-btn-bg);
+            color: var(--color-btn-fg);
+            cursor: pointer;
+            margin-right: 8px;
+        }
+
+        /* ============ Missing params ============ */
+        .tab-mixer .param-missing,
+        .tab-mixer tr.param-missing td {
+            color: var(--color-text-disabled) !important;
+            opacity: 0.5;
+        }
+
+        .tab-mixer input.param-missing,
+        .tab-mixer select.param-missing {
+            background-color: #c9c9c9 !important;
+            color: var(--color-text-disabled) !important;
+            border-color: #999999 !important;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        html[data-theme="dark"] .tab-mixer input.param-missing,
+        html[data-theme="dark"] .tab-mixer select.param-missing {
+            background-color: #2a2a2a !important;
+        }
+
+        .tab-mixer label.param-missing,
+        .tab-mixer label.param-missing span {
+            color: var(--color-text-disabled) !important;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div id="main-wrapper">
+        <!-- Connection Panel -->
+        <div id="connection-panel">
+            <span class="panel-title">Connection</span>
+            <select id="port-select">
+                <option value="none">Select Port</option>
+            </select>
+            <select id="baud-select">
+                <option value="1000000">1000000</option>
+                <option value="500000">500000</option>
+                <option value="250000">250000</option>
+                <option value="115200" selected>115200</option>
+                <option value="57600">57600</option>
+                <option value="38400">38400</option>
+            </select>
+            <button id="connect-btn">Connect</button>
+            <span id="connection-status">Disconnected</span>
+            <button id="theme-toggle-btn">&#127769; / &#9728;&#65039;</button>
+        </div>
+
+        <!-- Mixer Tab Content -->
+        <div id="tab-content-container">
+            <div class="tab-mixer toolbar_hidden">
+                <div class="content_wrapper">
+                    <div class="tab_title">Mixer</div>
+
+                    <div class="configuration">
+                        <div class="note mixerCustomNote" style="display:none">
+                            <p>A custom mixer configuration was detected on the flight controller. Editing
+                            these settings directly may damage the heli. Use the Reset button to restore
+                            defaults.</p>
+                        </div>
+                        <div class="note mixerRulesNote" style="display:none">
+                            <p>Custom mixer rules were detected on the flight controller.</p>
+                        </div>
+                        <div class="note mixerBidirNote" style="display:none">
+                            <p>Bidirectional tail rotor mode is enabled.</p>
+                        </div>
+                        <div class="note mixerRebootNote" style="display:none">
+                            <p>A reboot is required for these changes to take effect.</p>
+                        </div>
+
+                        <div class="grid-row">
+                            <!-- LEFT COLUMN -->
+                            <div class="grid-col col6">
+                                <!-- MAIN ROTOR SETTINGS -->
+                                <div class="gui_box grey">
+                                    <div class="gui_box_titlebar">
+                                        <div class="spacer_box_title">Main Rotor Settings</div>
+                                    </div>
+                                    <div class="spacer_box">
+                                        <table class="mixerConfigTable">
+                                            <tr class="mixerSwashType noborder">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig mixerReboot">
+                                                        <select id="mixerSwashType"></select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Swashplate Type</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerMainRotorDirection border">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <select id="mixerMainRotorDirection">
+                                                            <option value="0">Clockwise</option>
+                                                            <option value="1">Counter Clockwise</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Main Rotor Direction</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerAileronDirection border">
+                                                <td>
+                                                    <div class="configCol1 mixerInput1">
+                                                        <select id="mixerAileronDirection">
+                                                            <option value="1">Normal</option>
+                                                            <option value="-1">Reversed</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Aileron Control Direction</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerElevatorDirection border">
+                                                <td>
+                                                    <div class="configCol1 mixerInput2">
+                                                        <select id="mixerElevatorDirection">
+                                                            <option value="1">Normal</option>
+                                                            <option value="-1">Reversed</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Elevator Control Direction</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerCollectiveDirection border">
+                                                <td>
+                                                    <div class="configCol1 mixerInput4">
+                                                        <select id="mixerCollectiveDirection">
+                                                            <option value="1">Normal</option>
+                                                            <option value="-1">Reversed</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Collective Control Direction</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- GEOMETRY SETTINGS -->
+                                <div class="gui_box grey">
+                                    <div class="gui_box_titlebar">
+                                        <div class="spacer_box_title">Main Rotor Geometry</div>
+                                    </div>
+                                    <div class="spacer_box">
+                                        <table class="mixerConfigTable">
+                                            <tr class="mixerCyclicCalibration">
+                                                <td>
+                                                    <div class="configCol1 mixerInput1 mixerInput2">
+                                                        <input type="number" id="mixerCyclicCalibration" min="20" max="200" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Cyclic calibration [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerCollectiveCalibration">
+                                                <td>
+                                                    <div class="configCol1 mixerInput4">
+                                                        <input type="number" id="mixerCollectiveCalibration" min="20" max="200" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Collective calibration [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerCollectiveGeoCorrection">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerCollectiveGeoCorrection" min="-25.0" max="25.0" step="0.2" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Collective Geometry Correction [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerCyclicLimit border">
+                                                <td>
+                                                    <div class="configCol1 mixerInput1 mixerInput2">
+                                                        <input type="number" id="mixerCyclicLimit" min="0" max="20" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Cyclic blade pitch limit [°]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerCollectiveLimit">
+                                                <td>
+                                                    <div class="configCol1 mixerInput4">
+                                                        <input type="number" id="mixerCollectiveLimit" min="0" max="20" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Collective blade pitch limit [°]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTotalPitchLimit">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerTotalPitchLimit" min="0" max="36" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Total blade pitch limit [°]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerSwashPhase border">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerSwashPhase" min="-180" max="180" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Swashplate phase angle [°]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerCollectiveTiltCorrection border">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerCollectiveTiltCorrectionPos" min="-100" max="100" step="1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Positive Collective Tilt Correction</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerCollectiveTiltCorrection">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerCollectiveTiltCorrectionNeg" min="-100" max="100" step="1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Negative Collective Tilt Correction</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN -->
+                            <div class="grid-col col6">
+                                <!-- SWASH LINK TRIM -->
+                                <div class="gui_box grey">
+                                    <div class="gui_box_titlebar">
+                                        <div class="spacer_box_title">Swashplate Trims</div>
+                                    </div>
+                                    <div class="spacer_box">
+                                        <table class="mixerConfigTable">
+                                            <tr>
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerSwashRollTrim" min="-100" max="100" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Roll trim [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerSwashPitchTrim" min="-100" max="100" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Pitch trim [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerSwashCollectiveTrim" min="-100" max="100" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Collective trim [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- TAIL ROTOR SETTINGS -->
+                                <div class="gui_box grey">
+                                    <div class="gui_box_titlebar">
+                                        <div class="spacer_box_title">Tail Rotor Settings</div>
+                                    </div>
+                                    <div class="spacer_box">
+                                        <table class="mixerConfigTable">
+                                            <tr class="mixerTailRotorMode">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig mixerReboot">
+                                                        <select id="mixerTailRotorMode">
+                                                            <option value="0">Tail Variable Pitch</option>
+                                                            <option value="1">Tail Motorized</option>
+                                                            <option value="2">Tail Bidirectional</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Tail rotor type</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailRotorDirection border">
+                                                <td>
+                                                    <div class="configCol1 mixerInput3">
+                                                        <select id="mixerTailRotorDirection">
+                                                            <option value="1">Normal</option>
+                                                            <option value="-1">Reversed</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Yaw Control Direction</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailRotor mixerTailRotorCenterTrim border">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerTailRotorCenterTrim" min="-25.0" max="25.0" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Yaw center trim</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailMotor mixerTailMotorCenterTrim border">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerTailMotorCenterTrim" min="-50" max="50" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Yaw center offset [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerMotorisedTailCalibrationNote" style="display:none">
+                                                <td colspan="2">
+                                                    <div class="note">
+                                                        <p>Motorised tail calibration is not at 100%. Check the tail setup.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailRotorCalibration">
+                                                <td>
+                                                    <div class="configCol1 mixerInput3">
+                                                        <input type="number" id="mixerTailRotorCalibration" min="10" max="500" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Yaw calibration [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailRotor mixerTailRotorMinYaw border">
+                                                <td>
+                                                    <div class="configCol1 mixerInput3">
+                                                        <input type="number" id="mixerTailRotorMinYaw" min="0" max="60" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>CW Yaw Blade Angle Limit</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailRotor mixerTailRotorMaxYaw">
+                                                <td>
+                                                    <div class="configCol1 mixerInput3">
+                                                        <input type="number" id="mixerTailRotorMaxYaw" min="0" max="60" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>CCW Yaw Blade Angle Limit</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailMotor mixerTailMotorMinYaw border">
+                                                <td>
+                                                    <div class="configCol1 mixerInput3">
+                                                        <input type="number" id="mixerTailMotorMinYaw" min="0" max="200" step="1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>CW yaw limit [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailMotor mixerTailMotorMaxYaw">
+                                                <td>
+                                                    <div class="configCol1 mixerInput3">
+                                                        <input type="number" id="mixerTailMotorMaxYaw" min="0" max="200" step="1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>CCW yaw limit [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="mixerTailMotor mixerTailMotorIdle border">
+                                                <td>
+                                                    <div class="configCol1 mixerConfig">
+                                                        <input type="number" id="mixerTailMotorIdle" min="0" max="25.0" step="0.1" />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="configCol2">
+                                                        <span>Motor idle throttle [%]</span>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OVERRIDE (hidden page, revealed by Enable Override) -->
+                    <div class="override">
+                        <div class="gui_box">
+                            <div class="gui_box_titlebar">
+                                <div class="spacer_box_title">Mixer Override</div>
+                                </div>
+                            <div class="spacer_box">
+                                <table class="mixerOverrideSwitch">
+                                    <tr>
+                                        <td><input type="checkbox" id="mixerOverrideEnableSwitch" class="toggle" /></td>
+                                        <td><span>Enable Mixer Override</span></td>
+                                        <td class="mixerPassthroughVisible"><input type="checkbox" id="mixerPassthroughEnableSwitch" class="toggle" /></td>
+                                        <td class="mixerPassthroughVisible"><span>Enable Mixer Passthrough</span></td>
+                                        <td><span class="description">Mixer Override forces the mixer inputs to arbitrary positions for setup purposes.</span></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="mixerOverrideAxis">
+                                <table class="mixerOverrideTable">
+                                    <thead>
+                                        <tr class="trhead">
+                                            <th>Control</th>
+                                            <th>Override</th>
+                                            <th class="mixerPassthroughVisible">Passthrough</th>
+                                            <th>Value</th>
+                                            <th>Slider</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- ROWS GENERATED HERE -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content_toolbar">
+                    <div class="btn revert_btn">
+                        <a href="#" id="revert-btn">Revert</a>
+                    </div>
+                    <div class="btn save_btn">
+                        <a href="#" id="save-btn">Save &amp; Reboot</a>
+                    </div>
+                </div>
+
+                <dialog class="dialogMixerReset">
+                    <h3>Mixer Reset</h3>
+                    <div class="content">
+                        <div style="margin-top: 10px">This will reset the mixer configuration and overrides
+                        to firmware defaults and save to EEPROM. Continue?</div>
+                    </div>
+                    <div class="buttons">
+                        <a href="#" class="dialogMixerReset-acceptbtn regular-button">Reset & Save</a>
+                        <a href="#" class="dialogMixerReset-revertbtn regular-button">Cancel</a>
+                    </div>
+                </dialog>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Theme ====================
+        (function () {
+            const KEY = 'rf-theme';
+            function apply(t) {
+                document.documentElement.setAttribute('data-theme', t);
+                localStorage.setItem(KEY, t);
+            }
+            const saved = localStorage.getItem(KEY);
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            apply(saved || (prefersDark ? 'dark' : 'light'));
+            window.toggleTheme = () => {
+                const cur = document.documentElement.getAttribute('data-theme');
+                apply(cur === 'dark' ? 'light' : 'dark');
+            };
+        })();
+
+        // ==================== Web Serial API Connection ====================
+        class SerialConnection {
+            constructor() {
+                this.port = null;
+                this.reader = null;
+                this.writer = null;
+                this.connected = false;
+                this.baudRate = 115200;
+                this.onData = null;
+                this.onStatusChange = null;
+            }
+
+            async requestPort() {
+                try {
+                    this.port = await navigator.serial.requestPort();
+                    await this.updatePorts();
+                    return this.port;
+                } catch (e) {
+                    console.error('Error requesting port:', e);
+                    throw e;
+                }
+            }
+
+            async updatePorts() {
+                const ports = await navigator.serial.getPorts();
+                const select = document.getElementById('port-select');
+                select.innerHTML = '<option value="none">Select Port</option>';
+                ports.forEach((port, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = port.getInfo().usbVendorId ?
+                        `USB Device (VID: ${port.getInfo().usbVendorId?.toString(16).padStart(4, '0')})` :
+                        `Serial Port ${index + 1}`;
+                    select.appendChild(option);
+                });
+            }
+
+            async connect(portIndex, baudRate) {
+                try {
+                    const ports = await navigator.serial.getPorts();
+                    if (portIndex >= ports.length) {
+                        throw new Error('Invalid port');
+                    }
+                    this.port = ports[portIndex];
+                    this.baudRate = parseInt(baudRate);
+                    await this.port.open({ baudRate: this.baudRate });
+                    this.connected = true;
+                    this.writer = this.port.writable.getWriter();
+                    this.reader = this.port.readable.getReader();
+                    this.onStatusChange?.(true);
+                    this.readLoop();
+                    return true;
+                } catch (e) {
+                    console.error('Connection error:', e);
+                    this.onStatusChange?.(false);
+                    return false;
+                }
+            }
+
+            async disconnect() {
+                if (this.reader) {
+                    await this.reader.cancel();
+                    this.reader.releaseLock();
+                    this.reader = null;
+                }
+                if (this.writer) {
+                    this.writer.releaseLock();
+                    this.writer = null;
+                }
+                if (this.port) {
+                    await this.port.close();
+                    this.port = null;
+                }
+                this.connected = false;
+                this.onStatusChange?.(false);
+            }
+
+            async readLoop() {
+                try {
+                    while (this.port && this.reader) {
+                        const { value, done } = await this.reader.read();
+                        if (done) break;
+                        if (value && this.onData) {
+                            this.onData(value);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Read error:', e);
+                }
+            }
+
+            async send(data) {
+                if (this.writer && this.connected) {
+                    await this.writer.write(data);
+                }
+            }
+        }
+
+        // ==================== Real MSP Protocol ====================
+        const MSP_HEADER = '$M';
+        const MSP_CRC_MASK = 0xFF;
+
+        function mspChecksum(length, code, payload) {
+            let checksum = length ^ code;
+            for (let i = 0; i < payload.length; i++) {
+                checksum ^= payload[i];
+            }
+            return checksum & MSP_CRC_MASK;
+        }
+
+        function bitCheck(num, bit) {
+            return ((num >> bit) & 1) !== 0;
+        }
+
+        function bitSet(num, bit) {
+            return num | (1 << bit);
+        }
+
+        function bitClear(num, bit) {
+            return num & ~(1 << bit);
+        }
+
+        function readS8(b) {
+            return (b << 24) >> 24;
+        }
+
+        function readU16(p, idx) {
+            return (p[idx + 1] << 8) | p[idx];
+        }
+
+        function readS16(p, idx) {
+            let v = (p[idx + 1] << 8) | p[idx];
+            if (v > 32767) v -= 65536;
+            return v;
+        }
+
+        function buildMSPMessage(code, payload = []) {
+            const length = payload.length;
+            const buf = new Uint8Array(6 + length);
+            buf[0] = 0x24; // $
+            buf[1] = 0x4D; // M
+            buf[2] = 0x3C; // <
+            buf[3] = length & 0xFF;
+            buf[4] = code & 0xFF;
+            payload.forEach((b, i) => { buf[5 + i] = b & 0xFF; });
+            buf[5 + length] = mspChecksum(length, code, payload);
+            return buf;
+        }
+
+        class MSPParser {
+            /* BLE burst-safe parser (bleblackbox module): O(n) accumulator,
+               CRC verification, multi-frame drain per chunk, and stale-frame
+               filtering - the FC dumps ALL queued MSP responses back-to-back,
+               so leftovers from a previous burst must never be delivered as
+               the answer to the next request. */
+            constructor() {
+                this.buf = new Uint8Array(1024);
+                this.len = 0;
+                this.pos = 0;
+                this.expectedCode = null;
+                this.pendingResponse = null;
+                this.timeout = null;
+            }
+
+            feed(data) {
+                if (this.len + data.length > this.buf.length) {
+                    if (this.pos > 0) {
+                        this.buf.copyWithin(0, this.pos, this.len);
+                        this.len -= this.pos; this.pos = 0;
+                    }
+                    if (this.len + data.length > this.buf.length) {
+                        const cap = Math.max(this.buf.length * 2, this.len + data.length);
+                        const nb = new Uint8Array(cap);
+                        nb.set(this.buf.subarray(0, this.len));
+                        this.buf = nb;
+                    }
+                }
+                this.buf.set(data, this.len);
+                this.len += data.length;
+                while (this.tryParseOne()) {}
+            }
+
+            tryParseOne() {
+                while (this.len - this.pos >= 6) {
+                    if (this.buf[this.pos] !== 0x24 || this.buf[this.pos + 1] !== 0x4D || this.buf[this.pos + 2] !== 0x3E) { this.pos++; continue; }
+                    const b3 = this.buf[this.pos + 3];
+                    const jumbo = (b3 === 0xFF);          /* MSPv1 jumbo: $M> FF code lenLo lenHi payload crc */
+                    let length;
+                    if (jumbo) {
+                        if (this.len - this.pos < 8) return false;
+                        length = this.buf[this.pos + 5] | (this.buf[this.pos + 6] << 8);
+                    } else {
+                        length = b3;
+                    }
+                    const hdrEnd = jumbo ? 7 : 5;
+                    const totalLen = hdrEnd + length + 1;
+                    if (this.len - this.pos < totalLen) return false;
+                    const code = this.buf[this.pos + 4];
+                    const ps = this.pos + hdrEnd;
+                    let crc;
+                    if (jumbo) crc = 255 ^ code ^ (length & 0xFF) ^ ((length >> 8) & 0xFF);
+                    else crc = length ^ code;
+                    for (let i = 0; i < length; i++) crc ^= this.buf[ps + i];
+                    if (crc !== this.buf[ps + length]) { this.pos++; continue; }
+                    const payload = new Uint8Array(this.buf.slice(ps, ps + length));
+                    this.pos += totalLen;
+                    if (this.pos >= this.len) { this.pos = 0; this.len = 0; }
+                    else if (this.pos > 4096) { this.buf.copyWithin(0, this.pos, this.len); this.len -= this.pos; this.pos = 0; }
+                    if (this.pendingResponse && (this.expectedCode === null || this.expectedCode === code)) {
+                        clearTimeout(this.timeout);
+                        const cb = this.pendingResponse;
+                        this.pendingResponse = null;
+                        this.expectedCode = null;
+                        cb({ code, payload });
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            waitResponse(code, timeout = 1500) {
+                this.expectedCode = (code === undefined || code === null) ? null : code;
+                return new Promise((resolve, reject) => {
+                    this.pendingResponse = resolve;
+                    this.timeout = setTimeout(() => {
+                        this.pendingResponse = null;
+                        this.expectedCode = null;
+                        reject(new Error('MSP response timeout'));
+                    }, timeout);
+                });
+            }
+        }
+
+        const MSP = {
+            MIXER_CONFIG: 42,
+            SET_MIXER_CONFIG: 43,
+            MIXER_INPUTS: 170,
+            SET_MIXER_INPUT: 171,
+            MIXER_RULES: 172,
+            SET_MIXER_RULE: 173,
+            MIXER_OVERRIDE: 190,
+            SET_MIXER_OVERRIDE: 191,
+            EEPROM_WRITE: 250,
+        };
+
+        const MixerConst = {
+            OVERRIDE_OFF: 2501,
+            OVERRIDE_PASSTHROUGH: 2502,
+            swashTypes: ['None', 'Direct', 'CCPM 120°', 'CCPM 135°', 'CCPM 140°', 'FPM 90° L', 'FPM 90° V'],
+        };
+
+        class RealMSP {
+            constructor(serialConnection) {
+                this.serial = serialConnection;
+                this.parser = new MSPParser();
+                this.missingParams = new Set();
+                this.data = {
+                    MIXER_CONFIG: {
+                        main_rotor_dir: 0,
+                        tail_rotor_mode: 0,
+                        tail_motor_idle: 0,
+                        tail_center_trim: 0,
+                        swash_type: 1,
+                        swash_ring: 0,
+                        swash_phase: 0,
+                        blade_pitch_limit: 0,
+                        swash_trim: [0, 0, 0],
+                        coll_rpm_correction: 0,
+                        coll_geo_correction: 0,
+                        coll_tilt_correction_pos: 0,
+                        coll_tilt_correction_neg: 0,
+                    },
+                    MIXER_INPUTS: [],
+                    MIXER_RULES: [],
+                    MIXER_OVERRIDE: [],
+                    supportsTilt: false,
+                };
+
+                this.serial.onData = (bytes) => {
+                    this.parser.feed(bytes);
+                };
+                // Serialize all MSP traffic so concurrent sends (e.g. live config/
+                // override writes racing each other) never hit the Web Serial writer
+                // at the same time, and responses are not mismatched by the single
+                // shared pendingResponse.
+                this._busy = Promise.resolve();
+            }
+
+            async sendCommand(codeOrMsg, payload = []) {
+                const run = async () => {
+                    let msg;
+                    if (codeOrMsg instanceof Uint8Array) {
+                        msg = codeOrMsg;
+                    } else {
+                        msg = buildMSPMessage(codeOrMsg, payload);
+                    }
+                    await this.serial.send(msg);
+                    const expectCode = (codeOrMsg instanceof Uint8Array) ? ((codeOrMsg.length > 4) ? codeOrMsg[4] : null) : codeOrMsg;
+                    return await this.parser.waitResponse(expectCode);
+                };
+                const result = this._busy.then(run, run);
+                this._busy = result.then(() => {}, () => {});
+                return result;
+            }
+
+            // ---- MIXER CONFIG ----
+            async readMixerConfig() {
+                const resp = await this.sendCommand(MSP.MIXER_CONFIG);
+                const p = resp.payload;
+                const c = this.data.MIXER_CONFIG;
+                this.missingParams = new Set();
+                let idx = 0;
+                c.main_rotor_dir = p[idx++];
+                c.tail_rotor_mode = p[idx++];
+                c.tail_motor_idle = p[idx++];
+                c.tail_center_trim = readS16(p, idx); idx += 2;        // signed
+                c.swash_type = p[idx++];
+                c.swash_ring = p[idx++];
+                c.swash_phase = readS16(p, idx); idx += 2;            // signed (-180..180)
+                c.blade_pitch_limit = readU16(p, idx); idx += 2;      // unsigned
+                c.swash_trim[0] = readS16(p, idx); idx += 2;          // signed
+                c.swash_trim[1] = readS16(p, idx); idx += 2;          // signed
+                c.swash_trim[2] = readS16(p, idx); idx += 2;          // signed
+                c.coll_rpm_correction = p[idx++];
+                c.coll_geo_correction = readS8(p[idx]); idx++;
+                // tilt correction present only on API >= 12.8 (2 extra bytes)
+                if (p.length >= idx + 2) {
+                    c.coll_tilt_correction_pos = readS8(p[idx]); idx++;
+                    c.coll_tilt_correction_neg = readS8(p[idx]); idx++;
+                    this.data.supportsTilt = true;
+                } else {
+                    c.coll_tilt_correction_pos = 0;
+                    c.coll_tilt_correction_neg = 0;
+                    this.data.supportsTilt = false;
+                    this.missingParams.add('coll_tilt_correction_pos');
+                    this.missingParams.add('coll_tilt_correction_neg');
+                }
+            }
+
+            buildSetMixerConfig() {
+                const c = this.data.MIXER_CONFIG;
+                const payload = [
+                    c.main_rotor_dir & 0xFF,
+                    c.tail_rotor_mode & 0xFF,
+                    c.tail_motor_idle & 0xFF,
+                    c.tail_center_trim & 0xFF, (c.tail_center_trim >> 8) & 0xFF,
+                    c.swash_type & 0xFF,
+                    c.swash_ring & 0xFF,
+                    c.swash_phase & 0xFF, (c.swash_phase >> 8) & 0xFF,
+                    c.blade_pitch_limit & 0xFF, (c.blade_pitch_limit >> 8) & 0xFF,
+                    c.swash_trim[0] & 0xFF, (c.swash_trim[0] >> 8) & 0xFF,
+                    c.swash_trim[1] & 0xFF, (c.swash_trim[1] >> 8) & 0xFF,
+                    c.swash_trim[2] & 0xFF, (c.swash_trim[2] >> 8) & 0xFF,
+                    c.coll_rpm_correction & 0xFF,
+                    c.coll_geo_correction & 0xFF,
+                ];
+                if (this.data.supportsTilt) {
+                    payload.push(c.coll_tilt_correction_pos & 0xFF);
+                    payload.push(c.coll_tilt_correction_neg & 0xFF);
+                }
+                return buildMSPMessage(MSP.SET_MIXER_CONFIG, payload);
+            }
+
+            // ---- MIXER INPUTS ----
+            async readMixerInputs() {
+                const resp = await this.sendCommand(MSP.MIXER_INPUTS);
+                const p = resp.payload;
+                const count = Math.floor(p.length / 6);
+                const inputs = [];
+                for (let i = 0; i < count; i++) {
+                    let idx = i * 6;
+                    inputs.push({
+                        rate: readS16(p, idx),
+                        min: readS16(p, idx + 2),
+                        max: readS16(p, idx + 4),
+                    });
+                }
+                this.data.MIXER_INPUTS = inputs;
+            }
+
+            buildSetMixerInput(index) {
+                const inp = this.data.MIXER_INPUTS[index];
+                if (!inp) return null;
+                const payload = [
+                    index & 0xFF,
+                    inp.rate & 0xFF, (inp.rate >> 8) & 0xFF,
+                    inp.min & 0xFF, (inp.min >> 8) & 0xFF,
+                    inp.max & 0xFF, (inp.max >> 8) & 0xFF,
+                ];
+                return buildMSPMessage(MSP.SET_MIXER_INPUT, payload);
+            }
+
+            // ---- MIXER RULES ----
+            async readMixerRules() {
+                const resp = await this.sendCommand(MSP.MIXER_RULES);
+                const p = resp.payload;
+                const count = Math.floor(p.length / 7);
+                const rules = [];
+                for (let i = 0; i < count; i++) {
+                    let idx = i * 7;
+                    rules.push({
+                        oper: p[idx],
+                        src: p[idx + 1],
+                        dst: p[idx + 2],
+                        offset: readS16(p, idx + 3),
+                        weight: readS16(p, idx + 5),
+                    });
+                }
+                this.data.MIXER_RULES = rules;
+            }
+
+            // ---- MIXER OVERRIDE ----
+            async readMixerOverride() {
+                const resp = await this.sendCommand(MSP.MIXER_OVERRIDE);
+                const p = resp.payload;
+                const count = Math.floor(p.length / 2);
+                const ov = [];
+                for (let i = 0; i < count; i++) {
+                    let idx = i * 2;
+                    ov.push(readS16(p, idx));
+                }
+                this.data.MIXER_OVERRIDE = ov;
+            }
+
+            buildSetMixerOverride(index) {
+                const value = this.data.MIXER_OVERRIDE[index] ?? MixerConst.OVERRIDE_OFF;
+                const payload = [
+                    index & 0xFF,
+                    value & 0xFF, (value >> 8) & 0xFF,
+                ];
+                return buildMSPMessage(MSP.SET_MIXER_OVERRIDE, payload);
+            }
+        }
+
+        // ==================== Mixer Tab ====================
+        class MixerTab {
+            constructor() {
+                this.isDirty = false;
+                this.needSave = false;
+                this.needReboot = false;
+                this.customConfig = false;
+                this.customRules = false;
+                this.serial = new SerialConnection();
+                this.msp = new RealMSP(this.serial);
+
+                // Override axis definitions (mirror rfconfigurator mixer.js)
+                this.overrideAxes = [
+                    { cls: 'mixerMainRotor', axis: 1, min: -18, max: 18, step: 0.1, fixed: 1, scale: 0.012, name: 'Roll', left: 'Left', right: 'Right' },
+                    { cls: 'mixerMainRotor', axis: 2, min: -18, max: 18, step: 0.1, fixed: 1, scale: 0.012, name: 'Pitch', left: 'Backward', right: 'Forward' },
+                    { cls: 'mixerMainRotor', axis: 4, min: -18, max: 18, step: 0.1, fixed: 1, scale: 0.012, name: 'Collective', left: 'Down', right: 'Up' },
+                    { cls: 'mixerTailRotor', axis: 3, min: -60, max: 60, step: 1, fixed: 0, scale: 0.024, name: 'Yaw', left: 'CW', right: 'CCW' },
+                    { cls: 'mixerTailMotor', axis: 3, min: -125, max: 125, step: 1, fixed: 0, scale: 0.100, name: 'Yaw', left: 'CW', right: 'CCW' },
+                ];
+
+                // Per-axis dirty tracking
+                this.overrideAxes.forEach(a => { a.dirty = false; });
+
+                this.init();
+            }
+
+            init() {
+                this.bindConnection();
+                this.bindButtons();
+                this.bindInputs();
+                this.populateSwashTypes();
+                this.renderOverrideRows();
+            }
+
+            // ---------- Connection ----------
+            bindConnection() {
+                const connectBtn = document.getElementById('connect-btn');
+                const portSelect = document.getElementById('port-select');
+                const baudSelect = document.getElementById('baud-select');
+                const statusEl = document.getElementById('connection-status');
+
+                connectBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (this.serial.connected) {
+                        await this.serial.disconnect();
+                        connectBtn.textContent = 'Connect';
+                        connectBtn.classList.remove('active');
+                        statusEl.textContent = 'Disconnected';
+                        statusEl.classList.remove('connected');
+                    } else {
+                        let portIndex = parseInt(portSelect.value);
+                        if (portSelect.value === 'none' || isNaN(portIndex)) {
+                            try {
+                                await this.serial.requestPort();
+                                await this.serial.updatePorts();
+                                portIndex = 0;
+                            } catch (err) {
+                                console.log('Port selection cancelled');
+                                return;
+                            }
+                        }
+                        const success = await this.serial.connect(portIndex, baudSelect.value);
+                        if (success) {
+                            connectBtn.textContent = 'Disconnect';
+                            connectBtn.classList.add('active');
+                            statusEl.textContent = 'Connected';
+                            statusEl.classList.add('connected');
+                            this.onConnect();
+                        }
+                    }
+                });
+
+                this.serial.updatePorts();
+
+                this.serial.onStatusChange = (connected) => {
+                    if (!connected) {
+                        connectBtn.textContent = 'Connect';
+                        connectBtn.classList.remove('active');
+                        statusEl.textContent = 'Disconnected';
+                        statusEl.classList.remove('connected');
+                    }
+                };
+            }
+
+            async onConnect() {
+                await this.loadDataFromFC();
+            }
+
+            // ---------- Data load ----------
+            async loadDataFromFC() {
+                try {
+                    await this.msp.readMixerConfig();
+                    await this.msp.readMixerInputs();
+                    await this.msp.readMixerRules();
+                    await this.msp.readMixerOverride();
+                } catch (e) {
+                    console.error('Failed to read from FC:', e);
+                    alert('Failed to read mixer data from FC: ' + e.message);
+                    return;
+                }
+
+                this.origConfig = JSON.parse(JSON.stringify(this.msp.data.MIXER_CONFIG));
+                this.origInputs = JSON.parse(JSON.stringify(this.msp.data.MIXER_INPUTS));
+                this.origOverride = JSON.parse(JSON.stringify(this.msp.data.MIXER_OVERRIDE));
+
+                this.isDirty = false;
+                this.needSave = false;
+                this.needReboot = false;
+
+                this.clearMissingParams();
+                this.populateForm();
+                this.detectCustom();
+                this.renderOverrideRows();
+                this.setTailRotorMode(this.msp.data.MIXER_CONFIG.tail_rotor_mode, false);
+                this.updateOverrideFlagsAndVisibility();
+                this.updateSubOptions();
+
+                // All items are always shown. Values the FC did not return
+                // (e.g. tilt correction on older firmware) are greyed as unused.
+                this.greyMissingParams();
+
+                this.hideToolbar();
+            }
+
+            populateSwashTypes() {
+                const sel = document.getElementById('mixerSwashType');
+                sel.innerHTML = '';
+                MixerConst.swashTypes.forEach((name, i) => {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = name;
+                    sel.appendChild(opt);
+                });
+            }
+
+            populateForm() {
+                const c = this.msp.data.MIXER_CONFIG;
+                const inputs = this.msp.data.MIXER_INPUTS;
+
+                document.getElementById('mixerSwashType').value = c.swash_type;
+                document.getElementById('mixerMainRotorDirection').value = c.main_rotor_dir;
+
+                const ailDir = inputs[1] && inputs[1].rate < 0 ? -1 : 1;
+                const elevDir = inputs[2] && inputs[2].rate < 0 ? -1 : 1;
+                const collDir = inputs[4] && inputs[4].rate < 0 ? -1 : 1;
+                const yawDir = inputs[3] && inputs[3].rate < 0 ? -1 : 1;
+
+                const cyclicRate = (inputs[1] ? Math.abs(inputs[1].rate) : 0) * 0.1;
+                const collectiveRate = (inputs[4] ? Math.abs(inputs[4].rate) : 0) * 0.1;
+                const yawRate = (inputs[3] ? Math.abs(inputs[3].rate) : 0) * 0.1;
+
+                const collectiveMax = (inputs[4] ? inputs[4].max : 0) * 12 / 1000;
+                const cyclicMax = (inputs[2] ? inputs[2].max : 0) * 12 / 1000;
+
+                document.getElementById('mixerAileronDirection').value = ailDir;
+                document.getElementById('mixerElevatorDirection').value = elevDir;
+                document.getElementById('mixerCollectiveDirection').value = collDir;
+                document.getElementById('mixerTailRotorDirection').value = yawDir;
+
+                document.getElementById('mixerCyclicCalibration').value = cyclicRate.toFixed(1);
+                document.getElementById('mixerCollectiveCalibration').value = collectiveRate.toFixed(1);
+                document.getElementById('mixerCollectiveGeoCorrection').value = (c.coll_geo_correction / 5).toFixed(1);
+                document.getElementById('mixerCyclicLimit').value = cyclicMax.toFixed(1);
+                document.getElementById('mixerCollectiveLimit').value = collectiveMax.toFixed(1);
+                document.getElementById('mixerTotalPitchLimit').value = (c.blade_pitch_limit * 12 / 1000).toFixed(1);
+                document.getElementById('mixerSwashPhase').value = (c.swash_phase * 0.1).toFixed(1);
+
+                document.getElementById('mixerSwashRollTrim').value = (c.swash_trim[0] * 0.1).toFixed(1);
+                document.getElementById('mixerSwashPitchTrim').value = (c.swash_trim[1] * 0.1).toFixed(1);
+                document.getElementById('mixerSwashCollectiveTrim').value = (c.swash_trim[2] * 0.1).toFixed(1);
+
+                document.getElementById('mixerTailRotorCalibration').value = yawRate.toFixed(1);
+                document.getElementById('mixerTailMotorIdle').value = (c.tail_motor_idle / 10).toFixed(1);
+
+                // Tilt correction is always shown; greyed (unused) when not supported.
+                document.getElementById('mixerCollectiveTiltCorrectionPos').value = c.coll_tilt_correction_pos;
+                document.getElementById('mixerCollectiveTiltCorrectionNeg').value = c.coll_tilt_correction_neg;
+
+                // Tail yaw min/max displayed per mode (filled by setTailRotorMode)
+            }
+
+            clearMissingParams() {
+                document.querySelectorAll('.param-missing').forEach(el => {
+                    el.classList.remove('param-missing');
+                    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') el.disabled = false;
+                });
+                this.msp.missingParams.clear();
+            }
+
+            fieldToDomId(name) {
+                const map = {
+                    coll_tilt_correction_pos: 'mixerCollectiveTiltCorrectionPos',
+                    coll_tilt_correction_neg: 'mixerCollectiveTiltCorrectionNeg',
+                };
+                return map[name] || name;
+            }
+
+            markParamMissing(fieldName) {
+                const domId = this.fieldToDomId(fieldName);
+                const input = document.getElementById(domId);
+                if (input) {
+                    input.classList.add('param-missing');
+                    input.disabled = true;
+                    if (input.type === 'checkbox') input.checked = false;
+                    else if (input.tagName !== 'SELECT') input.value = 0;
+                }
+                const row = input ? input.closest('tr') : null;
+                if (row) row.classList.add('param-missing');
+                const label = document.querySelector('label[for="' + domId + '"]');
+                if (label) label.classList.add('param-missing');
+            }
+
+            greyMissingParams() {
+                this.msp.missingParams.forEach((fieldName) => {
+                    this.markParamMissing(fieldName);
+                });
+            }
+
+            detectCustom() {
+                const inputs = this.msp.data.MIXER_INPUTS;
+                let custom = false;
+                if (inputs[1] && inputs[2]) {
+                    custom |= (inputs[1].rate !== inputs[2].rate && inputs[1].rate !== -inputs[2].rate);
+                    custom |= (inputs[1].max !== inputs[2].max);
+                    custom |= (inputs[1].min !== inputs[2].min);
+                    custom |= (inputs[1].max !== -inputs[1].min);
+                    custom |= (inputs[2].max !== -inputs[2].min);
+                }
+                if (inputs[4]) {
+                    custom |= (inputs[4].max !== -inputs[4].min);
+                }
+                this.customConfig = custom;
+                document.querySelector('.mixerCustomNote').style.display = custom ? 'block' : 'none';
+
+                const rules = this.msp.data.MIXER_RULES;
+                let isNull = true;
+                for (const r of rules) {
+                    if (!(r.oper === 0 && r.src === 0 && r.dst === 0 && r.weight === 0 && r.offset === 0)) {
+                        isNull = false;
+                        break;
+                    }
+                }
+                this.customRules = !isNull;
+                document.querySelector('.mixerRulesNote').style.display = isNull ? 'none' : 'block';
+            }
+
+            setTailRotorMode(mode, changed) {
+                this.msp.data.MIXER_CONFIG.tail_rotor_mode = mode;
+                const motorised = (mode > 0);
+                const inputs = this.msp.data.MIXER_INPUTS;
+
+                document.querySelectorAll('.mixerTailRotor').forEach(el => el.style.display = motorised ? 'none' : '');
+                document.querySelectorAll('.mixerTailMotor').forEach(el => el.style.display = motorised ? '' : 'none');
+
+                if (motorised) {
+                    const yawMin = inputs[3] ? inputs[3].min * -0.1 : 0;
+                    const yawMax = inputs[3] ? inputs[3].max * 0.1 : 0;
+                    document.getElementById('mixerTailMotorMinYaw').value = yawMin.toFixed(1);
+                    document.getElementById('mixerTailMotorMaxYaw').value = yawMax.toFixed(1);
+                    document.getElementById('mixerTailMotorCenterTrim').value = (this.msp.data.MIXER_CONFIG.tail_center_trim * 0.1).toFixed(1);
+                } else {
+                    const yawMin = inputs[3] ? inputs[3].min * -24 / 1000 : 0;
+                    const yawMax = inputs[3] ? inputs[3].max * 24 / 1000 : 0;
+                    document.getElementById('mixerTailRotorMinYaw').value = yawMin.toFixed(1);
+                    document.getElementById('mixerTailRotorMaxYaw').value = yawMax.toFixed(1);
+                    document.getElementById('mixerTailRotorCenterTrim').value = (this.msp.data.MIXER_CONFIG.tail_center_trim * 24 / 1000).toFixed(3);
+                }
+
+                document.querySelector('.mixerBidirNote').style.display = (mode === 2) ? 'block' : 'none';
+                this.updateYawCalibrationNote();
+            }
+
+            updateYawCalibrationNote() {
+                const motorised = this.msp.data.MIXER_CONFIG.tail_rotor_mode > 0;
+                const val = parseFloat(document.getElementById('mixerTailRotorCalibration').value);
+                const show = motorised && val !== 100;
+                document.querySelector('.mixerMotorisedTailCalibrationNote').style.display = show ? 'table-row' : 'none';
+            }
+
+            // ---------- Override rows ----------
+            renderOverrideRows() {
+                const tbody = document.querySelector('.mixerOverrideTable tbody');
+                tbody.innerHTML = '';
+                const self = this;
+
+                this.overrideAxes.forEach((axis, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'mixerOverrideRow ' + axis.cls;
+
+                    const raw = self.msp.data.MIXER_OVERRIDE[axis.axis] ?? MixerConst.OVERRIDE_OFF;
+                    const override = self.overrideEnabled(raw);
+                    const passthrough = self.passthroughEnabled(raw);
+                    const mutable = override && !passthrough;
+                    const display = mutable ? (raw * axis.scale).toFixed(axis.fixed) : 0;
+
+                    tr.innerHTML = `
+                        <td><span class="mixerOverrideName">${axis.name}</span></td>
+                        <td><input type="checkbox" class="mixerOverrideEnable toggle" ${override ? 'checked' : ''} /></td>
+                        <td class="mixerPassthroughVisible"><input type="checkbox" class="mixerPassthroughEnable toggle" ${passthrough ? 'checked' : ''} /></td>
+                        <td><input type="number" class="mixerOverrideValue" min="${axis.min}" max="${axis.max}" step="${axis.step}" value="${display}" ${mutable ? '' : 'disabled'} /></td>
+                        <td class="sliderCell">
+                            <input type="range" class="mixerOverrideSlider" min="${axis.min}" max="${axis.max}" step="${axis.step}" value="${display}" ${mutable ? '' : 'disabled'} />
+                            <div class="mixerOverrideSliderLabels"><span>${axis.left}</span><span>${axis.right}</span></div>
+                        </td>
+                    `;
+
+                    const enableEl = tr.querySelector('.mixerOverrideEnable');
+                    const passEl = tr.querySelector('.mixerPassthroughEnable');
+                    const valEl = tr.querySelector('.mixerOverrideValue');
+                    const sliderEl = tr.querySelector('.mixerOverrideSlider');
+
+                    function updateOverrideValue() {
+                        let value = MixerConst.OVERRIDE_OFF;
+                        const ov = enableEl.checked;
+                        const pt = passEl.checked;
+                        if (ov) {
+                            if (pt) value = MixerConst.OVERRIDE_PASSTHROUGH;
+                            else value = Math.round(parseFloat(valEl.value || 0) / axis.scale);
+                        }
+                        self.msp.data.MIXER_OVERRIDE[axis.axis] = value;
+                        axis.dirty = true;
+                        self.setDirty();
+                        // Send to FC RAM immediately (no save needed) so the servo
+                        // reacts live as the override is changed — matches the
+                        // original configurator's behaviour.
+                        self.msp.sendCommand(self.msp.buildSetMixerOverride(axis.axis));
+                    }
+
+                    enableEl.addEventListener('change', () => {
+                        const ov = enableEl.checked;
+                        const pt = passEl.checked;
+                        const mutable = ov && !pt;
+                        valEl.disabled = !mutable;
+                        sliderEl.disabled = !mutable;
+                    if (!ov && pt) passEl.checked = false;
+                    valEl.value = 0;
+                    sliderEl.value = 0;
+                    updateOverrideValue();
+                });
+
+                    passEl.addEventListener('change', () => {
+                        const ov = enableEl.checked;
+                        const pt = passEl.checked;
+                        const mutable = ov && !pt;
+                        if (pt && !ov) enableEl.checked = true;
+                        valEl.disabled = !mutable;
+                        sliderEl.disabled = !mutable;
+                        if (mutable) valEl.value = 0;
+                        updateOverrideValue();
+                    });
+
+                    valEl.addEventListener('change', () => {
+                        let v = parseFloat(valEl.value);
+                        if (isNaN(v)) v = 0;
+                        if (v < axis.min) v = axis.min;
+                        if (v > axis.max) v = axis.max;
+                        valEl.value = v.toFixed(axis.fixed);
+                        sliderEl.value = v;
+                        updateOverrideValue();
+                    });
+
+                    sliderEl.addEventListener('input', () => {
+                        valEl.value = parseFloat(sliderEl.value).toFixed(axis.fixed);
+                        updateOverrideValue();
+                    });
+
+                    tbody.appendChild(tr);
+                });
+            }
+
+            overrideEnabled(v) {
+                return ((v >= -2500 && v <= 2500) || v === MixerConst.OVERRIDE_PASSTHROUGH);
+            }
+
+            passthroughEnabled(v) {
+                return (v === MixerConst.OVERRIDE_PASSTHROUGH);
+            }
+
+            updateOverrideFlagsAndVisibility() {
+                const anyEnabled = this.overrideAxes.some(a =>
+                    this.overrideEnabled(this.msp.data.MIXER_OVERRIDE[a.axis] ?? MixerConst.OVERRIDE_OFF));
+                const anyPassthrough = this.overrideAxes.some(a =>
+                    this.passthroughEnabled(this.msp.data.MIXER_OVERRIDE[a.axis] ?? MixerConst.OVERRIDE_OFF));
+
+                document.getElementById('mixerOverrideEnableSwitch').checked = anyEnabled;
+                document.getElementById('mixerPassthroughEnableSwitch').checked = anyPassthrough;
+
+                document.querySelector('.mixerOverrideAxis').classList.toggle('visible', anyEnabled);
+            }
+
+            // ---------- Buttons / Inputs ----------
+            bindButtons() {
+                document.getElementById('save-btn').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await this.saveAndReboot();
+                });
+                document.getElementById('revert-btn').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await this.revert();
+                });
+                document.querySelector('.dialogMixerReset-acceptbtn').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    document.querySelector('.dialogMixerReset').close();
+                    await this.resetMixer();
+                });
+                document.querySelector('.dialogMixerReset-revertbtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelector('.dialogMixerReset').close();
+                });
+            }
+
+            bindInputs() {
+                const self = this;
+
+                // Config change (swash type, main rotor dir, geometry, trims, tail mode, tail idle)
+                document.querySelectorAll('.mixerConfig').forEach(el => {
+                    el.addEventListener('input', () => self.onConfigChange());
+                });
+
+                // Swash type / main rotor direction / tail mode reboot flag
+                document.querySelectorAll('.mixerReboot').forEach(el => {
+                    el.addEventListener('change', () => {
+                        self.needReboot = true;
+                        document.querySelector('.mixerRebootNote').style.display = 'block';
+                        self.setDirty();
+                    });
+                });
+
+                // Input 1 (aileron / cyclic)
+                document.querySelectorAll('.mixerInput1').forEach(el => {
+                    el.addEventListener('input', () => self.updateInput1());
+                });
+                // Input 2 (elevator / cyclic)
+                document.querySelectorAll('.mixerInput2').forEach(el => {
+                    el.addEventListener('input', () => self.updateInput2());
+                });
+                // Input 3 (tail yaw)
+                document.querySelectorAll('.mixerInput3').forEach(el => {
+                    el.addEventListener('input', () => self.updateInput3());
+                });
+                // Input 4 (collective)
+                document.querySelectorAll('.mixerInput4').forEach(el => {
+                    el.addEventListener('input', () => self.updateInput4());
+                });
+
+                // Master enable override switch -> hidden page
+                document.getElementById('mixerOverrideEnableSwitch').addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    document.querySelector('.mixerOverrideAxis').classList.toggle('visible', checked);
+                    if (!checked) {
+                        document.getElementById('mixerPassthroughEnableSwitch').checked = false;
+                    }
+                    // Apply to all per-axis enable checkboxes
+                    document.querySelectorAll('.mixerOverrideEnable').forEach(cb => {
+                        if (cb.checked !== checked) {
+                            cb.checked = checked;
+                            cb.dispatchEvent(new Event('change'));
+                        }
+                    });
+                    this.setDirty();
+                });
+
+                document.getElementById('mixerPassthroughEnableSwitch').addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    if (checked) {
+                        const ovSwitch = document.getElementById('mixerOverrideEnableSwitch');
+                        if (!ovSwitch.checked) {
+                            ovSwitch.checked = true;
+                            document.querySelector('.mixerOverrideAxis').classList.add('visible');
+                        }
+                    }
+                    document.querySelectorAll('.mixerPassthroughEnable').forEach(cb => {
+                        if (cb.checked !== checked) {
+                            cb.checked = checked;
+                            cb.dispatchEvent(new Event('change'));
+                        }
+                    });
+                    this.setDirty();
+                });
+
+                // Number input clamping
+                document.querySelectorAll('.tab-mixer input[type="number"]').forEach(input => {
+                    input.addEventListener('change', () => {
+                        const min = parseFloat(input.min);
+                        const max = parseFloat(input.max);
+                        let val = parseFloat(input.value);
+                        if (!isNaN(min) && !isNaN(val) && val < min) val = min;
+                        if (!isNaN(max) && !isNaN(val) && val > max) val = max;
+                        if (!isNaN(val)) input.value = val;
+                    });
+                });
+            }
+
+            getInt(id, scale = 1) {
+                const el = document.getElementById(id);
+                if (!el) return 0;
+                let v = parseFloat(el.value) * scale;
+                if (isNaN(v)) v = 0;
+                return Math.round(v);
+            }
+
+            getFloat(id) {
+                const el = document.getElementById(id);
+                if (!el) return 0;
+                const v = parseFloat(el.value);
+                return isNaN(v) ? 0 : v;
+            }
+
+            onConfigChange() {
+                const c = this.msp.data.MIXER_CONFIG;
+                c.swash_type = parseInt(document.getElementById('mixerSwashType').value);
+                c.main_rotor_dir = parseInt(document.getElementById('mixerMainRotorDirection').value);
+                c.swash_phase = this.getInt('mixerSwashPhase', 10);
+                c.blade_pitch_limit = this.getInt('mixerTotalPitchLimit', 1000 / 12);
+                c.swash_trim[0] = this.getInt('mixerSwashRollTrim', 10);
+                c.swash_trim[1] = this.getInt('mixerSwashPitchTrim', 10);
+                c.swash_trim[2] = this.getInt('mixerSwashCollectiveTrim', 10);
+                c.coll_geo_correction = this.getInt('mixerCollectiveGeoCorrection', 5);
+                c.tail_motor_idle = this.getInt('mixerTailMotorIdle', 10);
+                if (this.msp.data.supportsTilt) {
+                    c.coll_tilt_correction_pos = this.getInt('mixerCollectiveTiltCorrectionPos');
+                    c.coll_tilt_correction_neg = this.getInt('mixerCollectiveTiltCorrectionNeg');
+                }
+                this.needSave = true;
+                this.setDirty();
+                this.msp.sendCommand(this.msp.buildSetMixerConfig());
+            }
+
+            updateInput1() {
+                const inputs = this.msp.data.MIXER_INPUTS;
+                if (!inputs[1]) inputs[1] = { rate: 0, min: 0, max: 0 };
+                const dir = parseInt(document.getElementById('mixerAileronDirection').value);
+                const rate = this.getInt('mixerCyclicCalibration', 10);
+                const max = this.getInt('mixerCyclicLimit', 1000 / 12);
+                inputs[1].rate = rate * dir;
+                inputs[1].min = -max;
+                inputs[1].max = max;
+                this.needSave = true;
+                this.setDirty();
+                const msg = this.msp.buildSetMixerInput(1);
+                if (msg) this.msp.sendCommand(msg);
+            }
+
+            updateInput2() {
+                const inputs = this.msp.data.MIXER_INPUTS;
+                if (!inputs[2]) inputs[2] = { rate: 0, min: 0, max: 0 };
+                const dir = parseInt(document.getElementById('mixerElevatorDirection').value);
+                const rate = this.getInt('mixerCyclicCalibration', 10);
+                const max = this.getInt('mixerCyclicLimit', 1000 / 12);
+                inputs[2].rate = rate * dir;
+                inputs[2].min = -max;
+                inputs[2].max = max;
+                this.needSave = true;
+                this.setDirty();
+                const msg = this.msp.buildSetMixerInput(2);
+                if (msg) this.msp.sendCommand(msg);
+            }
+
+            updateInput3() {
+                const inputs = this.msp.data.MIXER_INPUTS;
+                if (!inputs[3]) inputs[3] = { rate: 0, min: 0, max: 0 };
+                const dir = parseInt(document.getElementById('mixerTailRotorDirection').value);
+                const rate = this.getInt('mixerTailRotorCalibration', 10);
+                const motorised = this.msp.data.MIXER_CONFIG.tail_rotor_mode > 0;
+                let yawMin, yawMax;
+                if (motorised) {
+                    yawMin = this.getInt('mixerTailMotorMinYaw', -10);
+                    yawMax = this.getInt('mixerTailMotorMaxYaw', 10);
+                } else {
+                    yawMin = this.getInt('mixerTailRotorMinYaw', -1000 / 24);
+                    yawMax = this.getInt('mixerTailRotorMaxYaw', 1000 / 24);
+                }
+                inputs[3].rate = rate * dir;
+                inputs[3].min = yawMin;
+                inputs[3].max = yawMax;
+                this.updateYawCalibrationNote();
+                this.needSave = true;
+                this.setDirty();
+                const msg = this.msp.buildSetMixerInput(3);
+                if (msg) this.msp.sendCommand(msg);
+            }
+
+            updateInput4() {
+                const inputs = this.msp.data.MIXER_INPUTS;
+                if (!inputs[4]) inputs[4] = { rate: 0, min: 0, max: 0 };
+                const dir = parseInt(document.getElementById('mixerCollectiveDirection').value);
+                const rate = this.getInt('mixerCollectiveCalibration', 10);
+                const max = this.getInt('mixerCollectiveLimit', 1000 / 12);
+                inputs[4].rate = rate * dir;
+                inputs[4].min = -max;
+                inputs[4].max = max;
+                this.needSave = true;
+                this.setDirty();
+                const msg = this.msp.buildSetMixerInput(4);
+                if (msg) this.msp.sendCommand(msg);
+            }
+
+            // Tail mode change
+            bindTailMode() {
+                // handled within bindInputs via mixerConfig; add explicit listener
+                const el = document.getElementById('mixerTailRotorMode');
+                el.addEventListener('change', () => {
+                    this.setTailRotorMode(parseInt(el.value), true);
+                    this.onConfigChange();
+                });
+            }
+
+            updateSubOptions() {
+                // gated visibility already handled by setTailRotorMode; nothing else to do.
+            }
+
+            setDirty() {
+                if (!this.isDirty) {
+                    this.isDirty = true;
+                    this.showToolbar();
+                }
+            }
+
+            showToolbar() {
+                document.querySelector('.tab-mixer').classList.remove('toolbar_hidden');
+            }
+
+            hideToolbar() {
+                document.querySelector('.tab-mixer').classList.add('toolbar_hidden');
+            }
+
+            async saveData(reRead = true) {
+                try {
+                    this.msp.sendCommand(this.msp.buildSetMixerConfig());
+                    for (let i = 1; i <= 4; i++) {
+                        const msg = this.msp.buildSetMixerInput(i);
+                        if (msg) await this.msp.sendCommand(msg);
+                    }
+                    this.overrideAxes.forEach(a => {
+                        if (a.dirty) this.msp.sendCommand(this.msp.buildSetMixerOverride(a.axis));
+                    });
+                    if (this.needSave || this.overrideAxes.some(a => a.dirty)) {
+                        await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
+                    }
+                    if (reRead) {
+                        await this.loadDataFromFC();
+                    } else {
+                        this.overrideAxes.forEach(a => a.dirty = false);
+                        this.needSave = false;
+                        this.hideToolbar();
+                    }
+                } catch (e) {
+                    console.error('Save failed:', e);
+                    alert('Failed to save mixer: ' + e.message);
+                    return;
+                }
+            }
+
+            // Mixer changes require a reboot. Save to EEPROM then reboot the FC
+            // and drop the serial connection automatically.
+            async saveAndReboot() {
+                await this.saveData(false);
+                try {
+                    await this.msp.sendCommand(68, []); // MSP_SET_REBOOT
+                } catch (e) {
+                    console.log('Reboot command not acknowledged (FC already rebooting).');
+                }
+
+                // Deactivate locally FIRST so the hub's "off" broadcast cannot
+                // re-trigger this page via bridge.js's active-button click.
+                this.serial.connected = false;
+                this.serial.onStatusChange && this.serial.onStatusChange(false);
+
+                // The link is owned by the shell hub - closing only this page's
+                // virtual port would leave every tab (and the header) looking
+                // connected. Tear down the real native transport instead; the
+                // hub then broadcasts "off" everywhere and reconnect happens
+                // manually from the Status tab once the FC is back up.
+                const br = window.__RF_BRIDGE__;
+                const kind = (br && br.state && br.state.on) ? br.state.kind : null;
+                if (kind === 'spp') {
+                    const p = window.BluetoothSerial || window.cordova?.plugins?.bluetoothSerial;
+                    if (p) { try { await new Promise(r => p.disconnect(r, r)); } catch (e) {} }
+                } else if (kind === 'ble' && window.Capacitor?.Plugins?.BleClient) {
+                    try { await window.Capacitor.Plugins.BleClient.disconnect((br.state && br.state.detail) || ''); } catch (e) {}
+                } else if (kind === 'usb' && window.UsbSerial) {
+                    try { await new Promise(r => window.UsbSerial.disconnect(r, r)); } catch (e) {} }
+
+                if (this.serial.port) {
+                    await this.serial.disconnect();
+                }
+                alert('Settings saved. The flight controller is rebooting — press Connect on the Status tab to reconnect.');
+                // Land on the Status tab so reconnecting is one tap away
+                try { window.__RF_BRIDGE__ && window.__RF_BRIDGE__.gotoTab('status'); } catch (e) {}
+            }
+
+            async revert() {
+                this.msp.data.MIXER_CONFIG = JSON.parse(JSON.stringify(this.origConfig));
+                this.msp.data.MIXER_INPUTS = JSON.parse(JSON.stringify(this.origInputs));
+                this.msp.data.MIXER_OVERRIDE = JSON.parse(JSON.stringify(this.origOverride));
+                this.overrideAxes.forEach(a => a.dirty = false);
+                this.needSave = false;
+                try {
+                    await this.saveData();
+                } catch (e) {
+                    console.error('Revert failed:', e);
+                }
+            }
+
+            async resetMixer() {
+                // Reset overrides to OFF and config/inputs to defaults handled by firmware via re-read.
+                this.msp.data.MIXER_OVERRIDE = this.msp.data.MIXER_OVERRIDE.map(() => MixerConst.OVERRIDE_OFF);
+                this.overrideAxes.forEach(a => a.dirty = true);
+                this.needSave = true;
+                try {
+                    await this.saveData();
+                } catch (e) {
+                    console.error('Reset failed:', e);
+                }
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const tab = new MixerTab();
+            // Tail mode listener (bound after rows rendered)
+            tab.bindTailMode();
+            // Theme toggle button
+            const tt = document.getElementById('theme-toggle-btn');
+            if (tt) tt.addEventListener('click', window.toggleTheme);
+        });
+    </script>
+    <script src="../bridge.js"></script>
+</body>
+</html>
