@@ -16,8 +16,10 @@ rfcap-apk/
 │   └── tabs/             원본 5개 HTML (bridge.js 주입, status는 three 로컬 참조)
 └── android/
     └── app/src/main/java/org/rfcap/tabs/
-        ├── MainActivity.java       registerPlugin(RfSerialPlugin)
-        └── RfSerialPlugin.java     SPP(RFCOMM) + BLE(GATT 다중 프로파일) 네이티브 플러그인
+        ├── MainActivity.java       registerPlugin(RfSerialPlugin) + registerPlugin(RfBlePlugin)
+        ├── RfSerialPlugin.java     SPP(RFCOMM) + BLE(GATT 다중 프로파일) + USB 시리얼 네이티브 플러그인
+        └── protocols/ble/
+            └── RfBlePlugin.java    Nordic 기반 BLE 스캔/연결 플러그인 (bfapk에서 이식)
 ```
 
 ## 연결 공유 방식
@@ -54,3 +56,47 @@ adb install -r RFCap-v1.0.4.apk
 ```
 
 appId: `org.rfcap.tabs` (기존 rfconfigurator 앱과 별도 앱으로 설치됨)
+
+## ⚠️ 중요사항 (반드시 읽을 것)
+
+### 1. `www/`는 Git에 커밋되어 있지 않다
+`.gitignore`에 `www/`가 있어 **웹 소스(hub.js/bridge.js/탭 HTML)는 버전 관리 대상이 아니다.**
+- `android/app/src/main/assets/public/`도 Capacitor가 생성하는 것이므로 무시됨.
+- **다른 PC에서 클론해 빌드하면 www가 없거나 오래된 상태가 된다** — 이 저장소만으로는 완전한 빌드가 안 됨.
+- www를 버전 관리에 넣으려면 `.gitignore`에서 `www/` 줄을 제거하고 `git add www/` 할 것.
+- 최소한 www 디렉터리는 별도 백업을 유지할 것. **hub.js 수정 이력이 Git에 없다.**
+
+### 2. 빌드 전 반드시 `node --check` — JS 문법 오류 = 앱 전체 사망
+`hub.js`는 모든 탭↔네이티브 통신을 소유한다. **문법 오류가 하나만 있어도 hub.js 전체가 실행되지 않고**,
+모든 스캔/연결 요청이 탭의 60초 브리지 타임아웃까지 대기 후 실패한다 (과거 대규모 장애의 근본 원인).
+
+```bash
+node --check www/hub.js && node --check www/bridge.js && node --check www/shell.js
+```
+를 `npm run apk:release` 전에 항상 실행할 것.
+
+### 3. Capacitor 8 네이티브 런타임에 `window.Capacitor.registerPlugin`은 없다
+플러그인 프록시는 네이티브 브리지가 `Capacitor.Plugins.<이름>`으로 주입한다.
+JS에서 반드시 `window.Capacitor.Plugins.RfSerial` / `.RfBle` 로 접근할 것. (`registerPlugin(...)` 호출은 null 반환)
+
+### 4. 플러그인은 MainActivity에 반드시 등록
+`@CapacitorPlugin` 어노테이션만으로는 자동 등록되지 않는다. `MainActivity.onCreate()`에서
+`registerPlugin(RfSerialPlugin.class)` + `registerPlugin(RfBlePlugin.class)` 둘 다 필요.
+미등록 플러그인 호출은 "not implemented" 에러로 실패하며, JS에서 조용히 빈 목록으로 먹혀버린다.
+
+### 5. @PluginMethod에서 미처리 예외 = 앱 크래시
+Capacitor는 플러그인 메서드가 던진 예외를 RuntimeException으로 재던져 **프로세스를 죽인다**.
+플러그인 메서드 본문은 반드시 try/catch로 감싸고 `call.reject()`로 응답할 것 (RfBlePlugin 참조).
+BLE 스캔은 중복 실행 금지 — hub.js의 single-flight(`_scanPromise`)과 네이티브 `scanning` 가드가 이를 담당한다.
+
+### 6. 안드로이드 버전별 블루투스 권한
+- **12+ (API 31+)**: `BLUETOOTH_CONNECT`/`BLUETOOTH_SCAN`이 런타임 권한. 앱 시작 시
+  `RfBle.requestPerms()`로 "근처 기기" 다이얼로그를 먼저 띄운다 (hub.js 스타트업 코드).
+- **10~11**: SPP/USB는 권한 불필요. BLE 스캔만 `ACCESS_FINE_LOCATION` 런타임 권한 필요.
+- **14+ (targetSdk 34+)**: 커스텀 액션 포함 BroadcastReceiver 등록 시 `RECEIVER_NOT_EXPORTED` 플래그 필수
+  (`RfSerialPlugin.initUsb()` 참조 — 누락 시 플러그인 전체가 로드 실패).
+
+### 7. 과거 장애 분석
+SPP/BLE/시리얼이 전부 실패했던 원인 추적 전체 기록은 **`connecterror.md`** 참조.
+핵심 교훈: 플러그인 미등록, JS↔네이티브 메서드 불일치, JS 문법 오류는 모두
+"조용히 빈 목록" 또는 "긴 대기 후 실패"로 나타나 겉으로는 권한 문제처럼 보인다.
