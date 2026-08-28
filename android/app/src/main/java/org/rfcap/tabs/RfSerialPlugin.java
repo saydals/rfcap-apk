@@ -15,7 +15,6 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Base64;
 
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSArray;
@@ -24,6 +23,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import java.io.IOException;
@@ -57,7 +57,13 @@ import java.util.Arrays;
  * auto-match) with runtime permission handling. All data flows out
  * through the "rfData" listener as base64 strings.
  */
-@CapacitorPlugin(name = "RfSerial")
+@CapacitorPlugin(
+    name = "RfSerial",
+    permissions = {
+        @Permission(strings = {Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN}, alias = "bt"),
+        @Permission(strings = {Manifest.permission.ACCESS_FINE_LOCATION}, alias = "btLegacy")
+    }
+)
 public class RfSerialPlugin extends Plugin {
 
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
@@ -126,14 +132,22 @@ public class RfSerialPlugin extends Plugin {
                     }
                 } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(a)) {
                     UsbDevice d = i.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                    if (d != null && usbPort != null && usbPort.getDriver() != null
-                            && usbPort.getDriver().getDevice() != null
-                            && usbPort.getDriver().getDevice().equals(d)) {
-                        closeUsbQuietly();
-                        JSObject s = new JSObject();
-                        s.put("on", false);
-                        s.put("detail", "USB device detached");
-                        notifyListeners("rfState", s);
+                    if (d != null) {
+                        if (usbPort != null && usbPort.getDriver() != null
+                                && usbPort.getDriver().getDevice() != null
+                                && usbPort.getDriver().getDevice().equals(d)) {
+                            closeUsbQuietly();
+                            JSObject s = new JSObject();
+                            s.put("on", false);
+                            s.put("detail", "USB device detached");
+                            notifyListeners("rfState", s);
+                        }
+                        notifyListeners("deviceDetached", usbDeviceInfo(d));
+                    }
+                } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(a)) {
+                    UsbDevice d = i.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    if (d != null && findUsbDriver(d) != null) {
+                        notifyListeners("deviceAttached", usbDeviceInfo(d));
                     }
                 }
             }
@@ -141,7 +155,9 @@ public class RfSerialPlugin extends Plugin {
         IntentFilter f = new IntentFilter(ACTION_USB_PERMISSION);
         f.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         f.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-        getContext().registerReceiver(usbReceiver, f);
+        /* Android 13+ (targetSdk 34+): non-system actions in the filter require
+           an explicit export flag or registration throws SecurityException. */
+        ContextCompat.registerReceiver(getContext(), usbReceiver, f, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     /* ==================== permissions ==================== */
@@ -167,17 +183,20 @@ public class RfSerialPlugin extends Plugin {
     @PluginMethod
     public void requestPerms(final PluginCall call) {
         if (hasAllPerms()) { call.resolve(); return; }
-        ActivityCompat.requestPermissions(getActivity(), neededPerms(), RC_BT_PERMS);
-        Thread t = new Thread(() -> {
-            for (int i = 0; i < 60; i++) {           /* poll up to ~6 s */
-                try { Thread.sleep(100); } catch (InterruptedException e) { break; }
-                if (hasAllPerms()) { call.resolve(); return; }
-                if (call.isReleased()) return;
-            }
-            if (!call.isReleased()) call.reject("Bluetooth permission not granted");
-        });
-        t.setDaemon(true);
-        t.start();
+        if (Build.VERSION.SDK_INT >= 31) {
+            requestPermissionForAlias("bt", call, "onBtPermissionResult");
+        } else {
+            requestPermissionForAlias("btLegacy", call, "onBtPermissionResult");
+        }
+    }
+
+    @PermissionCallback
+    private void onBtPermissionResult(final PluginCall call) {
+        if (hasAllPerms()) {
+            call.resolve();
+        } else {
+            call.reject("Bluetooth permission not granted");
+        }
     }
 
     /* ==================== helpers ==================== */
@@ -394,19 +413,26 @@ public class RfSerialPlugin extends Plugin {
             for (UsbDevice d : usbManager.getDeviceList().values()) {
                 UsbSerialDriver drv = findUsbDriver(d);
                 if (drv == null) continue;
-                JSObject o = new JSObject();
-                o.put("deviceId", d.getVendorId() + ":" + d.getProductId() + ":" + d.getDeviceId());
-                o.put("vendorId", d.getVendorId());
-                o.put("productId", d.getProductId());
-                String name = null;
-                try { name = d.getProductName(); } catch (Exception ignore) {}
-                o.put("name", name != null ? name : drv.getClass().getSimpleName());
-                arr.put(o);
+                arr.put(usbDeviceInfo(d));
             }
         }
         JSObject res = new JSObject();
         res.put("devices", arr);
         call.resolve(res);
+    }
+
+    private JSObject usbDeviceInfo(UsbDevice d) {
+        JSObject o = new JSObject();
+        o.put("deviceId", d.getVendorId() + ":" + d.getProductId() + ":" + d.getDeviceId());
+        o.put("vendorId", d.getVendorId());
+        o.put("productId", d.getProductId());
+        String name = null, mfr = null;
+        try { name = d.getProductName(); } catch (Exception ignore) {}
+        try { mfr = d.getManufacturerName(); } catch (Exception ignore) {}
+        o.put("name", name);
+        o.put("product", name);
+        o.put("manufacturer", mfr);
+        return o;
     }
 
     private boolean requestUsbPermission(UsbDevice dev) {
@@ -416,7 +442,9 @@ public class RfSerialPlugin extends Plugin {
             usbPermResult = false;
             PendingIntent pi;
             try {
-                pi = PendingIntent.getBroadcast(getContext(), 0, new Intent(ACTION_USB_PERMISSION),
+                Intent permIntent = new Intent(ACTION_USB_PERMISSION);
+                permIntent.setPackage(getContext().getPackageName());
+                pi = PendingIntent.getBroadcast(getContext(), 0, permIntent,
                         PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
             } catch (Exception e) { return false; }
             usbManager.requestPermission(dev, pi);
@@ -471,6 +499,7 @@ public class RfSerialPlugin extends Plugin {
         startUsbRead();
 
         JSObject r = new JSObject();
+        r.put("success", true);
         r.put("name", portName(drv));
         r.put("deviceId", dev.getVendorId() + ":" + dev.getProductId() + ":" + dev.getDeviceId());
 
@@ -504,6 +533,7 @@ public class RfSerialPlugin extends Plugin {
                     final byte[] chunk = Arrays.copyOfRange(buf, 0, n);
                     JSObject o = new JSObject();
                     o.put("b64", Base64.encodeToString(chunk, 0, n, Base64.NO_WRAP));
+                    o.put("data", bytesToHex(chunk));
                     notifyListeners("rfData", o);
                 }
             }
@@ -522,15 +552,23 @@ public class RfSerialPlugin extends Plugin {
     @PluginMethod
     public void usbWrite(final PluginCall call) {
         String b64 = call.getString("b64");
-        if (b64 == null) { call.reject("b64 required"); return; }
         final byte[] data;
-        try { data = Base64.decode(b64, Base64.NO_WRAP); }
-        catch (IllegalArgumentException e) { call.reject("bad b64"); return; }
+        if (b64 != null) {
+            try { data = Base64.decode(b64, Base64.NO_WRAP); }
+            catch (IllegalArgumentException e) { call.reject("bad b64"); return; }
+        } else {
+            String hex = call.getString("data");
+            if (hex == null) { call.reject("b64 or data required"); return; }
+            try { data = hexToBytes(hex); }
+            catch (Exception e) { call.reject("bad data: " + e.getMessage()); return; }
+        }
         final UsbSerialPort p = usbPort;
         if (p == null) { call.reject("USB not connected"); return; }
         try {
             p.write(data, 1000);
-            call.resolve();
+            JSObject r = new JSObject();
+            r.put("bytesSent", data.length);
+            call.resolve(r);
         } catch (Exception e) {
             call.reject("USB write failed: " + e.getMessage());
         }
@@ -544,6 +582,72 @@ public class RfSerialPlugin extends Plugin {
         s.put("detail", "USB disconnected");
         notifyListeners("rfState", s);
         if (call != null) call.resolve();
+    }
+
+    /* ==================== JS-facing aliases (hub.js API) ==================== */
+
+    @PluginMethod
+    public void getDevices(final PluginCall call) {
+        usbList(call);
+    }
+
+    @PluginMethod
+    public void requestPermission(final PluginCall call) {
+        if (usbManager == null) { call.reject("USB host not available on this device"); return; }
+        UsbDevice dev = null;
+        String idStr = call.getString("deviceId");
+        if (idStr != null && !idStr.isEmpty()) {
+            String[] p = idStr.split(":");
+            int want;
+            try { want = Integer.parseInt(p[p.length - 1]); } catch (NumberFormatException e) { want = -1; }
+            if (want >= 0) dev = findUsbDevice(want);
+        }
+        if (dev == null) {
+            for (UsbDevice d : usbManager.getDeviceList().values()) {
+                if (findUsbDriver(d) != null) { dev = d; break; }
+            }
+        }
+        if (dev != null && !requestUsbPermission(dev)) {
+            call.reject("USB permission denied");
+            return;
+        }
+        usbList(call);
+    }
+
+    @PluginMethod
+    public void connect(final PluginCall call) {
+        usbConnect(call);
+    }
+
+    @PluginMethod
+    public void write(final PluginCall call) {
+        usbWrite(call);
+    }
+
+    @PluginMethod
+    public void disconnect(final PluginCall call) {
+        usbDisconnect(call);
+    }
+
+    /* ==================== hex helpers ==================== */
+
+    private static String bytesToHex(byte[] b) {
+        StringBuilder sb = new StringBuilder(b.length * 2);
+        for (byte x : b) {
+            sb.append(Character.forDigit((x >> 4) & 0xF, 16));
+            sb.append(Character.forDigit(x & 0xF, 16));
+        }
+        return sb.toString();
+    }
+
+    private static byte[] hexToBytes(String s) {
+        if (s.length() % 2 != 0) throw new IllegalArgumentException("odd hex length");
+        int n = s.length() / 2;
+        byte[] out = new byte[n];
+        for (int i = 0; i < n; i++) {
+            out[i] = (byte) Integer.parseInt(s.substring(i * 2, i * 2 + 2), 16);
+        }
+        return out;
     }
 
     private void closeUsbQuietly() {
@@ -565,6 +669,10 @@ public class RfSerialPlugin extends Plugin {
     @PluginMethod
     public void bleStartScan(final PluginCall call) {
         if (!btReady(call)) return;
+        if (Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            call.reject("Missing BLUETOOTH_SCAN permission — call RfSerial.requestPerms() first");
+            return;
+        }
         if (adapter.getBluetoothLeScanner() == null) { call.reject("BLE scanner unavailable"); return; }
         android.bluetooth.le.ScanSettings settings = new android.bluetooth.le.ScanSettings.Builder()
                 .setScanMode(android.bluetooth.le.ScanSettings.SCAN_MODE_LOW_LATENCY)
