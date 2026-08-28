@@ -266,8 +266,8 @@
 
         /* ============ STATUS TAB ============ */
         .tab-status {
-            max-width: 1400px;
-            margin: 0 auto;
+            width: 100%;
+            margin: 0;
         }
 
         .tab-status .section-row {
@@ -844,6 +844,16 @@
             .ble-spp-row { flex-direction: column; }
             .box-helicopter { min-width: 0; width: 100%; }
             .heli-canvas-wrapper { height: 220px; }
+        }
+
+        /* Column count driven by orientation (not pixel width) so high-res
+           devices still show 1 column in portrait and 2 columns in landscape,
+           scaled up to fill the available width. */
+        @media (orientation: portrait) {
+            .tab-status .gui_box { flex: 1 1 100%; min-width: 0; }
+        }
+        @media (orientation: landscape) {
+            .tab-status .gui_box { flex: 1 1 calc(50% - 6px); min-width: 0; }
         }
     </style>
 </head>
