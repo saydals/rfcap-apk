@@ -1268,17 +1268,31 @@ body {
             gap: 16px;
         }
 
-        /* Two columns when the container is wide enough for two 320 px
-           cf_columns (≥640 px). Below 700 px AND portrait orientation
-           the @media block below forces single column. This mirrors
-           the Profiles tab layout exactly - same flex+min-width pattern
-           that is known to work inside the Capacitor Android WebView
-           iframe. (The earlier `display: grid; repeat(auto-fit, ...)`
-           attempt was unreliable on Chromium 51 (Android 7) which the
-           app's minSdk 24 still ships to.) */
+        /* Column count is driven by ORIENTATION, not by pixel width -
+           the same rule the status tab uses. A high-res phone in
+           portrait reports a CSS width well above 700 px, so the old
+           `min-width: 320px` made every device (portrait included)
+           fall into the two-column layout. Portrait => 1 column,
+           landscape => 2 equal columns. `min-width: 0` is required so
+           a flex item may shrink below its content's intrinsic width
+           (tables/grids otherwise blow the column out). */
         .tab-rates .subtab .cf_column {
-            min-width: 320px;
-            flex: 1 1 0;
+            min-width: 0;
+            flex: 1 1 100%;
+        }
+
+        @media (orientation: portrait) {
+            .tab-rates .subtab .cf_column {
+                flex: 1 1 100%;
+                max-width: 100%;
+            }
+        }
+
+        @media (orientation: landscape) {
+            .tab-rates .subtab .cf_column {
+                flex: 1 1 calc(50% - 8px);
+                max-width: calc(50% - 8px);
+            }
         }
 
         .tab-rates .gui_box {
@@ -1627,16 +1641,13 @@ body {
             height: 100%;
         }
 
-        /* Dynamics section: the second .cf_column used to be forced to
-           100% width so dynamics sat on its own row. That broke the
-           landscape two-column layout (rates curve + rates preview on
-           the left, dynamics on the right). The flex-basis override is
-           removed so both columns share the row when there is room, and
-           a media query below forces single-column below 700 px. */
-        .tab-rates .subtab > .cf_column:last-child {
-            /* no flex-basis override - shares the row with the first column */
-        }
+        /* layer0 = axes + curves, layer1 = live stick dots / value labels.
+           The explicit z-index keeps the live layer above the curves even
+           if the DOM order ever changes. */
+        .tab-rates .rate_curve #rate_curve_layer0 { z-index: 0; }
+        .tab-rates .rate_curve #rate_curve_layer1 { z-index: 1; }
 
+        /* Dynamics section */
         .tab-rates .dynamics-section {
             margin-bottom: 12px;
         }
@@ -1806,25 +1817,22 @@ body {
         .tab-rates label.param-missing span { color: var(--color-text-disabled) !important; text-decoration: line-through; }
     
         /* ===== RFCap mobile alignment (added) ===== */
-        /* Narrow-portrait phones: force a single column so the rates
-           inputs + dynamics grid don't squash below readable width.
-           The `(orientation: portrait)` guard is critical: without it
-           the cascade applies to landscape viewports <= 700 px too,
-           and the wider `@media (orientation: landscape)` block above
-           (which switches to a 2-column layout) loses. */
-        @media all and (max-width: 700px) and (orientation: portrait) {
-            .tab-rates .subtab .cf_column,
-            .tab-profiles .subtab .cf_column {
-                min-width: 100%;
-                width: 100%;
-                flex: 1 1 100%;
-            }
+        /* Narrow viewports: shrink the number inputs and the dynamics grid
+           so the table stays readable. The column count itself is handled
+           purely by the orientation media queries further up - it must NOT
+           be duplicated here, because a pixel-width rule later in the
+           cascade would override the landscape two-column layout on small
+           landscape viewports. */
+        @media all and (max-width: 700px) {
             .tab-rates .field input[type="number"] { width: 62px; }
             .tab-rates .dynamics-grid-container {
                 grid-template-columns: max-content repeat(4, minmax(46px, 1fr));
             }
-            .tab-rates .rate_curve { height: 230px; }
             .tab-container { flex-wrap: wrap; }
+        }
+
+        @media (orientation: portrait) {
+            .tab-rates .rate_curve { height: 240px; }
         }
 
     </style>
@@ -2037,26 +2045,6 @@ body {
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <!-- Rates Preview (3D helicopter) -->
-                                        <div class="gui_box rates_preview">
-                                            <div class="gui_box_titlebar">Rates Preview</div>
-                                            <div class="heli-canvas-wrapper">
-                                                <div class="heli-loading" id="heli-loading">
-                                                    <div class="spinner"></div>
-                                                    Loading model...
-                                                </div>
-                                                <canvas id="heli-canvas"></canvas>
-                                                <div class="heli-attitude-info" id="heli-attitude-info">
-                                                    <dl>
-                                                        <dt>Roll</dt>       <dd id="att-roll">0 °/s</dd>
-                                                        <dt>Pitch</dt>      <dd id="att-pitch">0 °/s</dd>
-                                                        <dt>Yaw</dt>        <dd id="att-yaw">0 °/s</dd>
-                                                        <dt>Collective</dt> <dd id="att-collective">0</dd>
-                                                    </dl>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
 
                                     <div class="cf_column">
@@ -2137,6 +2125,30 @@ body {
                                                     <div class="empty-cell"></div>
                                                     <input type="number" id="yaw-dynamic-deadband-filter" step="0.1" min="0" max="25" value="6.0" />
                                                     <div class="empty-cell"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Rates Preview (3D helicopter). Lives in the SECOND
+                                             column (same as the desktop configurator) so the
+                                             landscape 2-column layout is balanced: column 1 =
+                                             Rates Type / Cyclic Ring / Rates / Rate Curve,
+                                             column 2 = Dynamics / Rates Preview. -->
+                                        <div class="gui_box rates_preview grey">
+                                            <div class="gui_box_titlebar">Rates Preview</div>
+                                            <div class="heli-canvas-wrapper">
+                                                <div class="heli-loading" id="heli-loading">
+                                                    <div class="spinner"></div>
+                                                    Loading model...
+                                                </div>
+                                                <canvas id="heli-canvas"></canvas>
+                                                <div class="heli-attitude-info" id="heli-attitude-info">
+                                                    <dl>
+                                                        <dt>Roll</dt>       <dd id="att-roll">0 °/s</dd>
+                                                        <dt>Pitch</dt>      <dd id="att-pitch">0 °/s</dd>
+                                                        <dt>Yaw</dt>        <dd id="att-yaw">0 °/s</dd>
+                                                        <dt>Collective</dt> <dd id="att-collective">0</dd>
+                                                    </dl>
                                                 </div>
                                             </div>
                                         </div>
@@ -2454,6 +2466,16 @@ body {
         const RATES_TYPE_NAMES = ['None', 'Betaflight', 'Raceflight', 'KISS', 'Actual', 'QuickRates', 'Rotorflight'];
         const RATES_TYPE_IMAGES = ['none', 'betaflight', 'raceflight', 'kiss', 'actual', 'quickrates', 'rotorflight'];
 
+        /* Per-axis palette. `curve` matches the desktop configurator exactly,
+           `dot` is the live stick indicator and `text` is a darker variant that
+           stays readable as text on both the light and the dark paper. */
+        const AXIS_COLORS = {
+            roll:       { curve: '#ff0000', dot: '#ff5555', text: '#e03b3b', label: 'ROLL' },
+            pitch:      { curve: '#00b050', dot: '#4ade7a', text: '#12a04f', label: 'PITCH' },
+            yaw:        { curve: '#0000ff', dot: '#7b95ff', text: '#3f63e8', label: 'YAW' },
+            collective: { curve: '#ffbb00', dot: '#ffcc44', text: '#c98a00', label: 'COLL' },
+        };
+
         class RateCurve {
             constructor() {
                 this.maxAngularVel = null;
@@ -2557,7 +2579,15 @@ body {
                 const rcRange = opts.rcRange ?? 500;
                 const canvasHeightScale = height / (2 * maxAngularVel);
                 const canvasWidthScale = rcRange / 500;
-                const stepWidth = context.lineWidth;
+                /* The upstream implementation hard-codes the horizontal
+                   range to ±500 canvas units because its canvas is always
+                   1000 px wide. This port sizes the canvas to the CSS box
+                   (so circles stay round and text is not stretched), so the
+                   x axis is normalised here instead: 500 µs of stick travel
+                   maps onto half the canvas width. With width === 1000 the
+                   maths is identical to upstream. */
+                const xUnit = (width / 2) / 500;
+                const stepWidth = Math.max(context.lineWidth, 1);
 
                 context.save();
                 context.translate(width / 2, height / 2);
@@ -2573,17 +2603,17 @@ body {
                     return value;
                 };
 
-                let xPos = -500;
+                let xPos = -500 * xUnit;
                 let yPos = -canvasHeightScale * getYPos(rcData);
                 context.moveTo(xPos, yPos);
                 rcData = rcData + stepWidth;
                 while (rcData <= 1500 + rcRange) {
-                    xPos = (rcData - 1500) / canvasWidthScale;
+                    xPos = ((rcData - 1500) / canvasWidthScale) * xUnit;
                     yPos = -canvasHeightScale * getYPos(rcData);
                     context.lineTo(xPos, yPos);
                     rcData = rcData + stepWidth;
                 }
-                xPos = 500;
+                xPos = 500 * xUnit;
                 yPos = -canvasHeightScale * getYPos(1500 + rcRange);
                 context.lineTo(xPos, yPos);
                 context.stroke();
@@ -2637,7 +2667,7 @@ body {
         };
 
         const RATE_INPUT_CFG = {
-            [RATES_TYPE.NONE]:       { rcRateMax: 0, rcRateMin: 0, rcRateStep: 0, rcRateDec: 0, rateMax: 0, rateStep: 0, rateDec: 0, rcColMax: 0, rcColMin: 0, rcColStep: 0, rcColDec: 0, colMax: 0, colStep: 0, colDec: 0, expoMax: 0, expoStep: 0, expoDec: 0, rcRateLabel: 'Rate', rateLabel: 'Rate', rcExpoLabel: 'RC Expo' },
+            [RATES_TYPE.NONE]:       { rcRateMax: 0, rcRateMin: 0, rcRateStep: 0, rcRateDec: 0, rateMax: 0, rateStep: 0, rateDec: 0, rcColMax: 0, rcColMin: 0, rcColStep: 0, rcColDec: 0, colMax: 0, colStep: 0, colDec: 0, expoMax: 0, expoStep: 0, expoDec: 0, rcRateLabel: 'RC Rate', rateLabel: 'Rate', rcExpoLabel: 'RC Expo' },
             [RATES_TYPE.BETAFLIGHT]: { rcRateMax: 2.55, rcRateMin: 0.01, rcRateStep: 0.01, rcRateDec: 2, rateMax: 0.99, rateStep: 0.01, rateDec: 2, rcColMax: 2.20, rcColMin: 0.01, rcColStep: 0.01, rcColDec: 2, colMax: 0.99, colStep: 0.01, colDec: 2, expoMax: 1.00, expoStep: 0.01, expoDec: 2, rcRateLabel: 'RC Rate', rateLabel: 'Rate', rcExpoLabel: 'RC Expo' },
             [RATES_TYPE.RACEFLIGHT]: { rcRateMax: 1000, rcRateMin: 10, rcRateStep: 10, rcRateDec: 0, rateMax: 255, rateStep: 1, rateDec: 0, rcColMax: 25, rcColMin: 0, rcColStep: 0.1, rcColDec: 1, colMax: 255, colStep: 1, colDec: 0, expoMax: 100, expoStep: 1, expoDec: 0, rcRateLabel: 'Rate', rateLabel: 'Acro+', rcExpoLabel: 'Expo' },
             [RATES_TYPE.KISS]:       { rcRateMax: 2.55, rcRateMin: 0.01, rcRateStep: 0.01, rcRateDec: 2, rateMax: 0.99, rateStep: 0.01, rateDec: 2, rcColMax: 2.55, rcColMin: 0.01, rcColStep: 0.01, rcColDec: 2, colMax: 0.99, colStep: 0.01, colDec: 2, expoMax: 1.00, expoStep: 0.01, expoDec: 2, rcRateLabel: 'RC Rate', rateLabel: 'Rate', rcExpoLabel: 'RC Curve' },
@@ -2646,14 +2676,22 @@ body {
             [RATES_TYPE.ROTORFLIGHT]:{ rcRateMax: 1000, rcRateMin: 10, rcRateStep: 5, rcRateDec: 0, rateMax: 127, rateStep: 1, rateDec: 0, rcColMax: 25, rcColMin: 0, rcColStep: 0.25, rcColDec: 2, colMax: 127, colStep: 1, colDec: 0, expoMax: 100, expoStep: 1, expoDec: 0, rcRateLabel: 'Rate', rateLabel: 'Shape', rcExpoLabel: 'Expo' },
         };
 
+        /* Per-type defaults applied when the user switches rates type.
+           NOTE: `rateYawDef` is mandatory - the yaw axis has its own Rate
+           default in every upstream type (400 for Actual/QuickRates, 12 for
+           Rotorflight). It used to be missing here, so `cr.yaw_srate` became
+           `undefined` and the very next `toFixed()` call threw, which aborted
+           initRatesSystem() BEFORE the column labels were relabelled, before
+           the curve was redrawn, and before dialog.close() ran - that single
+           missing key is what made "Change" appear to do nothing. */
         const RATE_DEFAULTS = {
-            [RATES_TYPE.NONE]:       { rcRateDef: 0, rcRateYawDef: 0, rateDef: 0, rcColDef: 0, colDef: 0, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
-            [RATES_TYPE.BETAFLIGHT]: { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 0.00, rcColDef: 2.03, colDef: 0.01, expoDef: 0.00, yawExpoDef: 0.00, colExpoDef: 0.00 },
-            [RATES_TYPE.RACEFLIGHT]: { rcRateDef: 240, rcRateYawDef: 400, rateDef: 0, rcColDef: 12.5, colDef: 0, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
-            [RATES_TYPE.KISS]:       { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 0.00, rcColDef: 2.50, colDef: 0.00, expoDef: 0.00, yawExpoDef: 0.00, colExpoDef: 0.00 },
-            [RATES_TYPE.ACTUAL]:     { rcRateDef: 180, rcRateYawDef: 180, rateDef: 240, rcColDef: 12.5, colDef: 12.5, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
-            [RATES_TYPE.QUICKRATES]: { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 240, rcColDef: 2.50, colDef: 500, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
-            [RATES_TYPE.ROTORFLIGHT]:{ rcRateDef: 250, rcRateYawDef: 400, rateDef: 12, rcColDef: 12.5, colDef: 12, expoDef: 40, yawExpoDef: 50, colExpoDef: 0 },
+            [RATES_TYPE.NONE]:       { rcRateDef: 0, rcRateYawDef: 0, rateDef: 0, rateYawDef: 0, rcColDef: 0, colDef: 0, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
+            [RATES_TYPE.BETAFLIGHT]: { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 0.00, rateYawDef: 0.00, rcColDef: 2.03, colDef: 0.01, expoDef: 0.00, yawExpoDef: 0.00, colExpoDef: 0.00 },
+            [RATES_TYPE.RACEFLIGHT]: { rcRateDef: 240, rcRateYawDef: 400, rateDef: 0, rateYawDef: 0, rcColDef: 12.5, colDef: 0, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
+            [RATES_TYPE.KISS]:       { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 0.00, rateYawDef: 0.00, rcColDef: 2.50, colDef: 0.00, expoDef: 0.00, yawExpoDef: 0.00, colExpoDef: 0.00 },
+            [RATES_TYPE.ACTUAL]:     { rcRateDef: 180, rcRateYawDef: 180, rateDef: 240, rateYawDef: 400, rcColDef: 12.5, colDef: 12.5, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
+            [RATES_TYPE.QUICKRATES]: { rcRateDef: 1.20, rcRateYawDef: 2.00, rateDef: 240, rateYawDef: 400, rcColDef: 2.50, colDef: 500, expoDef: 0, yawExpoDef: 0, colExpoDef: 0 },
+            [RATES_TYPE.ROTORFLIGHT]:{ rcRateDef: 250, rcRateYawDef: 400, rateDef: 12, rateYawDef: 12, rcColDef: 12.5, colDef: 12, expoDef: 40, yawExpoDef: 50, colExpoDef: 0 },
         };
 
         // ==================== RealMSP for Rates ====================
@@ -2894,7 +2932,11 @@ body {
                 this.serial = new SerialConnection();
                 this.msp = new RealMSP(this.serial);
                 this.rateCurve = new RateCurve();
-                this.rcCommand = [1500, 1500, 1500, 1500];
+                /* RC_COMMAND is an OFFSET from centre (-500..+500 µs), not an
+                   absolute pulse width - the curve code adds 1500 itself.
+                   Seeding this with 1500 put the stick dots at 3000 µs, i.e.
+                   far outside the canvas, until the first poll arrived. */
+                this.rcCommand = [0, 0, 0, 0];
                 this.liveData = {
                     raw_setpoint_roll: 0, raw_setpoint_pitch: 0, raw_setpoint_yaw: 0, raw_setpoint_collective: 0,
                     raw_setpoint_polar_cyclic: 0, actual_setpoint_roll: 0, actual_setpoint_pitch: 0,
@@ -2909,7 +2951,36 @@ body {
                 this.bindTabs();
                 this.bindButtons();
                 this.bindInputs();
+                this.bindViewportRedraw();
                 this.initHeli3D();
+            }
+
+            /* The curve canvases are sized from their CSS box, so the backing
+               store has to be recomputed whenever the box changes (rotation,
+               keyboard show/hide, tab activation) or the theme switches (the
+               grid/label ink is resolved at draw time). Debounced, and a no-op
+               until the first successful data load. */
+            bindViewportRedraw() {
+                let timer = null;
+                const redraw = () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => {
+                        if (!this.currentRates) return;
+                        try {
+                            this.updateRates();
+                        } catch (e) {
+                            console.warn('Rates redraw failed:', e);
+                        }
+                    }, 80);
+                };
+                window.addEventListener('resize', redraw);
+                window.addEventListener('orientationchange', () => setTimeout(redraw, 120));
+                if (window.visualViewport) window.visualViewport.addEventListener('resize', redraw);
+                if (typeof MutationObserver !== 'undefined') {
+                    new MutationObserver(redraw).observe(document.documentElement, {
+                        attributes: true, attributeFilter: ['data-theme'],
+                    });
+                }
             }
 
             bindConnection() {
@@ -2990,7 +3061,16 @@ body {
                     tab.classList.toggle('active', i === this.currentRateProfile);
                 });
                 this.buildRatesTypeOptions();
-                await this.loadDataFromFC();
+                /* The live poll MUST start even if the initial rates read (or
+                   the form population) fails. Previously a throw inside
+                   loadDataFromFC() escaped here and startPolling() was never
+                   reached, which froze RC_COMMAND updates: no stick dots on
+                   the curve and a completely motionless 3D helicopter. */
+                try {
+                    await this.loadDataFromFC();
+                } catch (e) {
+                    console.error('Initial rates load failed:', e);
+                }
                 this.startPolling();
             }
 
@@ -3078,7 +3158,7 @@ body {
                 };
 
                 if (type !== this.previousRatesType) {
-                    const d = RATE_DEFAULTS[type];
+                    const d = RATE_DEFAULTS[type] || RATE_DEFAULTS[RATES_TYPE.NONE];
                     cr.roll_srate = d.rateDef; cr.pitch_srate = d.rateDef; cr.yaw_srate = d.rateYawDef;
                     cr.collective_srate = d.colDef;
                     cr.roll_rc_rate = d.rcRateDef; cr.pitch_rc_rate = d.rcRateDef; cr.yaw_rc_rate = d.rcRateYawDef;
@@ -3090,23 +3170,56 @@ body {
                     else Object.assign(cr, DEFAULTS_DYNAMICS_4_5);
                 }
 
+                /* Never let a single missing/NaN field abort the whole
+                   re-initialisation (that is what made the rates-type dialog
+                   look frozen). Normalise every numeric field up front. */
+                const NUMERIC_FIELDS = [
+                    'roll_rc_rate', 'roll_rc_expo', 'roll_srate',
+                    'pitch_rc_rate', 'pitch_rc_expo', 'pitch_srate',
+                    'yaw_rc_rate', 'yaw_rc_expo', 'yaw_srate',
+                    'collective_rc_rate', 'collective_rc_expo', 'collective_srate',
+                    'roll_response_time', 'pitch_response_time', 'yaw_response_time', 'collective_response_time',
+                    'roll_setpoint_boost_gain', 'pitch_setpoint_boost_gain', 'yaw_setpoint_boost_gain', 'collective_setpoint_boost_gain',
+                    'roll_setpoint_boost_cutoff', 'pitch_setpoint_boost_cutoff', 'yaw_setpoint_boost_cutoff', 'collective_setpoint_boost_cutoff',
+                    'yaw_dynamic_ceiling_gain', 'yaw_dynamic_deadband_gain', 'yaw_dynamic_deadband_filter',
+                    'cyclic_ring',
+                ];
+                NUMERIC_FIELDS.forEach(k => {
+                    const v = Number(cr[k]);
+                    cr[k] = Number.isFinite(v) ? v : 0;
+                });
+
                 this.currentRates = cr;
                 this.cyclicRingEnabled = cr.cyclic_ring > 0;
-                this.polarRatesEnabled = cr.cyclic_polar;
+                this.polarRatesEnabled = !!cr.cyclic_polar;
+
+                /* Small DOM helpers - a missing selector logs instead of
+                   throwing, so the rest of the form still gets populated. */
+                const setVal = (sel, value) => {
+                    const el = document.querySelector(sel);
+                    if (!el) { console.warn('rates: missing element', sel); return; }
+                    el.value = value;
+                };
+                const setNum = (sel, value, dec) => setVal(sel, Number(value).toFixed(dec));
+                const setText = (sel, text) => {
+                    const el = document.querySelector(sel);
+                    if (!el) { console.warn('rates: missing element', sel); return; }
+                    el.textContent = text;
+                };
 
                 // Set input values (display)
-                document.querySelector('input[name="roll_rc_rate"]').value = cr.roll_rc_rate.toFixed(cfg.rcRateDec);
-                document.querySelector('input[name="pitch_rc_rate"]').value = cr.pitch_rc_rate.toFixed(cfg.rcRateDec);
-                document.querySelector('input[name="yaw_rc_rate"]').value = cr.yaw_rc_rate.toFixed(cfg.rcRateDec);
-                document.querySelector('input[name="roll_srate"]').value = cr.roll_srate.toFixed(cfg.rateDec);
-                document.querySelector('input[name="pitch_srate"]').value = cr.pitch_srate.toFixed(cfg.rateDec);
-                document.querySelector('input[name="yaw_srate"]').value = cr.yaw_srate.toFixed(cfg.rateDec);
-                document.querySelector('input[name="roll_rc_expo"]').value = cr.roll_rc_expo.toFixed(cfg.expoDec);
-                document.querySelector('input[name="pitch_rc_expo"]').value = cr.pitch_rc_expo.toFixed(cfg.expoDec);
-                document.querySelector('input[name="yaw_rc_expo"]').value = cr.yaw_rc_expo.toFixed(cfg.expoDec);
-                document.querySelector('input[name="collective_rc_rate"]').value = cr.collective_rc_rate.toFixed(cfg.rcColDec);
-                document.querySelector('input[name="collective_srate"]').value = cr.collective_srate.toFixed(cfg.colDec);
-                document.querySelector('input[name="collective_rc_expo"]').value = cr.collective_rc_expo.toFixed(cfg.expoDec);
+                setNum('input[name="roll_rc_rate"]', cr.roll_rc_rate, cfg.rcRateDec);
+                setNum('input[name="pitch_rc_rate"]', cr.pitch_rc_rate, cfg.rcRateDec);
+                setNum('input[name="yaw_rc_rate"]', cr.yaw_rc_rate, cfg.rcRateDec);
+                setNum('input[name="roll_srate"]', cr.roll_srate, cfg.rateDec);
+                setNum('input[name="pitch_srate"]', cr.pitch_srate, cfg.rateDec);
+                setNum('input[name="yaw_srate"]', cr.yaw_srate, cfg.rateDec);
+                setNum('input[name="roll_rc_expo"]', cr.roll_rc_expo, cfg.expoDec);
+                setNum('input[name="pitch_rc_expo"]', cr.pitch_rc_expo, cfg.expoDec);
+                setNum('input[name="yaw_rc_expo"]', cr.yaw_rc_expo, cfg.expoDec);
+                setNum('input[name="collective_rc_rate"]', cr.collective_rc_rate, cfg.rcColDec);
+                setNum('input[name="collective_srate"]', cr.collective_srate, cfg.colDec);
+                setNum('input[name="collective_rc_expo"]', cr.collective_rc_expo, cfg.expoDec);
 
                 // apply min/max/step
                 document.querySelectorAll('.rates_setup input[class="rc_rate_input"]').forEach(el => { el.max = cfg.rcRateMax; el.min = cfg.rcRateMin; el.step = cfg.rcRateStep; });
@@ -3115,102 +3228,165 @@ body {
                 document.querySelectorAll('.rates_setup input[class="rc_collective_input"]').forEach(el => { el.max = cfg.rcColMax; el.min = cfg.rcColMin; el.step = cfg.rcColStep; });
                 document.querySelectorAll('.rates_setup input[class="collective_input"]').forEach(el => { el.max = cfg.colMax; el.min = 0; el.step = cfg.colStep; });
 
-                // titlebar labels
-                document.querySelector('.rates_setup .rates_titlebar .rc_rate').textContent = cfg.rcRateLabel;
-                document.querySelector('.rates_setup .rates_titlebar .rate').textContent = cfg.rateLabel;
-                document.querySelector('.rates_setup .rates_titlebar .rc_expo').textContent = cfg.rcExpoLabel;
+                /* Column headers - these are what the user sees change from
+                   "Rate / Shape / Expo" (Rotorflight) to e.g.
+                   "Center Sensitivity / Max Rate / Expo" (Actual). */
+                setText('.rates_setup .rates_titlebar .rc_rate', cfg.rcRateLabel);
+                setText('.rates_setup .rates_titlebar .rate', cfg.rateLabel);
+                setText('.rates_setup .rates_titlebar .rc_expo', cfg.rcExpoLabel);
 
                 // response / accel
-                document.querySelector('input[name="roll_response"]').value = cr.roll_response_time;
-                document.querySelector('input[name="pitch_response"]').value = cr.pitch_response_time;
-                document.querySelector('input[name="yaw_response"]').value = cr.yaw_response_time;
-                document.querySelector('input[name="coll_response"]').value = cr.collective_response_time;
+                setVal('input[name="roll_response"]', cr.roll_response_time);
+                setVal('input[name="pitch_response"]', cr.pitch_response_time);
+                setVal('input[name="yaw_response"]', cr.yaw_response_time);
+                setVal('input[name="coll_response"]', cr.collective_response_time);
 
-                document.getElementById('setpoint-boost-gain-roll').value = cr.roll_setpoint_boost_gain;
-                document.getElementById('setpoint-boost-gain-pitch').value = cr.pitch_setpoint_boost_gain;
-                document.getElementById('setpoint-boost-gain-yaw').value = cr.yaw_setpoint_boost_gain;
-                document.getElementById('setpoint-boost-gain-collective').value = cr.collective_setpoint_boost_gain;
-                document.getElementById('setpoint-boost-cutoff-roll').value = cr.roll_setpoint_boost_cutoff;
-                document.getElementById('setpoint-boost-cutoff-pitch').value = cr.pitch_setpoint_boost_cutoff;
-                document.getElementById('setpoint-boost-cutoff-yaw').value = cr.yaw_setpoint_boost_cutoff;
-                document.getElementById('setpoint-boost-cutoff-collective').value = cr.collective_setpoint_boost_cutoff;
-                document.getElementById('yaw-dynamic-ceiling-gain').value = cr.yaw_dynamic_ceiling_gain;
-                document.getElementById('yaw-dynamic-deadband-gain').value = cr.yaw_dynamic_deadband_gain;
-                document.getElementById('yaw-dynamic-deadband-filter').value = (cr.yaw_dynamic_deadband_filter / 10).toFixed(1);
+                setVal('#setpoint-boost-gain-roll', cr.roll_setpoint_boost_gain);
+                setVal('#setpoint-boost-gain-pitch', cr.pitch_setpoint_boost_gain);
+                setVal('#setpoint-boost-gain-yaw', cr.yaw_setpoint_boost_gain);
+                setVal('#setpoint-boost-gain-collective', cr.collective_setpoint_boost_gain);
+                setVal('#setpoint-boost-cutoff-roll', cr.roll_setpoint_boost_cutoff);
+                setVal('#setpoint-boost-cutoff-pitch', cr.pitch_setpoint_boost_cutoff);
+                setVal('#setpoint-boost-cutoff-yaw', cr.yaw_setpoint_boost_cutoff);
+                setVal('#setpoint-boost-cutoff-collective', cr.collective_setpoint_boost_cutoff);
+                setVal('#yaw-dynamic-ceiling-gain', cr.yaw_dynamic_ceiling_gain);
+                setVal('#yaw-dynamic-deadband-gain', cr.yaw_dynamic_deadband_gain);
+                setVal('#yaw-dynamic-deadband-filter', (cr.yaw_dynamic_deadband_filter / 10).toFixed(1));
 
                 // cyclic ring + polar
                 const cRing = document.getElementById('enable-cyclic-ring');
                 const cLevel = document.getElementById('cyclic-ring-level');
                 const cPolar = document.getElementById('enable-polar-coordinates');
-                cRing.checked = this.cyclicRingEnabled;
-                cPolar.checked = this.polarRatesEnabled;
-                cLevel.value = cr.cyclic_ring;
-                cLevel.closest('.field').style.display = this.cyclicRingEnabled ? '' : 'none';
+                if (cRing) cRing.checked = this.cyclicRingEnabled;
+                if (cPolar) cPolar.checked = this.polarRatesEnabled;
+                if (cLevel) {
+                    cLevel.value = cr.cyclic_ring;
+                    const field = cLevel.closest('.field');
+                    if (field) field.style.display = this.cyclicRingEnabled ? '' : 'none';
+                }
 
                 // toggle pitch/roll columns for polar
-                document.querySelector('.rates_setup .ROLL').style.display = this.polarRatesEnabled ? 'none' : '';
-                document.querySelector('.rates_setup .PITCH .axis_title').textContent = this.polarRatesEnabled ? 'CYCLIC' : 'PITCH';
+                const rollRow = document.querySelector('.rates_setup .ROLL');
+                if (rollRow) rollRow.style.display = this.polarRatesEnabled ? 'none' : '';
+                setText('.rates_setup .PITCH .axis_title', this.polarRatesEnabled ? 'CYCLIC' : 'PITCH');
 
                 this.previousRatesType = type;
                 this.updateRates();
             }
 
+            /* Rates-type confirmation dialog.
+
+               The buttons are <a href="#"> elements, so every handler must
+               call preventDefault() - otherwise the hash navigation reloads
+               the iframe right after the dialog closes.
+
+               The dialog is closed FIRST and the (potentially throwing) form
+               rebuild runs afterwards inside a try/catch. Previously the
+               close() call sat at the very end of the confirm handler, so any
+               exception raised while re-initialising the form left the dialog
+               open and the rates type visually unchanged - exactly the
+               "Change does nothing, only Cancel closes it" symptom. */
             changeRatesType(rateTypeID) {
                 const dialog = document.querySelector('.dialogRatesType');
-                if (!dialog.open) {
-                    dialog.showModal();
-                    /* The dialog buttons are <a href="#"> in the markup.
-                       Without e.preventDefault() the anchor's default
-                       behaviour (jumping to the # fragment) fires after
-                       dialog.close() and reloads the iframe, making it
-                       look as if "Change" / "Cancel" did nothing. The
-                       iframe hash-change reload is what made the
-                       confirm button feel unresponsive. */
-                    document.querySelector('.dialogRatesType-cancelbtn').onclick = (e) => {
+                if (!dialog || dialog.open) return;
+
+                this._pendingRatesType = rateTypeID;
+                dialog.showModal();
+
+                const cancelBtn = document.querySelector('.dialogRatesType-cancelbtn');
+                const confirmBtn = document.querySelector('.dialogRatesType-confirmbtn');
+
+                if (cancelBtn) {
+                    cancelBtn.onclick = (e) => {
                         e.preventDefault();
-                        document.getElementById('ratesType').value = this.currentRatesType;
                         dialog.close();
-                    };
-                    document.querySelector('.dialogRatesType-confirmbtn').onclick = (e) => {
-                        e.preventDefault();
-                        this.currentRatesType = rateTypeID;
-                        this.changeRatesLogo();
-                        this.initRatesSystem();
-                        /* Redraw the rate curve with the new type so the
-                           column headers + the four curves actually
-                           update visually. Without this, the user sees
-                           the rate-type select change but the curve
-                           canvas keeps showing the old type's curve
-                           (initRatesSystem already calls updateRates()
-                           internally - this is a belt-and-suspenders
-                           no-op for that path, but it makes the
-                           intent obvious in case the inner call is
-                           skipped on a future refactor). */
-                        this.updateRates();
-                        this.setChanged();
-                        dialog.close();
+                        /* Put the <select> back and keep previousRatesType in
+                           sync so a later confirm still detects a real change. */
+                        const sel = document.getElementById('ratesType');
+                        if (sel) sel.value = this.currentRatesType;
+                        this.previousRatesType = this.currentRatesType;
                     };
                 }
+
+                if (confirmBtn) {
+                    confirmBtn.onclick = (e) => {
+                        e.preventDefault();
+                        const newType = this._pendingRatesType;
+                        dialog.close();
+                        try {
+                            this.currentRatesType = newType;
+                            this.changeRatesLogo();
+                            /* Rebuilds the inputs with the new type's defaults,
+                               relabels the RC Rate / Rate / RC Expo columns and
+                               redraws the curve (initRatesSystem ends with
+                               updateRates()). */
+                            this.initRatesSystem();
+                            this.setChanged();
+                        } catch (err) {
+                            console.error('Rates type change failed:', err);
+                        }
+                    };
+                }
+            }
+
+            /* Resize a curve canvas backing store to its CSS box.
+               Both layers are stretched to 100% of the .rate_curve box by
+               CSS. The old code left them at a fixed 1000x1000, so on a
+               phone (~340x240 CSS px) everything was squashed 3:1
+               horizontally and 4:1 vertically - stick dots became flat
+               ellipses and any text was unreadable. Sizing the backing
+               store to the box keeps the aspect ratio 1:1 so dots stay
+               round and labels stay legible. */
+            sizeCurveCanvas(canvas) {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                const box = canvas.parentElement;
+                const cssW = canvas.clientWidth || (box && box.clientWidth) || 320;
+                const cssH = canvas.clientHeight || (box && box.clientHeight) || 240;
+                const w = Math.max(1, Math.round(cssW * dpr));
+                const h = Math.max(1, Math.round(cssH * dpr));
+                if (canvas.width !== w || canvas.height !== h) {
+                    canvas.width = w;
+                    canvas.height = h;
+                }
+                return { w, h, dpr };
+            }
+
+            /* Theme-aware ink. The data-theme attribute is read directly:
+               resolving CSS custom properties through getComputedStyle is
+               unreliable inside the Capacitor WebView iframe. */
+            curveInk() {
+                const isDark = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark';
+                return {
+                    isDark,
+                    text: isDark ? '#e8eaee' : '#1a1c20',
+                    grid: isDark ? '#3a3d45' : '#d7dae2',
+                    axis: isDark ? '#9aa0ac' : '#5a5f6a',
+                    paper: isDark ? 'rgba(18,18,26,0.72)' : 'rgba(255,255,255,0.76)',
+                };
             }
 
             updateRates(event) {
                 if (event) {
                     const t = event.target;
-                    const v = parseFloat(t.value);
-                    if (t.name && Object.hasOwn(this.currentRates, t.name)) {
-                        this.currentRates[t.name] = v;
-                    }
                     if (t.id === 'ratesType') {
-                        this.changeRatesType(v);
+                        this.changeRatesType(parseInt(t.value, 10));
                         return;
+                    }
+                    const v = parseFloat(t.value);
+                    if (t.name && this.currentRates && Object.hasOwn(this.currentRates, t.name) && Number.isFinite(v)) {
+                        this.currentRates[t.name] = v;
                     }
                 }
 
                 const cr = this.currentRates;
+                if (!cr) return;
                 const canvas = document.querySelector('#rate_curve_layer0');
                 if (!canvas) return;
+
+                const { w: W, h: H, dpr } = this.sizeCurveCanvas(canvas);
                 const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, W, H);
 
                 this.maxCollectiveAngle = this.rateCurve.getMaxAngularVel(
                     this.currentRatesType, cr.collective_srate, cr.collective_rc_rate, cr.collective_rc_expo, cr.superexpo, 0, cr.collective_rate_limit);
@@ -3229,14 +3405,14 @@ body {
                     cr.max_setpoint_polar_cyclic = Math.min(cr.max_angular_pitch * (cr.cyclic_ring / 100), cr.max_setpoint_polar_cyclic);
                 }
 
-                document.querySelector('.maxAngularVelRoll').value = cr.max_angular_roll.toFixed(0);
-                if (this.polarRatesEnabled) {
-                    document.querySelector('.maxAngularVelPitch').value = cr.max_setpoint_polar_cyclic.toFixed(0);
-                } else {
-                    document.querySelector('.maxAngularVelPitch').value = cr.max_angular_pitch.toFixed(0);
-                }
-                document.querySelector('.maxAngularVelYaw').value = cr.max_angular_yaw.toFixed(0);
-                document.querySelector('.maxCollectiveAngle').value = this.convertToCollective(this.maxCollectiveAngle);
+                const setBoxVal = (sel, value) => {
+                    const el = document.querySelector(sel);
+                    if (el) el.value = value;
+                };
+                setBoxVal('.maxAngularVelRoll', cr.max_angular_roll.toFixed(0));
+                setBoxVal('.maxAngularVelPitch', (this.polarRatesEnabled ? cr.max_setpoint_polar_cyclic : cr.max_angular_pitch).toFixed(0));
+                setBoxVal('.maxAngularVelYaw', cr.max_angular_yaw.toFixed(0));
+                setBoxVal('.maxCollectiveAngle', this.convertToCollective(this.maxCollectiveAngle));
 
                 let maxAngularVel = cr.max_angular_yaw;
                 if (this.polarRatesEnabled) {
@@ -3246,45 +3422,28 @@ body {
                 }
                 maxAngularVel = this.rateCurve.setMaxAngularVel(maxAngularVel);
 
-                // draw axes (cross) + grid + axis labels.
-                // Grid uses a light tint so it stays subtle; the centre
-                // cross is heavier. Labels are placed with a small inset
-                // so they don't crowd the edge of the canvas.
-                /* Use the data-theme attribute directly instead of
-                   getComputedStyle().getPropertyValue('--color-text').
-                   Reading CSS custom properties on the documentElement
-                   inside a Capacitor WebView iframe is unreliable - some
-                   OEM WebView builds return an empty string for vars
-                   defined under `html[data-theme=...]`, which would
-                   silently fall back to #000 even in dark mode (or vice
-                   versa), making the labels invisible on the wrong
-                   background. The attribute is the source of truth. */
-                const themeAttr = document.documentElement.getAttribute('data-theme') || 'light';
-                const isDark = themeAttr === 'dark';
-                const textColor = isDark ? '#e8eaee' : '#1a1c20';
-                const subtleColor = isDark ? '#555555' : '#c9ccd4';
-                const W = canvas.width, H = canvas.height;
+                const ink = this.curveInk();
                 const cx = W / 2, cy = H / 2;
 
-                // 4 vertical grid lines (-500, -250, 0, 250, 500) and 3 horizontal ones.
-                ctx.strokeStyle = subtleColor;
-                ctx.lineWidth = 1;
+                // Grid: 4 vertical divisions (±500 / ±250 µs) and 3 horizontal ones.
+                ctx.strokeStyle = ink.grid;
+                ctx.lineWidth = Math.max(1, dpr);
                 ctx.beginPath();
                 for (let i = 1; i <= 4; i++) {
-                    const x = (W / 5) * i;
+                    const x = Math.round((W / 5) * i) + 0.5;
                     ctx.moveTo(x, 0);
                     ctx.lineTo(x, H);
                 }
                 for (let i = 1; i <= 2; i++) {
-                    const y = (H / 3) * i;
+                    const y = Math.round((H / 3) * i) + 0.5;
                     ctx.moveTo(0, y);
                     ctx.lineTo(W, y);
                 }
                 ctx.stroke();
 
-                // centre cross (heavier)
-                ctx.strokeStyle = textColor;
-                ctx.lineWidth = 2;
+                // Centre cross (heavier than the grid)
+                ctx.strokeStyle = ink.axis;
+                ctx.lineWidth = Math.max(1, 1.5 * dpr);
                 ctx.beginPath();
                 ctx.moveTo(0, cy);
                 ctx.lineTo(W, cy);
@@ -3292,115 +3451,69 @@ body {
                 ctx.lineTo(cx, H);
                 ctx.stroke();
 
-                // Note: axis labels are drawn AFTER the curves below -
-                // the curves are drawn at y offsets of ±2 / ±4 px around
-                // the centre line with a thick stroke, so labels placed
-                // at cy+4 would be painted over. See the bottom of this
-                // method for the actual drawText() calls.
-
-                const scale = (ctx.canvas.width / ctx.canvas.clientWidth) || 1;
-                ctx.lineWidth = 2 * scale;
-
-                const drawCurve = (rate, rcRate, rcExpo, useSuperExpo, deadband, limit, maxAngularVel, colour, yOffset, context, opts) => {
+                // ---- curves ----
+                ctx.lineWidth = Math.max(1.5, 2 * dpr);
+                const drawCurve = (rate, rcRate, rcExpo, useSuperExpo, deadband, limit, maxVel, colour, yOffset, context, opts) => {
                     context.save();
                     context.strokeStyle = colour;
-                    context.translate(0, yOffset);
-                    this.rateCurve.draw(this.currentRatesType, rate, rcRate, rcExpo, useSuperExpo, deadband, limit, maxAngularVel, context, opts);
+                    context.translate(0, yOffset * dpr);
+                    this.rateCurve.draw(this.currentRatesType, rate, rcRate, rcExpo, useSuperExpo, deadband, limit, maxVel, context, opts);
                     context.restore();
                 };
 
-                drawCurve(
-                    cr.collective_srate,
-                    cr.collective_rc_rate,
-                    cr.collective_rc_expo,
-                    cr.superexpo,
-                    0,
-                    cr.collective_rate_limit,
-                    this.maxCollectiveAngle,
-                    '#ffbb00',
-                    -4,
-                    ctx,
-                );
+                drawCurve(cr.collective_srate, cr.collective_rc_rate, cr.collective_rc_expo, cr.superexpo,
+                    0, cr.collective_rate_limit, this.maxCollectiveAngle, AXIS_COLORS.collective.curve, -2, ctx);
 
-                drawCurve(
-                    cr.yaw_srate,
-                    cr.yaw_rc_rate,
-                    cr.yaw_rc_expo,
-                    cr.superexpo,
-                    cr.yawDeadband,
-                    cr.yaw_rate_limit,
-                    maxAngularVel,
-                    '#0000ff',
-                    4,
-                    ctx,
-                );
+                drawCurve(cr.yaw_srate, cr.yaw_rc_rate, cr.yaw_rc_expo, cr.superexpo,
+                    cr.yawDeadband, cr.yaw_rate_limit, maxAngularVel, AXIS_COLORS.yaw.curve, 2, ctx);
 
                 if (this.polarRatesEnabled) {
-                    drawCurve(
-                        cr.pitch_srate,
-                        cr.pitch_rc_rate,
-                        cr.pitch_rc_expo,
-                        cr.superexpo,
-                        cr.deadband,
-                        cr.pitch_rate_limit,
-                        maxAngularVel,
-                        '#00ff00',
-                        0,
-                        ctx,
-                        {
-                            rcRange: 500 * Math.sqrt(2),
-                            maxAngularVel: cr.max_setpoint_polar_cyclic,
-                        },
-                    );
+                    drawCurve(cr.pitch_srate, cr.pitch_rc_rate, cr.pitch_rc_expo, cr.superexpo,
+                        cr.deadband, cr.pitch_rate_limit, maxAngularVel, AXIS_COLORS.pitch.curve, 0, ctx,
+                        { rcRange: 500 * Math.sqrt(2), maxAngularVel: cr.max_setpoint_polar_cyclic });
                 } else {
-                    drawCurve(
-                        cr.roll_srate,
-                        cr.roll_rc_rate,
-                        cr.roll_rc_expo,
-                        cr.superexpo,
-                        cr.deadband,
-                        cr.roll_rate_limit,
-                        maxAngularVel,
-                        '#ff0000',
-                        -2,
-                        ctx,
-                    );
-                    drawCurve(
-                        cr.pitch_srate,
-                        cr.pitch_rc_rate,
-                        cr.pitch_rc_expo,
-                        cr.superexpo,
-                        cr.deadband,
-                        cr.pitch_rate_limit,
-                        maxAngularVel,
-                        '#00ff00',
-                        2,
-                        ctx,
-                    );
+                    drawCurve(cr.roll_srate, cr.roll_rc_rate, cr.roll_rc_expo, cr.superexpo,
+                        cr.deadband, cr.roll_rate_limit, maxAngularVel, AXIS_COLORS.roll.curve, -1, ctx);
+                    drawCurve(cr.pitch_srate, cr.pitch_rc_rate, cr.pitch_rc_expo, cr.superexpo,
+                        cr.deadband, cr.pitch_rate_limit, maxAngularVel, AXIS_COLORS.pitch.curve, 1, ctx);
                 }
 
-                /* Axis labels - drawn LAST so the curve strokes (which run
-                   through cy ± 4 px with a 6-7 px line width) cannot
-                   paint over the text. The stick-position labels are
-                   placed just below the centre line where the curves
-                   are at the lowest density. */
-                ctx.fillStyle = textColor;
-                ctx.font = (16 * ((W / canvas.clientWidth) || 1)) + 'px sans-serif';
-                ctx.textBaseline = 'top';
-                ctx.textAlign = 'left';
-                ctx.fillText('-500 µs', labelInset, cy + 14);
-                ctx.textAlign = 'right';
-                ctx.fillText('+500 µs', W - labelInset, cy + 14);
-                ctx.textAlign = 'center';
-                ctx.fillText('0', cx, cy + 14);
-                ctx.textAlign = 'left';
-                ctx.fillText('+' + Math.round(maxAngularVel) + ' °/s', labelInset, labelInset);
-                ctx.textBaseline = 'bottom';
-                ctx.fillText('-' + Math.round(maxAngularVel) + ' °/s', labelInset, H - labelInset);
+                /* Scale labels, drawn last so the curve strokes cannot paint
+                   over them. Each label gets a translucent backdrop so it
+                   stays readable where a curve runs underneath.
+                   `labelInset` used to be referenced here without ever being
+                   declared - the resulting ReferenceError aborted updateRates()
+                   before updateRcPositions() / updateRatesLabels() ran, which
+                   is why the axis values were missing AND the live stick dots
+                   never appeared. */
+                const labelInset = Math.round(6 * dpr);
+                const fontPx = Math.max(10, Math.round(11 * dpr));
+                ctx.font = fontPx + 'px sans-serif';
+                const tag = (text, x, y, align, baseline, colour) => {
+                    ctx.textAlign = align;
+                    ctx.textBaseline = baseline;
+                    const tw = ctx.measureText(text).width;
+                    const pad = Math.round(3 * dpr);
+                    let bx = x;
+                    if (align === 'right') bx = x - tw;
+                    else if (align === 'center') bx = x - tw / 2;
+                    let by = y;
+                    if (baseline === 'bottom') by = y - fontPx;
+                    else if (baseline === 'middle') by = y - fontPx / 2;
+                    ctx.fillStyle = ink.paper;
+                    ctx.fillRect(bx - pad, by - pad, tw + pad * 2, fontPx + pad * 2);
+                    ctx.fillStyle = colour || ink.text;
+                    ctx.fillText(text, x, y);
+                };
+
+                tag('+' + Math.round(maxAngularVel) + ' °/s', labelInset, labelInset, 'left', 'top');
+                tag('-' + Math.round(maxAngularVel) + ' °/s', labelInset, H - labelInset, 'left', 'bottom');
+                tag('-500 µs', labelInset, cy - Math.round(4 * dpr), 'left', 'bottom');
+                tag('+500 µs', W - labelInset, cy - Math.round(4 * dpr), 'right', 'bottom');
 
                 this.updateRcPositions();
                 this.updateRatesLabels();
-                this.updateHeliAttitude();
+                this.updateHeliReadout();
             }
 
             convertToCollective(rate) {
@@ -3450,50 +3563,88 @@ body {
                 }
             }
 
-            drawStickPosition(context, color, rcPos, value, maxValue) {
-                const DEFAULT_SIZE = 60;
-                const rateScaling = (context.canvas.height / 2) / maxValue;
+            /* Live stick indicator: a filled dot with a contrasting ring so
+               it stays visible on top of a curve of the same colour.
+               `rcPos` is the signed stick offset in µs (-500..+500) and
+               `value` the resulting setpoint in °/s - both are converted to
+               canvas pixels here, so the dot lands correctly whatever the
+               canvas resolution is. */
+            drawStickPosition(context, colour, rcMicros, value, maxValue, dpr) {
+                if (!Number.isFinite(value) || !maxValue) return;
+                const W = context.canvas.width, H = context.canvas.height;
+                const x = (W / 2) + (rcMicros / 500) * (W / 2);
+                const y = (H / 2) - ((H / 2) / maxValue) * value;
+                const r = Math.max(4, 5.5 * dpr);
                 context.save();
-                context.fillStyle = color;
-                context.translate(context.canvas.width / 2, context.canvas.height / 2);
                 context.beginPath();
-                context.arc(rcPos, -rateScaling * value, context.canvas.height / DEFAULT_SIZE, 0, 2 * Math.PI);
+                context.arc(x, y, r, 0, 2 * Math.PI);
+                context.fillStyle = colour;
                 context.fill();
+                context.lineWidth = Math.max(1, 1.5 * dpr);
+                context.strokeStyle = 'rgba(0,0,0,0.55)';
+                context.stroke();
                 context.restore();
             }
 
+            /* Live overlay (layer1): the stick dots plus a right-aligned
+               readout of the current setpoint of every axis in °/s (the
+               "angle" display). Redrawn on every RC_COMMAND poll. */
             updateRatesLabels() {
                 const cr = this.currentRates;
-                if (!cr || !this.rateCurve.maxAngularVel) return;
+                if (!cr || !this.rateCurve.maxAngularVel || !this.liveData) return;
 
                 const canvas = document.querySelector('#rate_curve_layer1');
+                if (!canvas) return;
+                const { w: W, h: H, dpr } = this.sizeCurveCanvas(canvas);
                 const ctx = canvas.getContext('2d');
-                const curveHeight = canvas.height;
-                const curveWidth = canvas.width;
                 const maxAngularVel = this.rateCurve.maxAngularVel;
-                const rateScale = (curveHeight / 2) / maxAngularVel;
                 const rc = this.rcCommand;
+                const ld = this.liveData;
 
-                ctx.clearRect(0, 0, curveWidth, curveHeight);
-
-                /* Normalise the signed stick offset (-500..+500 µs) to a
-                   canvas x position in pixels. drawStickPosition() draws
-                   an arc at (rcPos, -rateScaling*value) relative to the
-                   canvas centre - so rcPos must be in pixels, not µs.
-                   Before this fix, passing rc[0] (a signed 16-bit
-                   -500..+500) sent the dot ~500 px off-canvas at either
-                   end of the stick, which is why the dot disappeared
-                   after the readRCCommand signed-16-bit fix. */
-                const stickX = (i) => (rc[i] / 500) * (curveWidth / 2);
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, W, H);
 
                 if (this.polarRatesEnabled) {
-                    this.drawStickPosition(ctx, '#80FF80', stickX(0) / Math.sqrt(2), this.liveData.raw_setpoint_polar_cyclic, maxAngularVel);
+                    /* Polar mode shows ONE cyclic dot: the stick magnitude
+                       (sqrt(roll² + pitch²), already normalised to 0..1 by
+                       updateRcPositions) mapped back onto the µs axis, same
+                       as the desktop configurator. */
+                    this.drawStickPosition(ctx, AXIS_COLORS.pitch.dot, (ld.polar_rc_command * 500) / Math.sqrt(2), ld.raw_setpoint_polar_cyclic, maxAngularVel, dpr);
                 } else {
-                    this.drawStickPosition(ctx, '#FF8080', stickX(0), this.liveData.actual_setpoint_roll, maxAngularVel);
-                    this.drawStickPosition(ctx, '#80FF80', stickX(1), this.liveData.actual_setpoint_pitch, maxAngularVel);
+                    this.drawStickPosition(ctx, AXIS_COLORS.roll.dot, rc[0], ld.actual_setpoint_roll, maxAngularVel, dpr);
+                    this.drawStickPosition(ctx, AXIS_COLORS.pitch.dot, rc[1], ld.actual_setpoint_pitch, maxAngularVel, dpr);
                 }
-                this.drawStickPosition(ctx, '#8080FF', stickX(2), this.liveData.actual_setpoint_yaw, maxAngularVel);
-                this.drawStickPosition(ctx, '#FFBB00', stickX(3), this.liveData.actual_setpoint_collective, this.maxCollectiveAngle);
+                this.drawStickPosition(ctx, AXIS_COLORS.yaw.dot, rc[2], ld.actual_setpoint_yaw, maxAngularVel, dpr);
+                this.drawStickPosition(ctx, AXIS_COLORS.collective.dot, rc[3], ld.actual_setpoint_collective, this.maxCollectiveAngle, dpr);
+
+                // ---- live value readout (top-right corner) ----
+                const ink = this.curveInk();
+                const fontPx = Math.max(10, Math.round(11 * dpr));
+                const pad = Math.round(4 * dpr);
+                const lineH = fontPx + Math.round(4 * dpr);
+                const rows = [];
+                if (this.polarRatesEnabled) {
+                    rows.push({ c: AXIS_COLORS.pitch, t: 'CYCLIC ' + ld.raw_setpoint_polar_cyclic.toFixed(0) + ' °/s' });
+                } else {
+                    rows.push({ c: AXIS_COLORS.roll, t: 'ROLL ' + ld.actual_setpoint_roll.toFixed(0) + ' °/s' });
+                    rows.push({ c: AXIS_COLORS.pitch, t: 'PITCH ' + ld.actual_setpoint_pitch.toFixed(0) + ' °/s' });
+                }
+                rows.push({ c: AXIS_COLORS.yaw, t: 'YAW ' + ld.actual_setpoint_yaw.toFixed(0) + ' °/s' });
+                rows.push({ c: AXIS_COLORS.collective, t: 'COLL ' + this.convertToCollective(ld.actual_setpoint_collective) + '°' });
+
+                ctx.font = fontPx + 'px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'top';
+                const boxW = Math.max(...rows.map(r => ctx.measureText(r.t).width)) + pad * 2;
+                const boxH = rows.length * lineH + pad;
+                const bx = W - boxW - Math.round(6 * dpr);
+                const by = Math.round(6 * dpr);
+                ctx.fillStyle = ink.paper;
+                ctx.fillRect(bx, by, boxW, boxH);
+                rows.forEach((r, i) => {
+                    ctx.fillStyle = ink.isDark ? r.c.dot : r.c.text;
+                    ctx.fillText(r.t, W - Math.round(6 * dpr) - pad, by + pad / 2 + i * lineH);
+                });
             }
 
             // ---- form <-> data ----
@@ -3739,7 +3890,7 @@ async activateProfile(index) {
                             if (this.currentRates) {
                                 this.updateRcPositions();
                                 this.updateRatesLabels();
-                                this.updateHeliAttitude();
+                                this.updateHeliReadout();
                             }
                         }
                         await this.msp.readStatus();
@@ -3888,7 +4039,7 @@ async activateProfile(index) {
                     modelWrapper.add(innerGroup);
                     this.heliModel = innerGroup;
                     loadingEl.style.display = 'none';
-                    this.updateHeliAttitude();
+                    this.updateHeliReadout();
                 };
                 if (glbDataUri && GLTFLoader) {
                     const loader = new GLTFLoader();
@@ -3957,14 +4108,30 @@ async activateProfile(index) {
                 const onVis = () => { this._heliVisible = !document.hidden; };
                 document.addEventListener('visibilitychange', onVis);
                 window.addEventListener('pageshow', onVis);
-                const animate = () => {
+                /* Frame loop. The model is spun by the LIVE setpoint (°/s)
+                   using the real frame delta, exactly like the desktop
+                   configurator (Model.rotateBy + THREE.Clock): hold a stick
+                   and the model keeps turning in that direction, past 360°,
+                   for as long as the stick is held. */
+                this._heliLastTs = 0;
+                const animate = (ts) => {
                     this.heliAnimId = requestAnimationFrame(animate);
-                    if (!this._heliVisible) return;
+                    if (!this._heliVisible) { this._heliLastTs = 0; return; }
+                    const now = (typeof ts === 'number') ? ts : performance.now();
+                    let dt = this._heliLastTs ? (now - this._heliLastTs) / 1000 : 0;
+                    this._heliLastTs = now;
+                    /* Clamp: a long stall (tab switch, GC pause) must not make
+                       the model jump by several revolutions in one frame. */
+                    if (!Number.isFinite(dt) || dt < 0) dt = 0;
+                    if (dt > 0.1) dt = 0.1;
+                    /* While the shell shows a different tab, the RC poll is
+                       deferred by bridge.js - so keep PAINTING (the WebGL
+                       context must not be dropped) but freeze the motion
+                       instead of spinning on a stale setpoint. */
+                    const bridge = window.__RF_BRIDGE__;
+                    if (bridge && bridge.active === false) dt = 0;
                     renderer.setClearColor(this.getBgColors().bg, 1);
-                    /* Re-apply the latest RC->setpoint attitude every frame
-                       so the model never goes stale between 250 ms poll
-                       ticks (or when the user just types in an input field). */
-                    this.updateHeliAttitude();
+                    this.stepHeliRotation(dt);
                     renderer.render(scene, camera);
                 };
                 animate();
@@ -3986,96 +4153,68 @@ async activateProfile(index) {
                 }, false);
             }
 
-            /* Drive the heli attitude from THIS tab's rates pipeline.
-               raw_setpoint_* are °/s already RateCurve-corrected via
-               updateRcPositions(). The 3D preview follows a
-               multicopter / drone model (this is a small toy 3D
-               helicopter in the UI, not a real RC heli with a swash
-               plate and mechanical stops):
-                 - Hold the stick → that axis keeps rotating at the
-                   rate-curve setpoint, indefinitely, with NO angle
-                   limit. Roll past 90°, pitch past 90°, yaw past
-                   360° all keep going - matches how a multicopter
-                   simulator previews rates.
-                 - Stick back to neutral → setpoint is 0, integration
-                   stops, the model holds the last position (a real
-                   heli would slowly self-level; a quadcopter holds
-                   its angle in a hover).
-                 - Yaw is NOT wrapped. The model spins freely in 3D
-                   space; the camera (fixed due-north) lets the user
-                   read the heading by watching the model silhouette
-                   rotate, which is the standard "rates preview"
-                   idiom. The overlay text normalises to ±180° for
-                   readability but the model itself keeps spinning.
-                 - The integration dt is small (0.05) so a 100°/s
-                   setpoint produces ~5°/s visual rate - comfortable
-                   to watch, ~3 s for a full revolution at full
-                   rudder stick. */
-            updateHeliAttitude() {
+            /* ============================================================
+               Rates preview attitude.
+
+               Two separate concerns, deliberately split:
+
+                 updateHeliReadout()  - the text overlay (°/s per axis).
+                                        Called from the RC poll.
+                 stepHeliRotation(dt) - the actual 3D rotation. Called from
+                                        the rAF loop with the real frame
+                                        delta.
+
+               The rotation follows the desktop configurator exactly
+               (Model.rotateBy + THREE.Clock): the live setpoint is an
+               angular RATE in °/s, so it is integrated over the frame time
+               and applied with Object3D.rotateX/Y/Z (local-space, relative
+               rotation). Consequences, all intended:
+
+                 - Holding a stick spins that axis continuously at the
+                   rate-curve setpoint - past 90°, past 360°, forever,
+                   like a drone rate-mode preview.
+                 - Releasing the stick to centre gives a 0 °/s setpoint,
+                   so the model simply stops and holds its pose.
+                 - Nothing is clamped or wrapped; rotateX/Y/Z composes
+                   quaternions, so there is no gimbal lock either.
+
+               The previous implementation instead assigned absolute Euler
+               angles from an accumulator scaled by a magic dt of 0.5 and
+               normalised by maxAngularVel, which made the motion both
+               frame-rate dependent and unrelated to the real setpoint. */
+            updateHeliReadout() {
                 const ld = this.liveData || {};
-                const roll  = ld.raw_setpoint_roll       || 0;
-                const pitch = ld.raw_setpoint_pitch      || 0;
-                const yaw   = ld.raw_setpoint_yaw        || 0;
-                const coll  = ld.raw_setpoint_collective || 0;
-
-                // Normalise against maxAngularVel so a 200°/s curve
-                // and an 800°/s curve both feel right - the visual
-                // rate is always proportional to the stick position.
-                const maxVel  = this.rateCurve.maxAngularVel || 1;
-                const maxColl = this.maxCollectiveAngle    || 1;
-                const rollN  = roll  / (maxVel  || 1);
-                const pitchN = pitch / (maxVel  || 1);
-                const yawN   = yaw   / (maxVel  || 1);
-                const collN  = coll  / (maxColl || 1);
-
-                // Attitude overlay (the raw setpoint, °/s, signed)
-                const fmtDeg = (v) => (v >= 0 ? '+' : '') + v.toFixed(0) + ' °/s';
+                const fmt = (v) => (v >= 0 ? '+' : '') + (Number(v) || 0).toFixed(0) + ' °/s';
                 const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
-                setText('att-roll',  fmtDeg(roll));
-                setText('att-pitch', fmtDeg(pitch));
-                setText('att-yaw',   fmtDeg(yaw));
-                setText('att-collective', this.convertToCollective ? this.convertToCollective(coll) : coll.toFixed(0));
+                setText('att-roll', fmt(ld.actual_setpoint_roll));
+                setText('att-pitch', fmt(ld.actual_setpoint_pitch));
+                setText('att-yaw', fmt(ld.actual_setpoint_yaw));
+                setText('att-collective', this.convertToCollective(ld.actual_setpoint_collective || 0) + '°');
+            }
 
-                if (!this.heliModel || !this.heliWrapper) return;
+            stepHeliRotation(dt) {
+                if (!this.heliModel || !dt) return;
+                const ld = this.liveData || {};
+                const DEG_TO_RAD = Math.PI / 180;
+                const roll  = Number(ld.actual_setpoint_roll)  || 0;
+                const pitch = Number(ld.actual_setpoint_pitch) || 0;
+                const yaw   = Number(ld.actual_setpoint_yaw)   || 0;
+                const coll  = Number(ld.actual_setpoint_collective) || 0;
 
-                /* dt for the integration step. The setpoint is in °/s.
-                   With the normalised input (rollN / pitchN / yawN are
-                   already 0..1 across the stick range), dt=0.5 means a
-                   full-stick setpoint adds ~0.5 rad (~28°) of rotation
-                   per call. Combined with the RAF loop (~60 fps), a
-                   full-stick normalised setpoint produces ~30 rad/s
-                   visual angular rate, which is clearly visible on
-                   the 3D preview without being absurdly fast. The
-                   idle drift below (when the stick is at neutral) is
-                   ~0.02 rad/call = 1.2 rad/s, which is two orders of
-                   magnitude smaller than the full-stick rate and
-                   therefore gets visually dominated by real stick
-                   input. */
-                const dt = 0.5;
+                /* Signs match the desktop configurator's renderModel():
+                   rotateBy(-pitch, -yaw, -roll) in radians per second. */
+                this.heliModel.rotateX(dt * -pitch * DEG_TO_RAD);
+                this.heliModel.rotateY(dt * -yaw   * DEG_TO_RAD);
+                this.heliModel.rotateZ(dt * -roll  * DEG_TO_RAD);
 
-                // Roll / pitch: integrate with NO clamp. The 3D
-                // model is a toy preview, not a mechanical model:
-                // the user wants to see the rate-curve response
-                // without artificial limits. Sign is negated to match
-                // the original status.html convention (stick right
-                // → model banks right; stick forward → nose down).
-                this._heliRoll  = this._heliRoll  || 0;
-                this._heliPitch = this._heliPitch || 0;
-                this._heliRoll  += rollN  * -1 * dt;
-                this._heliPitch += pitchN * -1 * dt;
-                this.heliModel.rotation.x = this._heliPitch;
-                this.heliModel.rotation.y = 0;
-                this.heliModel.rotation.z = this._heliRoll;
-
-                // Yaw: integrate the rate. No wrap - the model keeps
-                // spinning freely as long as the rudder stick is held.
-                // Sign negated to match the status.html convention.
-                this._heliYaw = (this._heliYaw || 0) - yawN * dt;
-                this.heliWrapper.rotation.y = this._heliYaw;
-
-                // Collective: small vertical bob on the inner model.
-                if (this.heliModel.children && this.heliModel.children[0]) {
-                    this.heliModel.children[0].position.y = collN * 0.3;
+                /* Collective is a linear (not angular) command: lift the whole
+                   model in WORLD space so it reads as up/down collective pitch
+                   instead of being dragged around by the model's own rotation. */
+                if (this.heliWrapper) {
+                    const maxColl = Math.abs(this.maxCollectiveAngle) || 1;
+                    const target = Math.max(-1, Math.min(1, coll / maxColl)) * 0.35;
+                    const cur = this.heliWrapper.position.y || 0;
+                    this.heliWrapper.position.y = cur + (target - cur) * Math.min(1, dt * 8);
                 }
             }
         }
