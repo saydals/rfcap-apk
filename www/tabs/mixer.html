@@ -2065,6 +2065,11 @@
                 c.swash_trim[2] = this.getInt('mixerSwashCollectiveTrim', 10);
                 c.coll_geo_correction = this.getInt('mixerCollectiveGeoCorrection', 5);
                 c.tail_motor_idle = this.getInt('mixerTailMotorIdle', 10);
+                c.tail_rotor_mode = parseInt(document.getElementById('mixerTailRotorMode').value);
+                if (c.tail_rotor_mode > 0)
+                    c.tail_center_trim = this.getInt('mixerTailMotorCenterTrim', 10);
+                else
+                    c.tail_center_trim = this.getInt('mixerTailRotorCenterTrim', 1000 / 24);
                 if (this.msp.data.supportsTilt) {
                     c.coll_tilt_correction_pos = this.getInt('mixerCollectiveTiltCorrectionPos');
                     c.coll_tilt_correction_neg = this.getInt('mixerCollectiveTiltCorrectionNeg');
