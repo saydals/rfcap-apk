@@ -344,45 +344,79 @@ public class RfSerialPlugin extends Plugin {
             }
             connectWatch.removeCallbacks(connectTimeout);
             sppSocket = socket;
+
+            /* RFCOMM being up is NOT proof of a working link: on many FC BT
+               modules the RFCOMM channel opens yet no serial data ever flows
+               (the "shows connected but isn't" flake). So we (a) emit a
+               transient "linking" rfState, (b) send an MSP probe and only
+               announce "connected" once the FC actually answers, and (c)
+               reject if the FC stays silent — so the UI never displays a
+               fake connection (the old code resolved on RFCOMM-up alone, which
+               is exactly why a dead link looked "Connected"). */
             if (!call.isReleased()) {
-                JSObject r = new JSObject();
-                r.put("name", safeName(dev));
-                r.put("address", address);
-                call.resolve(r);
+                JSObject linking = new JSObject();
+                linking.put("on", false);
+                linking.put("kind", "spp");
+                linking.put("state", "linking");
+                linking.put("address", address);
+                notifyListeners("rfState", linking);
             }
 
-            /* Liveness watchdog: a "connected" RFCOMM socket that never
-               delivers a single byte within SILENT_MS is a dead/empty link
-               (the same SDP/encryption flake). Tear it down and tell the UI,
-               so it does not sit falsely connected — the user reconnects and
-               it usually succeeds on the next attempt. */
+            /* Probe: MSP v1 API_VERSION request. A real FC answers; a dead
+               RFCOMM link never does — that round-trip is our liveness test.
+               (If this write fails the read loop still verifies via the app's
+               own later MSP traffic, so a write error is not fatal.) */
+            try {
+                OutputStream out = socket.getOutputStream();
+                out.write(new byte[]{ '$', 'M', '<', 0x00, 0x01, 0x01 });   // '$M<' len=0 cmd=1 (API_VERSION) crc=len^cmd
+                out.flush();
+            } catch (IOException ignore) { /* read loop will surface failure */ }
+
             final AtomicBoolean sawData = new AtomicBoolean(false);
-            final long linkUpAt = System.currentTimeMillis();
-            final long SILENT_MS = 4000;
+            final AtomicBoolean resolved = new AtomicBoolean(false);
+            final long VERIFY_MS = 6000;
             final Handler watch = new Handler(Looper.getMainLooper());
             final Runnable watcher = () -> {
                 if (sppSocket != socket) return;               /* already torn down */
-                if (!sawData.get() && System.currentTimeMillis() - linkUpAt >= SILENT_MS) {
+                if (!sawData.get()) {
                     try { socket.close(); } catch (IOException ignore) {}
                     teardownSpp();
+                    if (!call.isReleased()) call.reject("SPP link silent (FC did not answer)");
                     JSObject s = new JSObject();
                     s.put("on", false);
-                    s.put("detail", "SPP link silent (no data)");
+                    s.put("detail", "SPP link silent (FC did not answer)");
                     notifyListeners("rfState", s);
                 }
             };
-            watch.postDelayed(watcher, SILENT_MS);
+            watch.postDelayed(watcher, VERIFY_MS);
 
             byte[] buf = new byte[1024];
             InputStream in;
             try { in = socket.getInputStream(); }
-            catch (IOException e) { watch.removeCallbacks(watcher); teardownSpp(); return; }
+            catch (IOException e) { watch.removeCallbacks(watcher); teardownSpp(); if (!call.isReleased()) call.reject("SPP link open failed: " + e.getMessage()); return; }
             while (sppSocket == socket) {
                 int n;
                 try { n = in.read(buf); }
                 catch (IOException e) { break; }
                 if (n <= 0) break;
-                sawData.set(true);
+                if (sawData.compareAndSet(false, true)) {
+                    watch.removeCallbacks(watcher);
+                    /* Real link: announce "connected" and surface the device ID
+                       (MAC) so the UI shows the unique serial, never the name. */
+                    JSObject s = new JSObject();
+                    s.put("on", true);
+                    s.put("kind", "spp");
+                    s.put("name", address);
+                    s.put("detail", address);
+                    notifyListeners("rfState", s);
+                    if (resolved.compareAndSet(false, true) && !call.isReleased()) {
+                        JSObject r = new JSObject();
+                        r.put("success", true);
+                        r.put("name", safeName(dev));
+                        r.put("address", address);
+                        call.resolve(r);
+                    }
+                }
                 emitData(buf, n);
             }
             watch.removeCallbacks(watcher);

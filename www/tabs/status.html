@@ -2158,7 +2158,7 @@ class StatusTab {
 
             connect({
                 success: () => {
-                    setSppStatus('connected', `Connected: ${device.name || device.address}`);
+                    setSppStatus('connected', `Connected: ${device.address}`);
                     if (disconnectBtn) disconnectBtn.disabled = false;
                     onResult(true);
                     // Subscribe to incoming data

@@ -661,11 +661,10 @@
 
         async btConnect(msg) {
             var r = await rfBle.connectSPP(msg.address);
-            if (r) {
-                setState({ on: true, kind: 'spp', name: msg.address, detail: msg.address });
-                try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'spp', address: msg.address, name: msg.address })); } catch (e) {}
-            }
-            return r || {};
+            if (!r) throw new Error('SPP connect failed');
+            setState({ on: true, kind: 'spp', name: msg.address, detail: msg.address });
+            try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'spp', address: msg.address, name: msg.address })); } catch (e) {}
+            return r;
         },
 
         async btDisconnect() {
