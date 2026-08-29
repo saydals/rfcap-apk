@@ -1620,6 +1620,47 @@ class StatusTab {
         this.serial.onStatusChange && this.serial.onStatusChange(true);
     }
 
+    /* ============================================================
+       CONNECTION PRIORITY SORTING
+       Sort every transport list so the most relevant device floats
+       to the top:
+         1) previously-connected device (this.lastConn)
+         2) devices with the most connection attempts (persisted count)
+         3) the original list order (fallback)
+       Applied to SPP / BLE / USB boxes.
+       ============================================================ */
+    _keyOf(dev) {
+        return dev.address || dev.deviceId || dev.id || dev.name || JSON.stringify(dev);
+    }
+
+    _loadConnCounts() {
+        try { return JSON.parse(localStorage.getItem('rfcap_conn_counts') || '{}'); }
+        catch (e) { return {}; }
+    }
+
+    _bumpConnCount(dev) {
+        const key = this._keyOf(dev);
+        const counts = this._loadConnCounts();
+        counts[key] = (counts[key] || 0) + 1;
+        try { localStorage.setItem('rfcap_conn_counts', JSON.stringify(counts)); } catch (e) {}
+    }
+
+    sortDevicesByPriority(type, list) {
+        const last = this.lastConn;
+        const counts = this._loadConnCounts();
+        const order = new Map();
+        list.forEach((d, i) => order.set(this._keyOf(d), i));
+        return list.slice().sort((a, b) => {
+            const ak = this._keyOf(a), bk = this._keyOf(b);
+            const aLast = (last && last.type === type && this._keyOf(last.device) === ak) ? 1 : 0;
+            const bLast = (last && last.type === type && this._keyOf(last.device) === bk) ? 1 : 0;
+            if (aLast !== bLast) return bLast - aLast;            // 1) previous connection
+            const ac = counts[ak] || 0, bc = counts[bk] || 0;
+            if (ac !== bc) return bc - ac;                        // 2) most connections
+            return (order.get(ak) || 0) - (order.get(bk) || 0);   // 3) original order
+        });
+    }
+
     /* Repaint the three transport boxes from current state: highlights the
        box that owns the live link and rebuilds the device lists so each
        per-device Connect/Disconnect button matches reality. */
@@ -2091,7 +2132,7 @@ class StatusTab {
             try {
                 const devices = await this.sppListPaired();
                 this.sppSetStatus('', `Found ${devices.length} device(s)`);
-                refreshSppList(devices);
+                refreshSppList(this.sortDevicesByPriority('spp', devices));
             } catch(e) {
                 this.sppSetStatus('', 'Scan failed: ' + e.message);
                 refreshSppList([]);
@@ -2134,6 +2175,7 @@ class StatusTab {
             this.sppConnected = true;
             this.serial.connected = true;
             this.lastConn = { type: 'spp', device: dev };
+            this._bumpConnCount(dev);
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.sppConnected = false;
@@ -2260,7 +2302,7 @@ class StatusTab {
             try {
                 const devices = await this.usbList();
                 this.usbSetStatus('', `Found ${devices.length} device(s)`);
-                refreshUsbList(devices);
+                refreshUsbList(this.sortDevicesByPriority('usb', devices));
             } catch (e) {
                 this.usbSetStatus('', 'USB scan failed: ' + e.message);
                 refreshUsbList([]);
@@ -2292,6 +2334,7 @@ class StatusTab {
             this.usbConnected = true;
             this.serial.connected = true;
             this.lastConn = { type: 'usb', device: dev };
+            this._bumpConnCount(dev);
             this.serial.send = (data) => new Promise((resolve, reject) => {
                 window.UsbSerial.write(data, () => resolve(), (e) => reject(new Error(e)));
             });
@@ -2426,7 +2469,7 @@ class StatusTab {
                     } else {
                         bleDevices.push(dev);
                     }
-                    refreshBleList(bleDevices);
+                    refreshBleList(this.sortDevicesByPriority('ble', bleDevices));
                 }, 8000);
             } catch(e) {
                 this.bleSetStatus('', 'Scan error: ' + e.message);
@@ -2505,6 +2548,7 @@ class StatusTab {
             this.bleConnected = true;
             this.serial.connected = true;
             this.lastConn = { type: 'ble', device: dev };
+            this._bumpConnCount(dev);
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.bleConnected = false;
