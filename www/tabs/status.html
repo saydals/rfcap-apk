@@ -1457,7 +1457,7 @@ class StatusTab {
         this.sppRefreshList = null;
         this.bleRefreshList = null;
         this.usbRefreshList = null;
-        this.lastConn = null;
+        this.lastConn = this._loadLastConn();
 
         this.init();
     }
@@ -1659,6 +1659,22 @@ class StatusTab {
             if (ac !== bc) return bc - ac;                        // 2) most connections
             return (order.get(ak) || 0) - (order.get(bk) || 0);   // 3) original order
         });
+    }
+
+    /* Persist the previously-connected device so priority 1 (직전 연결) keeps
+       working across app restarts. lastConn used to live only in memory, so a
+       fresh launch always fell back to the original list order. */
+    _loadLastConn() {
+        try {
+            const raw = localStorage.getItem('rfcap_last_conn');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+    }
+
+    _saveLastConn(type, dev) {
+        try {
+            localStorage.setItem('rfcap_last_conn', JSON.stringify({ type, device: dev }));
+        } catch (e) {}
     }
 
     /* Repaint the three transport boxes from current state: highlights the
@@ -2176,6 +2192,7 @@ class StatusTab {
             this.serial.connected = true;
             this.lastConn = { type: 'spp', device: dev };
             this._bumpConnCount(dev);
+            this._saveLastConn('spp', dev);
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.sppConnected = false;
@@ -2335,6 +2352,7 @@ class StatusTab {
             this.serial.connected = true;
             this.lastConn = { type: 'usb', device: dev };
             this._bumpConnCount(dev);
+            this._saveLastConn('usb', dev);
             this.serial.send = (data) => new Promise((resolve, reject) => {
                 window.UsbSerial.write(data, () => resolve(), (e) => reject(new Error(e)));
             });
@@ -2549,6 +2567,7 @@ class StatusTab {
             this.serial.connected = true;
             this.lastConn = { type: 'ble', device: dev };
             this._bumpConnCount(dev);
+            this._saveLastConn('ble', dev);
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.bleConnected = false;
