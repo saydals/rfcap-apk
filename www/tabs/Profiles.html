@@ -2672,7 +2672,7 @@ body {
                 return false;
             }
 
-            waitResponse(code, timeout = 5000) {
+            waitResponse(code, timeout = 10000) {
                 this.expectedCode = (code === undefined || code === null) ? null : code;
                 return new Promise((resolve, reject) => {
                     this.pendingResponse = resolve;
@@ -2689,9 +2689,11 @@ body {
             constructor(serialConnection) {
                 this.serial = serialConnection;
                 this.parser = new MSPParser();
-                this.queue = [];
+                this.queue = Promise.resolve();  /* MSP command queue (serialises sends) */
                 this.processing = false;
                 this.missingParams = new Set();
+                this.profile = 0;
+                this.rateProfile = 0;
                 this.data = {
                     PIDS: [
                         [10, 50, 0, 50, 0, 0],
@@ -2771,16 +2773,53 @@ body {
             }
 
             async sendCommand(codeOrMsg, payload = []) {
-                let msg;
-                if (codeOrMsg instanceof Uint8Array) {
-                    msg = codeOrMsg;
-                } else {
-                    msg = buildMSPMessage(codeOrMsg, payload);
-                }
-                await this.serial.send(msg);
-                const expectCode = (codeOrMsg instanceof Uint8Array) ? ((codeOrMsg.length > 4) ? codeOrMsg[4] : null) : codeOrMsg;
+                // Serialize all MSP commands through a single queue so that
+                // concurrent calls (e.g. from the 250ms status poll) never
+                // interleave their request/response pairs on the shared
+                // serial link. Without this, two near-simultaneous reads can
+                // produce spurious "MSP response timeout" failures.
+                const job = async () => {
+                    let msg;
+                    if (codeOrMsg instanceof Uint8Array) {
+                        msg = codeOrMsg;
+                    } else {
+                        msg = buildMSPMessage(codeOrMsg, payload);
+                    }
+                    const expectCode = (codeOrMsg instanceof Uint8Array) ? ((codeOrMsg.length > 4) ? codeOrMsg[4] : null) : codeOrMsg;
+                    await this.serial.send(msg);
                     const response = await this.parser.waitResponse(expectCode);
-                return response;
+                    return response;
+                };
+                const tail = this.queue.then(() => job(), () => job());
+                // Always keep the queue chain alive even if a job rejects.
+                this.queue = tail.catch(() => {});
+                return tail;
+            }
+
+            async readStatus() {
+                const resp = await this.sendCommand(101);
+                const p = resp.payload;
+                let i = 0;
+                const u8 = () => (i < p.length ? p[i++] : 0);
+                const u16 = () => { const lo = u8(); const hi = u8(); return (hi << 8) | lo; };
+                const u32 = () => { const a = u8(), b = u8(), c = u8(), d = u8(); return (d << 24) | (c << 16) | (b << 8) | a; };
+                u16(); // pidCycleTime
+                u16(); // gyroCycleTime
+                u16(); // activeSensors
+                u32(); // mode
+                u8();  // compat profile (legacy)
+                u16(); // rtLoadRaw
+                u16(); // cpuLoadRaw
+                const flagCount = u8();
+                for (let k = 0; k < flagCount; k++) u8();
+                u8();  // armingDisableCount
+                u32(); // armingDisableFlags
+                u8();  // extraFlags
+                u8();  // configurationState
+                this.profile = u8();   // active PID profile
+                u8();  // numProfiles
+                this.rateProfile = u8(); // active rate profile (for info; not used here)
+                u8();  // numRateProfiles
             }
 
             async readPID() {
@@ -3090,6 +3129,8 @@ body {
                 this.savedProfile = 0;
                 this.isChanged = false;
                 this.isDirty = false;
+                this._profileChangeToken = 0;   /* supersedes in-flight reloads */
+                this._lastLoadAlert = 0;        /* throttles user-facing error alert */
                 this.serial = new SerialConnection();
                 this.msp = new RealMSP(this.serial);
                 this.init();
@@ -3154,8 +3195,82 @@ body {
             }
 
             async onConnect() {
-                await this.detectActiveProfile();
+                // Quick path: read MSP_STATUS to learn the active PID profile
+                // directly from FC (no brute-force scan needed).
+                try {
+                    await this.msp.readStatus();
+                    this.currentProfile = this.msp.profile;
+                    this.savedProfile = this.currentProfile;
+                    this.setActiveProfileTab(this.currentProfile);
+                } catch (e) {
+                    // Fallback to brute-force detection if MSP_STATUS is unavailable
+                    await this.detectActiveProfile();
+                }
                 await this.loadDataFromFC();
+                this.startPolling();
+            }
+
+            setActiveProfileTab(index) {
+                this.currentProfile = index;
+                document.querySelectorAll('.tab-profiles .tab-container > div.tab').forEach((tab, i) => {
+                    tab.classList.toggle('active', i === index);
+                });
+            }
+
+            startPolling() {
+                this.stopPolling();
+                // Poll MSP_STATUS every 250ms so the UI follows the FC's
+                // active PID profile (changed via adjustment).
+                this.pollTimer = setInterval(async () => {
+                    try {
+                        await this.msp.readStatus();
+                        if (this.msp.profile !== this.currentProfile) {
+                            // Update the visible tab immediately so the user
+                            // gets instant feedback; queue the data reload
+                            // (which can take a while for 5 reads) behind
+                            // the live poll. The data load is token-checked
+                            // so a fresh profile change cancels any older
+                            // in-flight reload cleanly.
+                            this.setActiveProfileTab(this.msp.profile);
+                            this.savedProfile = this.msp.profile;
+                            this.reloadProfileData();
+                        }
+                    } catch (e) {
+                        // ignore transient errors
+                    }
+                }, 250);
+            }
+
+            stopPolling() {
+                if (this.pollTimer) {
+                    clearInterval(this.pollTimer);
+                    this.pollTimer = null;
+                }
+            }
+
+            /* Reload the 5 profile data fields (PIDs, PID profile, rescue,
+               governor profile, governor config) for the currently active
+               profile. Runs in the MSP command queue, so it is naturally
+               serialised with the live status poll - the poll never has
+               to be paused, and the user sees the tab switch instantly
+               while the data fills in behind it. A token guards against
+               supersession if the profile changes again before this run
+               finishes. */
+            async reloadProfileData() {
+                const myToken = ++this._profileChangeToken;
+                try {
+                    if (this.isChanged) {
+                        // If the user is mid-edit, don't clobber their
+                        // unsaved values - just refresh the active-tab
+                        // marker (already done) and leave the data alone.
+                        return;
+                    }
+                    await this.loadDataFromFC();
+                } catch (e) {
+                    if (myToken === this._profileChangeToken) {
+                        console.warn('Profile data reload failed:', e);
+                    }
+                }
             }
 
             profilesEqual(a, b) {
@@ -3208,8 +3323,13 @@ body {
                     await this.msp.readGovernorProfile();
                     await this.msp.readGovernorConfig();
                 } catch (e) {
-                    console.error('Failed to read from FC:', e);
-                    alert('Failed to read data from FC: ' + e.message);
+                    console.warn('Failed to read from FC:', e);
+                    // Throttled user-facing warning: only one alert per 5s.
+                    const now = Date.now();
+                    if (!this._lastLoadAlert || now - this._lastLoadAlert > 5000) {
+                        this._lastLoadAlert = now;
+                        alert('Failed to read data from FC: ' + e.message);
+                    }
                     return;
                 }
 
@@ -3404,9 +3524,11 @@ body {
             }
 
             async activateProfile(index) {
+                this.stopPolling();
                 try {
                     await this.msp.sendCommand(210, [index]);
                     this.currentProfile = index;
+                    this.savedProfile = index;
                     document.querySelectorAll('.tab-profiles .tab-container > div.tab').forEach((tab, i) => {
                         tab.classList.toggle('active', i === index);
                     });
@@ -3416,6 +3538,8 @@ body {
                     document.querySelector('.tab-profiles').classList.add('toolbar_hidden');
                 } catch (e) {
                     console.error('Profile switch failed:', e);
+                } finally {
+                    this.startPolling();
                 }
             }
 
@@ -3607,6 +3731,7 @@ body {
 
                 const savingDialog = document.querySelector('.dialogSaving');
                 savingDialog.showModal();
+                this.stopPolling();
                 try {
                     await this.msp.sendCommand(this.msp.buildSetPIDTuning());
                     await this.msp.sendCommand(this.msp.buildSetPIDProfile());
@@ -3619,6 +3744,7 @@ body {
                     console.error('Save failed:', e);
                     savingDialog.close();
                     alert('Failed to save profile: ' + e.message);
+                    this.startPolling();
                     return;
                 }
                 savingDialog.close();
