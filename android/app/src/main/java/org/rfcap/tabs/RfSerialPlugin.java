@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -304,21 +305,44 @@ public class RfSerialPlugin extends Plugin {
         catch (IllegalArgumentException e) { call.reject("bad address: " + address); return; }
 
         closeSppQuietly();                                     /* single transport rule */
-        android.bluetooth.BluetoothSocket sock;
-        try { sock = dev.createRfcommSocketToServiceRecord(SPP_UUID); }
-        catch (IOException e) { call.reject("socket create failed: " + e.getMessage()); return; }
+
+        /* Robust channel negotiation: insecure SDP -> secure SDP ->
+           reflection channel scan. Legacy FC BT modules (HC-05/06, HM-10 in
+           SPP mode) frequently fail the MITM/encryption handshake of the
+           *secure* variant, leaving an RFCOMM link that "connects" but never
+           carries a byte — exactly the "shows connected but isn't" symptom. */
+        final android.bluetooth.BluetoothSocket socket;
+        try {
+            socket = createSppSocket(dev);
+        } catch (IOException e) {
+            call.reject("SPP socket create failed: " + e.getMessage());
+            return;
+        }
 
         try { if (adapter.isDiscovering()) adapter.cancelDiscovery(); } catch (SecurityException ignore) {}
-        final android.bluetooth.BluetoothSocket socket = sock;
+
+        final AtomicBoolean connected = new AtomicBoolean(false);
+        /* connect() has no built-in timeout and can hang on a bad channel;
+           force it closed if it hasn't completed within CONNECT_TIMEOUT_MS. */
+        final long CONNECT_TIMEOUT_MS = 8000;
+        final Handler connectWatch = new Handler(Looper.getMainLooper());
+        final Runnable connectTimeout = () -> {
+            if (connected.get()) return;
+            try { socket.close(); } catch (IOException ignore) {}
+        };
+        connectWatch.postDelayed(connectTimeout, CONNECT_TIMEOUT_MS);
 
         sppThread = new Thread(() -> {
             try {
                 socket.connect();
+                connected.set(true);
             } catch (IOException e) {
+                connectWatch.removeCallbacks(connectTimeout);
                 try { socket.close(); } catch (IOException ignore) {}
                 if (!call.isReleased()) call.reject("SPP connect failed: " + e.getMessage());
                 return;
             }
+            connectWatch.removeCallbacks(connectTimeout);
             sppSocket = socket;
             if (!call.isReleased()) {
                 JSObject r = new JSObject();
@@ -326,17 +350,42 @@ public class RfSerialPlugin extends Plugin {
                 r.put("address", address);
                 call.resolve(r);
             }
+
+            /* Liveness watchdog: a "connected" RFCOMM socket that never
+               delivers a single byte within SILENT_MS is a dead/empty link
+               (the same SDP/encryption flake). Tear it down and tell the UI,
+               so it does not sit falsely connected — the user reconnects and
+               it usually succeeds on the next attempt. */
+            final AtomicBoolean sawData = new AtomicBoolean(false);
+            final long linkUpAt = System.currentTimeMillis();
+            final long SILENT_MS = 4000;
+            final Handler watch = new Handler(Looper.getMainLooper());
+            final Runnable watcher = () -> {
+                if (sppSocket != socket) return;               /* already torn down */
+                if (!sawData.get() && System.currentTimeMillis() - linkUpAt >= SILENT_MS) {
+                    try { socket.close(); } catch (IOException ignore) {}
+                    teardownSpp();
+                    JSObject s = new JSObject();
+                    s.put("on", false);
+                    s.put("detail", "SPP link silent (no data)");
+                    notifyListeners("rfState", s);
+                }
+            };
+            watch.postDelayed(watcher, SILENT_MS);
+
             byte[] buf = new byte[1024];
             InputStream in;
             try { in = socket.getInputStream(); }
-            catch (IOException e) { teardownSpp(); return; }
+            catch (IOException e) { watch.removeCallbacks(watcher); teardownSpp(); return; }
             while (sppSocket == socket) {
                 int n;
                 try { n = in.read(buf); }
                 catch (IOException e) { break; }
                 if (n <= 0) break;
+                sawData.set(true);
                 emitData(buf, n);
             }
+            watch.removeCallbacks(watcher);
             if (sppSocket == socket) {
                 teardownSpp();
                 JSObject s = new JSObject();
@@ -347,6 +396,35 @@ public class RfSerialPlugin extends Plugin {
         });
         sppThread.setName("rf-spp");
         sppThread.start();
+    }
+
+    /** Build an RFCOMM socket with the documented fallback chain.
+     *  @throws IOException if every strategy fails. */
+    private android.bluetooth.BluetoothSocket createSppSocket(BluetoothDevice dev) throws IOException {
+        try {
+            return dev.createInsecureRfcommSocketToServiceRecord(SPP_UUID);
+        } catch (IOException insecureFail) {
+            try {
+                return dev.createRfcommSocketToServiceRecord(SPP_UUID);
+            } catch (IOException secureFail) {
+                return createRfcommSocketByReflection(dev);
+            }
+        }
+    }
+
+    /** Last-resort: bypass SDP channel resolution entirely by opening a raw
+     *  RFCOMM socket on a guessed channel via reflection (the classic Android
+     *  workaround for SoCs whose SDP returns a wrong/stale channel). Channel 1
+     *  is the common default for SPP modules; we try a small spread. */
+    private android.bluetooth.BluetoothSocket createRfcommSocketByReflection(BluetoothDevice dev) throws IOException {
+        for (int channel : new int[]{1, 2, 3, 4, 5, 6, 7, 8}) {
+            try {
+                java.lang.reflect.Method m = dev.getClass().getMethod("createRfcommSocket", int.class);
+                android.bluetooth.BluetoothSocket s = (android.bluetooth.BluetoothSocket) m.invoke(dev, channel);
+                if (s != null) return s;
+            } catch (Exception ignore) { /* try next channel */ }
+        }
+        throw new IOException("could not create RFCOMM socket (SDP + reflection failed)");
     }
 
     @PluginMethod
