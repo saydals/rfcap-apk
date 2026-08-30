@@ -1027,6 +1027,12 @@
                 <div class="gui_box box-arming">
                     <div class="gui_box_titlebar">Arming</div>
 
+                    <div class="arm-danger-row" style="display:none; padding: 6px 10px;">
+                        <div class="note" style="margin:0; background:#fff3cd; border-color:#ffc107; color:#856404;">
+                            <p style="margin:0; font-size:11px;">⚠ Arming is enabled — motors will spin when throttle is raised.</p>
+                        </div>
+                    </div>
+
                     <div class="arm-enable-row">
                         <label for="arming-enable-toggle">Enable Arming</label>
                         <label class="toggle-switch">
@@ -1064,6 +1070,17 @@
         </div><!-- /tab-status -->
     </div><!-- /tab-content-container -->
 </div><!-- /main-wrapper -->
+
+<dialog class="dialogConfirmArming">
+    <h3>Enable Arming</h3>
+    <div class="content">
+        <div style="margin-top: 10px">Arming will enable the motors. Make sure the helicopter is secure and the area is clear.</div>
+    </div>
+    <div class="buttons">
+        <a href="#" class="dialog-confirm-arm-btn">Confirm</a>
+        <a href="#" class="dialog-cancel-arm-btn">Cancel</a>
+    </div>
+</dialog>
 
 <script>
 /* ============================================================
@@ -1257,7 +1274,8 @@ class StatusMSP {
         this.serial.onData = (bytes) => this.parser.feed(bytes);
         this.data = {
             CONFIG: {
-                armingDisableCount: 27
+                armingDisableCount: 27,
+                armingDisabled: false
             },
             STATUS: {
                 isArmed: false,
@@ -1759,25 +1777,68 @@ class StatusTab {
 
     /* ---- ARMING BOX ---- */
     bindArming() {
-        document.getElementById('arming-enable-toggle').addEventListener('change', async (e) => {
-            if (!this.serial.connected) { e.target.checked = false; return; }
-            // MSP_ARMING_DISABLE: code 99, payload [disableRunaway, disableArmingFlags]
-            // just toggle visual for now; actual arming via MSP_SET_ARM would be code 217
+        const toggle = document.getElementById('arming-enable-toggle');
+        const dialog = document.querySelector('.dialogConfirmArming');
+        const dangerRow = document.querySelector('.arm-danger-row');
+
+        const updateArming = async (enable) => {
+            if (!this.serial.connected) return;
+            const wantDisabled = !enable;
+            if (this.msp.data.CONFIG.armingDisabled === wantDisabled) return;
+
+            this.msp.data.CONFIG.armingDisabled = wantDisabled;
+            try {
+                await this.msp.send(99, [wantDisabled ? 1 : 0]);
+            } catch (e) {
+                this.msp.data.CONFIG.armingDisabled = !wantDisabled;
+                toggle.checked = enable;
+            }
+        };
+
+        toggle.addEventListener('change', async (e) => {
+            if (!this.serial.connected) {
+                toggle.checked = false;
+                return;
+            }
+            if (toggle.checked) {
+                dialog.showModal();
+            } else {
+                await updateArming(false);
+            }
+        });
+
+        dialog.querySelector('.dialog-confirm-arm-btn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            dialog.close();
+            await updateArming(true);
+        });
+
+        dialog.querySelector('.dialog-cancel-arm-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            dialog.close();
+            toggle.checked = false;
         });
     }
 
     updateArmingBox() {
         const st = this.msp.data.STATUS || {};
         const isArmed = st.isArmed || false;
+        const flags = st.armingDisableFlags || 0;
+        const armingEnabled = flags === 0;
+
         const toggle = document.getElementById('arming-enable-toggle');
-        toggle.checked = isArmed;
+        toggle.checked = !this.msp.data.CONFIG.armingDisabled;
+
+        const dangerRow = document.querySelector('.arm-danger-row');
+        if (dangerRow) dangerRow.style.display = armingEnabled ? '' : 'none';
+
+        const statusEl = document.getElementById('arm-overall-status');
+        if (statusEl) statusEl.style.display = isArmed ? '' : 'none';
 
         const container = document.getElementById('disarm-flags-container');
         container.innerHTML = '';
 
-        const flags = st.armingDisableFlags || 0;
         const count = st.armingDisableCount || 0;
-
         let anyActive = false;
         const numFlags = Math.max(count, DISARM_FLAGS.length);
         for (let i = 0; i < numFlags; i++) {
@@ -1800,7 +1861,10 @@ class StatusTab {
     }
 
     resetArmingBox() {
+        this.msp.data.CONFIG.armingDisabled = false;
         document.getElementById('arming-enable-toggle').checked = false;
+        const dangerRow = document.querySelector('.arm-danger-row');
+        if (dangerRow) dangerRow.style.display = 'none';
         const container = document.getElementById('disarm-flags-container');
         container.innerHTML = '<span style="color:var(--color-text-disabled);font-size:11px;">Disconnected</span>';
     }
