@@ -272,7 +272,9 @@
             if (pluginSerial) {
                 var self = this;
                 pluginSerial.addListener('rfData', function(event) {
-                    var data = self.hexStringToUint8Array(event && event.data);
+                    /* native now emits b64 only (the per-chunk hex copy was
+                       removed on the Java side - it was never consumed) */
+                    var data = base64ToUint8Array(event && event.b64);
                     self.bytesReceived += data.length;
                     self.dispatchEvent(new CustomEvent('receive', { detail: data }));
                 });
@@ -584,7 +586,7 @@
     if (rfBle) {
         rfBle.addEventListener('receive', function(ev) {
             var u8 = ev.detail;
-            broadcast({ t: 'd', b64: uint8ArrayToBase64(u8) });
+            broadcastData({ t: 'd', b64: uint8ArrayToBase64(u8) });
         });
         rfBle.addEventListener('disconnect', function() {
             setState({ on: false, kind: null, name: null, detail: 'link lost' });
@@ -597,7 +599,7 @@
     if (rfSerial) {
         rfSerial.addEventListener('receive', function(ev) {
             var u8 = ev.detail;
-            broadcast({ t: 'd', b64: uint8ArrayToBase64(u8) });
+            broadcastData({ t: 'd', b64: uint8ArrayToBase64(u8) });
         });
         rfSerial.addEventListener('disconnect', function() {
             setState({ on: false, kind: null, name: null, detail: 'link lost' });
@@ -609,6 +611,28 @@
 
     function safePost(port, msg) { try { port.postMessage(msg); } catch (e) {} }
     function broadcast(msg) { RF.children.forEach(function(_v, port) { safePost(port, msg); }); }
+
+    /* Raw MSP data only matters to the tab the user is looking at: the other
+       tabs' polls are deferred by bridge.js, so fanning every byte out to all
+       five iframes meant 5x postMessage + base64 decode work for nothing. */
+    function tabNameFromHref(href) {
+        if (!href) return null;
+        if (/status/i.test(href)) return 'status';
+        if (/mixer/i.test(href)) return 'mixer';
+        if (/servo/i.test(href)) return 'servos';
+        if (/rate/i.test(href)) return 'rates';
+        if (/profile/i.test(href)) return 'profiles';
+        return null;
+    }
+    function broadcastData(msg) {
+        var sent = false;
+        if (RF.activeTab) {
+            RF.children.forEach(function(href, port) {
+                if (tabNameFromHref(href) === RF.activeTab) { safePost(port, msg); sent = true; }
+            });
+        }
+        if (!sent) broadcast(msg);   /* fallback: unmatched tabs still get data */
+    }
 
     function b64ToU8(b64) {
         var bin = atob(b64);

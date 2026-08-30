@@ -4129,7 +4129,13 @@ async activateProfile(index) {
                        context must not be dropped) but freeze the motion
                        instead of spinning on a stale setpoint. */
                     const bridge = window.__RF_BRIDGE__;
-                    if (bridge && bridge.active === false) dt = 0;
+                    const inactive = (bridge && bridge.active === false) || document.hidden;
+                    if (inactive) dt = 0;
+                    /* GPU relief: in the background paint at ~5fps instead of
+                       60fps - keeps the context alive without starving the
+                       active tab's canvas. */
+                    if (inactive && (now - (this._heliLastPaint || 0)) < 200) return;
+                    this._heliLastPaint = now;
                     renderer.setClearColor(this.getBgColors().bg, 1);
                     this.stepHeliRotation(dt);
                     renderer.render(scene, camera);

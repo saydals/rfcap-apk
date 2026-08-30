@@ -644,8 +644,9 @@ public class RfSerialPlugin extends Plugin {
                 if (n > 0) {
                     final byte[] chunk = Arrays.copyOfRange(buf, 0, n);
                     JSObject o = new JSObject();
+                    /* b64 only - the hub decodes this directly. The old extra
+                       hex copy was pure per-chunk waste (nobody consumed it). */
                     o.put("b64", Base64.encodeToString(chunk, 0, n, Base64.NO_WRAP));
-                    o.put("data", bytesToHex(chunk));
                     notifyListeners("rfData", o);
                 }
             }
@@ -660,6 +661,13 @@ public class RfSerialPlugin extends Plugin {
         usbThread.setName("rf-usb");
         usbThread.start();
     }
+
+    /* Serial I/O must never run on the UI thread: usb-serial-for-android's
+       write() blocks (up to its timeout) on the bulk transfer, and a blocked
+       UI thread freezes the whole WebView. Same threading model as the
+       working Cordova configurator (cordova.getThreadPool()). */
+    private final java.util.concurrent.ExecutorService ioExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
 
     @PluginMethod
     public void usbWrite(final PluginCall call) {
@@ -676,14 +684,16 @@ public class RfSerialPlugin extends Plugin {
         }
         final UsbSerialPort p = usbPort;
         if (p == null) { call.reject("USB not connected"); return; }
-        try {
-            p.write(data, 1000);
-            JSObject r = new JSObject();
-            r.put("bytesSent", data.length);
-            call.resolve(r);
-        } catch (Exception e) {
-            call.reject("USB write failed: " + e.getMessage());
-        }
+        ioExecutor.execute(() -> {
+            try {
+                p.write(data, 1000);
+                JSObject r = new JSObject();
+                r.put("bytesSent", data.length);
+                call.resolve(r);
+            } catch (Exception e) {
+                call.reject("USB write failed: " + e.getMessage());
+            }
+        });
     }
 
     @PluginMethod

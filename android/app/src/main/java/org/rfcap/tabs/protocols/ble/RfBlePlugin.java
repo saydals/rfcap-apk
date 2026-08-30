@@ -71,6 +71,12 @@ public class RfBlePlugin extends Plugin {
 	private static final long SCAN_DURATION_MS = 2_000L;
 	private static final long FALLBACK_SCAN_DURATION_MS = 3_000L;
 
+	/* Blocking socket I/O (RFCOMM connect/write) must run off the UI thread:
+	   Capacitor executes @PluginMethod on the main thread, and a blocked main
+	   thread freezes the entire WebView. Single thread = writes stay ordered. */
+	private final java.util.concurrent.ExecutorService ioExecutor =
+			java.util.concurrent.Executors.newSingleThreadExecutor();
+
 	private static final String SERVICE_CC2541 = "0000ffe0-0000-1000-8000-00805f9b34fb";
 	private static final String WRITE_CC2541 = "0000ffe1-0000-1000-8000-00805f9b34fb";
 	private static final String NOTIFY_CC2541 = "0000ffe2-0000-1000-8000-00805f9b34fb";
@@ -233,27 +239,35 @@ public class RfBlePlugin extends Plugin {
 			return;
 		}
 
-		try {
-			BluetoothDevice device = btAdapter.getRemoteDevice(address);
-			java.util.UUID sppUuid = java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+		/* socket.connect() blocks for seconds - run it off the UI thread so
+		   the WebView keeps rendering during (re)connection. */
+		final BluetoothAdapter adapterRef = btAdapter;
+		final String addr = address;
+		ioExecutor.execute(() -> {
+			BluetoothSocket socket = null;
+			try {
+				BluetoothDevice device = adapterRef.getRemoteDevice(addr);
+				java.util.UUID sppUuid = java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
-			BluetoothSocket socket = device.createInsecureRfcommSocketToServiceRecord(sppUuid);
-			btAdapter.cancelDiscovery();
+				socket = device.createInsecureRfcommSocketToServiceRecord(sppUuid);
+				try { adapterRef.cancelDiscovery(); } catch (Exception ignored) {}
 
-			Log.i(TAG, "SPP: connecting to " + address);
-			socket.connect();
+				Log.i(TAG, "SPP: connecting to " + addr);
+				socket.connect();
 
-			sppSocket = socket;
-			startSppReader(socket);
+				sppSocket = socket;
+				startSppReader(socket);
 
-			Log.i(TAG, "SPP: connected to " + address);
-			JSObject result = new JSObject();
-			result.put("success", true);
-			call.resolve(result);
-		} catch (Exception e) {
-			Log.e(TAG, "SPP connect error: " + e.getMessage(), e);
-			call.reject("SPP connect error: " + e.getMessage());
-		}
+				Log.i(TAG, "SPP: connected to " + addr);
+				JSObject result = new JSObject();
+				result.put("success", true);
+				call.resolve(result);
+			} catch (Exception e) {
+				Log.e(TAG, "SPP connect error: " + e.getMessage(), e);
+				if (socket != null) { try { socket.close(); } catch (Exception ignored) {} }
+				call.reject("SPP connect error: " + e.getMessage());
+			}
+		});
 	}
 
 	private void startSppReader(BluetoothSocket socket) {
@@ -305,12 +319,22 @@ public class RfBlePlugin extends Plugin {
 		}
 
 		try {
-			byte[] bytes = android.util.Base64.decode(data, android.util.Base64.DEFAULT);
-			sppSocket.getOutputStream().write(bytes);
-			sppSocket.getOutputStream().flush();
-			JSObject result = new JSObject();
-			result.put("bytesSent", bytes.length);
-			call.resolve(result);
+			final byte[] bytes = android.util.Base64.decode(data, android.util.Base64.DEFAULT);
+			final BluetoothSocket sock = sppSocket;
+			/* RFCOMM OutputStream.write() blocks on flow control - keep it off
+			   the UI thread. Single executor thread preserves TX ordering. */
+			ioExecutor.execute(() -> {
+				try {
+					sock.getOutputStream().write(bytes);
+					sock.getOutputStream().flush();
+					JSObject result = new JSObject();
+					result.put("bytesSent", bytes.length);
+					call.resolve(result);
+				} catch (Exception e) {
+					Log.e(TAG, "SPP send error", e);
+					call.reject("SPP send error: " + e.getMessage());
+				}
+			});
 		} catch (Exception e) {
 			Log.e(TAG, "SPP send error", e);
 			call.reject("SPP send error: " + e.getMessage());

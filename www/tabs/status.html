@@ -1272,6 +1272,7 @@ class StatusMSP {
         this.serial = serial;
         this.parser = new MSPParser();
         this.serial.onData = (bytes) => this.parser.feed(bytes);
+        this.queue = Promise.resolve();  /* serialises all MSP commands */
         this.data = {
             CONFIG: {
                 armingDisableCount: 27,
@@ -1289,8 +1290,18 @@ class StatusMSP {
     }
 
     async send(code, payload = []) {
-        await this.serial.send(buildMSPMessage(code, payload));
-        return await this.parser.waitResponse(code);
+        /* Serialize all MSP commands through a single queue. The status poll
+           fires every 100ms with 3 commands; without the queue, slow links
+           make cycles overlap, waitResponse() callbacks overwrite each other
+           (single slot per code) and updates stall until the 3s timeout.
+           Same pattern as the Rates/Profiles tabs. */
+        const job = async () => {
+            await this.serial.send(buildMSPMessage(code, payload));
+            return await this.parser.waitResponse(code);
+        };
+        const tail = this.queue.then(() => job(), () => job());
+        this.queue = tail.catch(() => {});
+        return tail;
     }
 
     async readAPIVersion() {
@@ -2111,8 +2122,18 @@ class StatusTab {
             applyFixedCamera();
 
             // Animate
-            const animate = () => {
+            let lastPaintTs = 0;
+            const animate = (ts) => {
                 this.heliAnimId = requestAnimationFrame(animate);
+                /* GPU relief: while this tab is in the background (another tab
+                   active or page hidden) paint at ~5fps instead of 60fps. The
+                   WebGL context stays alive, but it no longer fights the
+                   active tab's canvas for GPU time. */
+                const now = (typeof ts === 'number') ? ts : performance.now();
+                const bridge = window.__RF_BRIDGE__;
+                const inactive = (bridge && bridge.active === false) || document.hidden;
+                if (inactive && (now - lastPaintTs) < 200) return;
+                lastPaintTs = now;
                 const bg = this.getBgColors();
                 renderer.setClearColor(bg.bg, 1);
                 renderer.render(scene, camera);
