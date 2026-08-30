@@ -81,6 +81,12 @@ public class RfBlePlugin extends Plugin {
 	private static final String WRITE_CC2541 = "0000ffe1-0000-1000-8000-00805f9b34fb";
 	private static final String NOTIFY_CC2541 = "0000ffe2-0000-1000-8000-00805f9b34fb";
 
+	// BT04 (HM-10 clone): same Service 0xFFE0 but reversed char roles
+	// FFE1 = Notify (module -> app, RX), FFE2 = Write (app -> module, TX)
+	private static final String SERVICE_BT04   = "0000ffe0-0000-1000-8000-00805f9b34fb";
+	private static final String WRITE_BT04     = "0000ffe2-0000-1000-8000-00805f9b34fb";
+	private static final String NOTIFY_BT04    = "0000ffe1-0000-1000-8000-00805f9b34fb";
+
 	private static final String SERVICE_HC05 = "00001101-0000-1000-8000-00805f9b34fb";
 	private static final String WRITE_HC05 = "00001101-0000-1000-8000-00805f9b34fb";
 	private static final String NOTIFY_HC05 = "00001101-0000-1000-8000-00805f9b34fb";
@@ -117,6 +123,7 @@ public class RfBlePlugin extends Plugin {
 
 	static {
 		addDevice("CC2541", SERVICE_CC2541, WRITE_CC2541, NOTIFY_CC2541);
+		addDevice("BT04", SERVICE_BT04, WRITE_BT04, NOTIFY_BT04);
 		addDevice("HC-05", SERVICE_HC05, WRITE_HC05, NOTIFY_HC05);
 		addDevice("HM-10", SERVICE_HM10, WRITE_HM10, NOTIFY_HM10);
 		addDevice("HM-11", SERVICE_NORDIC_NUS, NOTIFY_NORDIC_NUS, WRITE_NORDIC_NUS);
