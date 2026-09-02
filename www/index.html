@@ -6,7 +6,7 @@
 <title>RFCap - Rotorflight Configurator</title>
 <script src="./hub.js?v=119"></script>
 <style>
-    :root { --hdr-h:56px; --nav-h:54px; }
+    :root { --hdr-h:30px; --nav-h:54px; }
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html[data-theme="light"] {
         --bg:#e6e8ec; --surface:#f5f6f8; --text:#1a1c20; --soft:#5a6070;
@@ -21,32 +21,35 @@
         font-family:"Open Sans","Segoe UI",Tahoma,sans-serif; font-size:13px;
         background:var(--bg); color:var(--text);
         display:flex; flex-direction:column;
+        padding-top:env(safe-area-inset-top);
     }
     /* ---------- common header ---------- */
     #app-header {
         height:var(--hdr-h); flex:0 0 auto;
-        display:flex; align-items:center; gap:10px;
-        padding:0 12px; padding-top:env(safe-area-inset-top);
+        display:flex; align-items:center; gap:6px;
+        padding:0 8px;
         background:var(--surface); border-bottom:1px solid var(--border);
         box-shadow:0 2px 6px rgba(0,0,0,.14);
         z-index:10;
     }
-    #app-ver { font-size:9px; color:var(--soft); opacity:.7; white-space:nowrap; }
-    #app-logo { font-weight:bold; font-size:19px; letter-spacing:.5px; color:var(--accent); white-space:nowrap; }
+    @media (orientation: portrait) {
+        #app-header { height:calc(var(--hdr-h) + env(safe-area-inset-top, 24px)); }
+    }
+    #app-logo { font-weight:bold; font-size:20px; line-height:1; letter-spacing:.3px; color:var(--accent); white-space:nowrap; }
     #conn-chip {
         display:flex; align-items:center; gap:6px;
         background:var(--chip); border:1px solid var(--border);
-        border-radius:14px; padding:3px 10px; min-width:0;
+        border-radius:15px; padding:4px 10px; min-width:0;
     }
     #conn-dot { width:9px; height:9px; border-radius:50%; background:#999; flex:0 0 auto; transition:background .2s; }
     #conn-dot.on-spp, #conn-dot.on-ble { background:var(--ok); box-shadow:0 0 6px var(--ok); }
-    #conn-text { font-size:11px; color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46vw; }
-    #disc-btn {
-        border:1px solid var(--border); background:transparent; color:var(--text);
-        font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer;
+    #conn-text { font-size:13px; color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46vw; }
+    #exit-btn {
+        margin-left:auto; background:transparent; border:none; cursor:pointer;
+        padding:0; display:flex; align-items:center; justify-content:center;
     }
-    #disc-btn:disabled { opacity:.35; }
-    #theme-btn { margin-left:auto; margin-right:8px; background:transparent; border:none; font-size:16px; cursor:pointer; color:var(--text); padding:4px 8px; }
+    #exit-btn img { width:20px; height:20px; display:block; }
+    #theme-btn { background:transparent; border:none; font-size:20px; cursor:pointer; color:var(--text); padding:2px 6px; }
     /* ---------- tab area ---------- */
     #tab-area { flex:1 1 auto; position:relative; min-height:0; }
     /* All tabs stay mounted & sized (visibility toggle, NOT display:none)
@@ -87,12 +90,11 @@
 <body>
     <header id="app-header">
         <span id="app-logo">RFCap</span>
-        <span id="app-ver">v1.0.6</span>
         <div id="conn-chip" title="Connection state (shared across all tabs)">
             <span id="conn-dot"></span>
             <span id="conn-text">Disconnected</span>
         </div>
-        <button id="disc-btn" disabled>Disconnect</button>
+        <button id="exit-btn" title="Exit"><img src="./icons/exit.svg" alt="Exit"></button>
         <button id="theme-btn" title="Toggle theme">&#127769;</button>
     </header>
 

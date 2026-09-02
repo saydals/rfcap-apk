@@ -1130,5 +1130,13 @@ public class RfSerialPlugin extends Plugin {
         try { bleStopScan(null); } catch (Exception ignore) {}
         super.handleOnDestroy();
     }
+
+    @PluginMethod
+    public void exitApp(final PluginCall call) {
+        if (getActivity() != null) {
+            getActivity().finishAndRemoveTask();
+        }
+        if (call != null) call.resolve();
+    }
 }
 

@@ -772,6 +772,13 @@
             return {};
         },
 
+        async exitApp() {
+            if (pluginSerial && typeof pluginSerial.exitApp === 'function') {
+                try { await pluginSerial.exitApp(); } catch (e) { console.warn('[HUB] exitApp failed:', e); }
+            }
+            return {};
+        },
+
         async gotoTab(msg) {
             if (RF.gotoTab) { try { RF.gotoTab(msg.v || 'status'); } catch (e) {} }
             return {};

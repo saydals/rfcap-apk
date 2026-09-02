@@ -44,29 +44,31 @@
     /* ---------- header connection rendering ---------- */
     const dot = document.getElementById('conn-dot');
     const text = document.getElementById('conn-text');
-    const discBtn = document.getElementById('disc-btn');
+    const exitBtn = document.getElementById('exit-btn');
     function render(st) {
         dot.classList.remove('on-spp', 'on-ble');
         if (!st.on) {
             text.textContent = st.detail ? ('Lost: ' + st.detail) : 'Disconnected';
-            discBtn.disabled = true;
             return;
         }
         if (st.kind === 'spp') { dot.classList.add('on-spp'); text.textContent = '\uD83D\uDCE1 SPP \u00B7 ' + (st.name || ''); }
         else if (st.kind === 'ble') { dot.classList.add('on-ble'); text.textContent = '\uD83D\uDCF6 BLE \u00B7 ' + (st.name || ''); }
         else { text.textContent = 'Connected'; }
-        discBtn.disabled = false;
     }
-    // fix class reset (keep base id styling)
     render(window.RFHub.state());
     window.RFHub.setRenderer(render);
 
-    discBtn.addEventListener('click', async () => {
+    exitBtn.addEventListener('click', async () => {
         const st = window.RFHub.state();
         try {
             if (st.kind === 'spp') await window.RFHub.api.btDisconnect();
             else if (st.kind === 'ble') await window.RFHub.api.bleDisconnect();
+            else if (st.kind === 'usb') await window.RFHub.api.usbDisconnect();
         } catch (e) { console.warn(e); }
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App && window.Capacitor.Plugins.App.exitApp) {
+            try { await window.Capacitor.Plugins.App.exitApp(); return; } catch (e) { console.warn(e); }
+        }
+        try { await window.RFHub.api.exitApp(); } catch (e) { console.warn(e); }
     });
 
     /* ---------- browser dev hint (no native plugin) ---------- */
