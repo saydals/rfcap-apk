@@ -152,21 +152,8 @@
             --color-collective-soft: #ffbb33;
         }
 
-        /* axis color scoping compatibility */
-        html[data-theme="light"] .tab-rates .dynamics-section,
-        html[data-theme="light"] .tab-profiles .dynamics-section {
-            --color-roll: var(--color-roll-soft);
-            --color-pitch: var(--color-pitch-soft);
-            --color-yaw: var(--color-yaw-soft);
-            --color-collective: var(--color-collective-soft);
-        }
-        html[data-theme="dark"] .tab-rates .dynamics-section,
-        html[data-theme="dark"] .tab-profiles .dynamics-section {
-            --color-roll: var(--color-roll);
-            --color-pitch: var(--color-pitch);
-            --color-yaw: var(--color-yaw);
-            --color-collective: var(--color-collective);
-        }
+        /* axis color scoping compatibility - intentionally identical to Rates
+           so both tabs share one color system. Do NOT re-scope to soft variants. */
 
 body {
             height: 100%;
@@ -176,94 +163,6 @@ body {
             font-size: 12px;
             color: var(--color-text);
             background-color: var(--color-surface);
-        }
-
-        html[data-theme="light"] {
-            --color-neutral-50: hsl(220, 5%, 98%);
-            --color-neutral-100: hsl(220, 5%, 97%);
-            --color-neutral-200: hsl(220, 5%, 92%);
-            --color-neutral-300: hsl(220, 5%, 85%);
-            --color-neutral-400: hsl(220, 5%, 70%);
-            --color-neutral-500: hsl(220, 5%, 50%);
-            --color-neutral-600: hsl(220, 5%, 30%);
-            --color-neutral-700: hsl(220, 5%, 15%);
-            --color-neutral-800: hsl(220, 5%, 8%);
-            --color-neutral-900: hsl(220, 5%, 3%);
-            --color-neutral-950: hsl(220, 5%, 2%);
-            --color-bg: var(--color-neutral-200);
-            --color-surface: var(--color-neutral-100);
-            --color-surface-alt: var(--color-neutral-600);
-            --color-surface-float: var(--color-neutral-50);
-            --color-hover: var(--color-neutral-200);
-            --color-border: var(--color-neutral-400);
-            --color-border-soft: var(--color-neutral-300);
-            --color-border-accent: hsl(202, 100%, 50%);
-            --color-text: var(--color-neutral-900);
-            --color-text-alt: var(--color-neutral-100);
-            --color-text-soft: var(--color-neutral-700);
-            --color-text-disabled: var(--color-neutral-500);
-            --color-input-bg: var(--color-neutral-50);
-            --color-input-bg-disabled: var(--color-neutral-200);
-            --color-input-bg-hover: var(--color-neutral-200);
-            --color-input-bg-active: var(--color-neutral-300);
-            --color-btn-fg: var(--color-neutral-800);
-            --color-btn-fg-disabled: var(--color-neutral-500);
-            --color-btn-bg: var(--color-neutral-300);
-            --color-btn-bg-hover: var(--color-neutral-400);
-            --color-btn-bg-active: var(--color-neutral-500);
-            --color-btn-bg-disabled: var(--color-neutral-200);
-            --color-switch: hsl(202, 100%, 50%);
-            --color-switch-handle: var(--color-neutral-50);
-            --color-roll: hsl(2, 62%, 60%);
-            --color-pitch: hsl(122, 62%, 60%);
-            --color-yaw: hsl(242, 62%, 60%);
-            --accent: hsl(202, 100%, 50%);
-            --subtleAccent: var(--color-neutral-400);
-            --superSubtleAccent: var(--color-neutral-300);
-        }
-
-        html[data-theme="dark"] {
-            --color-neutral-950: hsl(248, 5%, 5%);
-            --color-neutral-900: hsl(248, 5%, 10%);
-            --color-neutral-800: hsl(248, 5%, 20%);
-            --color-neutral-700: hsl(248, 5%, 30%);
-            --color-neutral-600: hsl(248, 5%, 40%);
-            --color-neutral-500: hsl(248, 5%, 50%);
-            --color-neutral-400: hsl(248, 5%, 60%);
-            --color-neutral-300: hsl(248, 5%, 70%);
-            --color-neutral-200: hsl(248, 5%, 80%);
-            --color-neutral-100: hsl(248, 5%, 90%);
-            --color-neutral-50: hsl(248, 5%, 95%);
-            --color-bg: var(--color-neutral-950);
-            --color-surface: var(--color-neutral-900);
-            --color-surface-alt: var(--color-neutral-800);
-            --color-surface-float: var(--color-neutral-800);
-            --color-hover: var(--color-neutral-800);
-            --color-border: var(--color-neutral-700);
-            --color-border-soft: var(--color-neutral-700);
-            --color-border-accent: hsl(202, 40%, 40%);
-            --color-text: var(--color-neutral-50);
-            --color-text-alt: var(--color-neutral-100);
-            --color-text-soft: var(--color-neutral-100);
-            --color-text-disabled: var(--color-neutral-300);
-            --color-input-bg: var(--color-neutral-800);
-            --color-input-bg-disabled: var(--color-neutral-700);
-            --color-input-bg-hover: var(--color-neutral-700);
-            --color-input-bg-active: var(--color-neutral-600);
-            --color-btn-fg: var(--color-neutral-900);
-            --color-btn-fg-disabled: var(--color-neutral-700);
-            --color-btn-bg: var(--color-neutral-200);
-            --color-btn-bg-hover: var(--color-neutral-400);
-            --color-btn-bg-active: var(--color-neutral-500);
-            --color-btn-bg-disabled: var(--color-neutral-400);
-            --color-switch: hsl(202, 40%, 40%);
-            --color-switch-handle: var(--color-neutral-100);
-            --color-roll: hsl(2, 48%, 45%);
-            --color-pitch: hsl(122, 48%, 40%);
-            --color-yaw: hsl(242, 48%, 55%);
-            --accent: hsl(202, 40%, 40%);
-            --subtleAccent: var(--color-neutral-700);
-            --superSubtleAccent: var(--color-neutral-700);
         }
 
         body {
@@ -601,26 +500,45 @@ body {
 
         .tab-profiles .pid_table tr.pid_titlebar th {
             text-align: left;
-            font-size: 11px;
-            font-weight: normal;
+            /* 12px = inherited body font-size, matching Rates box axis_title size 1:1 */
+            font-size: 12px;
+            font-weight: 600;
             line-height: 16px;
             height: 22px;
             padding: 0 4px;
+            /* Square, full-bleed chips: mirrors the Rates box axis_title cells
+               (collapsed table borders render square corners without extra radius). */
+            border-radius: 0;
+            /* Column dividing line - matches Rates box td border style */
+            border-bottom: 1px solid #AAAAAA;
+            /* Vertical separator between columns */
+            border-right: 1px solid #AAAAAA;
         }
-
-        html[data-theme="light"] .tab-profiles .pid_table tr.pid_titlebar th {
-            background-color: #D0D0D0;
-            color: #333333;
+        .tab-profiles .ROLL .axis_title {
+            /* Same axis color as Rates box --color-roll in light mode */
+            background-color: var(--color-roll);
+            color: #fff;
+            font-weight: 600;
         }
-
-        html[data-theme="dark"] .tab-profiles .pid_table tr.pid_titlebar th {
-            color: #DDDDDD;
-            background-color: #444444;
+        .tab-profiles .PITCH .axis_title {
+            /* Same axis color as Rates box --color-pitch in light mode */
+            background-color: var(--color-pitch);
+            color: #fff;
+            font-weight: 600;
         }
-
-        .tab-profiles .pid_table td.pid_data {
-            padding-left: 3px;
-            padding-right: 3px;
+        .tab-profiles .YAW .axis_title {
+            /* Same axis color as Rates box --color-yaw in light mode */
+            background-color: var(--color-yaw);
+            color: #fff;
+            font-weight: 600;
+        }
+        /* Row tints - vertical counterpart of Rates box tinted axis rows */
+        .tab-profiles .pid_table tr.ROLL         { background-color: rgba(232, 93, 93, 0.18); }
+        .tab-profiles .pid_table tr.PITCH        { background-color: rgba(93, 207, 93, 0.18); }
+        .tab-profiles .pid_table tr.YAW          { background-color: rgba(107, 107, 255, 0.18); }
+        /* td has no extra border - reads as one vertical tinted band like Rates box */
+        .tab-profiles .pid_table td {
+            /* border-bottom already set on th; td stays as vertical tint band only */
         }
 
         .tab-profiles .settings_table tr {
@@ -710,18 +628,6 @@ body {
 
         .tab-profiles .settings_table .suboption label {
             margin-left: 5px;
-        }
-
-        .tab-profiles .ROLL .axis_title {
-            background-color: #FF8080;
-        }
-
-        .tab-profiles .PITCH .axis_title {
-            background-color: #80FF80;
-        }
-
-        .tab-profiles .YAW .axis_title {
-            background-color: #8080FF;
         }
 
         .tab-profiles .spacer_left {
@@ -940,116 +846,6 @@ body {
             .tab-profiles .spacer_left {
                 width: 100%;
             }
-        }
-    
-body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
-            font-size: 12px;
-            color: var(--color-text);
-            background-color: var(--color-surface);
-        }
-
-        html[data-theme="light"] {
-            --color-neutral-50: hsl(220, 5%, 98%);
-            --color-neutral-100: hsl(220, 5%, 97%);
-            --color-neutral-200: hsl(220, 5%, 92%);
-            --color-neutral-300: hsl(220, 5%, 85%);
-            --color-neutral-400: hsl(220, 5%, 70%);
-            --color-neutral-500: hsl(220, 5%, 50%);
-            --color-neutral-600: hsl(220, 5%, 30%);
-            --color-neutral-700: hsl(220, 5%, 15%);
-            --color-neutral-800: hsl(220, 5%, 8%);
-            --color-neutral-900: hsl(220, 5%, 3%);
-            --color-neutral-950: hsl(220, 5%, 2%);
-            --color-bg: var(--color-neutral-200);
-            --color-surface: var(--color-neutral-100);
-            --color-surface-alt: var(--color-neutral-600);
-            --color-surface-float: var(--color-neutral-50);
-            --color-hover: var(--color-neutral-200);
-            --color-border: var(--color-neutral-400);
-            --color-border-soft: var(--color-neutral-300);
-            --color-border-accent: hsl(202, 100%, 50%);
-            --color-text: var(--color-neutral-900);
-            --color-text-alt: var(--color-neutral-100);
-            --color-text-soft: var(--color-neutral-700);
-            --color-text-disabled: var(--color-neutral-500);
-            --color-input-bg: var(--color-neutral-50);
-            --color-input-bg-disabled: var(--color-neutral-200);
-            --color-input-bg-hover: var(--color-neutral-200);
-            --color-input-bg-active: var(--color-neutral-300);
-            --color-btn-fg: var(--color-neutral-800);
-            --color-btn-fg-disabled: var(--color-neutral-500);
-            --color-btn-bg: var(--color-neutral-300);
-            --color-btn-bg-hover: var(--color-neutral-400);
-            --color-btn-bg-active: var(--color-neutral-500);
-            --color-btn-bg-disabled: var(--color-neutral-200);
-            --color-switch: hsl(202, 100%, 50%);
-            --color-switch-handle: var(--color-neutral-50);
-            --accent: hsl(202, 100%, 50%);
-            --subtleAccent: var(--color-neutral-400);
-            --superSubtleAccent: var(--color-neutral-300);
-            --quietHeader: #555555;
-            --quietText: #ffffff;
-        }
-
-        html[data-theme="light"] .tab-rates .dynamics-section {
-            --color-roll: #ff8080;
-            --color-pitch: #80ff80;
-            --color-yaw: #8080ff;
-            --color-collective: #ffbb00;
-        }
-
-        html[data-theme="dark"] {
-            --color-neutral-950: hsl(248, 5%, 5%);
-            --color-neutral-900: hsl(248, 5%, 10%);
-            --color-neutral-800: hsl(248, 5%, 20%);
-            --color-neutral-700: hsl(248, 5%, 30%);
-            --color-neutral-600: hsl(248, 5%, 40%);
-            --color-neutral-500: hsl(248, 5%, 50%);
-            --color-neutral-400: hsl(248, 5%, 60%);
-            --color-neutral-300: hsl(248, 5%, 70%);
-            --color-neutral-200: hsl(248, 5%, 80%);
-            --color-neutral-100: hsl(248, 5%, 90%);
-            --color-neutral-50: hsl(248, 5%, 95%);
-            --color-bg: var(--color-neutral-950);
-            --color-surface: var(--color-neutral-900);
-            --color-surface-alt: var(--color-neutral-800);
-            --color-surface-float: var(--color-neutral-800);
-            --color-hover: var(--color-neutral-800);
-            --color-border: var(--color-neutral-700);
-            --color-border-soft: var(--color-neutral-700);
-            --color-border-accent: hsl(202, 40%, 40%);
-            --color-text: var(--color-neutral-50);
-            --color-text-alt: var(--color-neutral-100);
-            --color-text-soft: var(--color-neutral-100);
-            --color-text-disabled: var(--color-neutral-300);
-            --color-input-bg: var(--color-neutral-800);
-            --color-input-bg-disabled: var(--color-neutral-700);
-            --color-input-bg-hover: var(--color-neutral-700);
-            --color-input-bg-active: var(--color-neutral-600);
-            --color-btn-fg: var(--color-neutral-900);
-            --color-btn-fg-disabled: var(--color-neutral-700);
-            --color-btn-bg: var(--color-neutral-200);
-            --color-btn-bg-hover: var(--color-neutral-400);
-            --color-btn-bg-active: var(--color-neutral-500);
-            --color-btn-bg-disabled: var(--color-neutral-400);
-            --color-switch: hsl(202, 40%, 40%);
-            --color-switch-handle: var(--color-neutral-100);
-            --accent: hsl(202, 40%, 40%);
-            --subtleAccent: var(--color-neutral-700);
-            --superSubtleAccent: var(--color-neutral-700);
-            --quietHeader: #444444;
-            --quietText: #ffffff;
-        }
-
-        html[data-theme="dark"] .tab-rates .dynamics-section {
-            --color-roll: #a00000;
-            --color-pitch: #00a000;
-            --color-yaw: #0000a0;
-            --color-collective: #c08000;
         }
 
         body {
@@ -1540,20 +1336,20 @@ body {
         }
 
         .tab-rates .roll-header {
-            background-color: #ff6b6b;
+            background-color: var(--color-roll);
         }
 
         .tab-rates .pitch-header {
-            background-color: #51cf66;
+            background-color: var(--color-pitch);
         }
 
         .tab-rates .yaw-header {
-            background-color: #5c7cfa;
+            background-color: var(--color-yaw);
         }
 
         .tab-rates .collective-header {
-            background-color: #ffd43b;
-            color: #333;
+            background-color: var(--color-collective);
+            color: #1a1a1a;
         }
 
         .tab-rates .dynamics-row {
@@ -1590,6 +1386,26 @@ body {
             background: #2e2e2e;
             color: var(--color-text);
             border-color: #555;
+        }
+
+        .tab-rates .dynamics-title-row .dynamics-axis-header:nth-child(2),
+        .tab-rates .dynamics-row input:nth-child(2) {
+            background-color: rgba(232, 93, 93, 0.18);
+        }
+
+        .tab-rates .dynamics-title-row .dynamics-axis-header:nth-child(3),
+        .tab-rates .dynamics-row input:nth-child(3) {
+            background-color: rgba(93, 207, 93, 0.18);
+        }
+
+        .tab-rates .dynamics-title-row .dynamics-axis-header:nth-child(4),
+        .tab-rates .dynamics-row input:nth-child(4) {
+            background-color: rgba(107, 107, 255, 0.18);
+        }
+
+        .tab-rates .dynamics-title-row .dynamics-axis-header:nth-child(5),
+        .tab-rates .dynamics-row input:nth-child(5) {
+            background-color: rgba(255, 183, 0, 0.20);
         }
 
         .tab-rates .empty-cell {
@@ -1785,7 +1601,7 @@ body {
                                         </div>
                                         <table id="pid_main" class="pid_table">
                                             <tr class="pid_titlebar">
-                                                <th class="name"><div class="name-helpicon-flex"><div>PID Controller Gains</div></div></th>
+                                                <th class="name"><div class="name-helpicon-flex"><div>Gains</div></div></th>
                                                 <th class="proportional"><div class="name-helpicon-flex"><div>P</div></div></th>
                                                 <th class="integral"><div class="name-helpicon-flex"><div>I</div></div></th>
                                                 <th class="derivative"><div class="name-helpicon-flex"><div>D</div></div></th>

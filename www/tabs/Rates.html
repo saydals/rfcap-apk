@@ -152,21 +152,9 @@
             --color-collective-soft: #ffbb33;
         }
 
-        /* axis color scoping compatibility */
-        html[data-theme="light"] .tab-rates .dynamics-section,
-        html[data-theme="light"] .tab-profiles .dynamics-section {
-            --color-roll: var(--color-roll-soft);
-            --color-pitch: var(--color-pitch-soft);
-            --color-yaw: var(--color-yaw-soft);
-            --color-collective: var(--color-collective-soft);
-        }
-        html[data-theme="dark"] .tab-rates .dynamics-section,
-        html[data-theme="dark"] .tab-profiles .dynamics-section {
-            --color-roll: var(--color-roll);
-            --color-pitch: var(--color-pitch);
-            --color-yaw: var(--color-yaw);
-            --color-collective: var(--color-collective);
-        }
+        /* Dynamics header chips intentionally use the SAME axis colors as
+           the Rates box axis_title cells. Do NOT re-scope --color-* to the
+           soft variants here - the two boxes must stay one color system. */
 
 body {
             height: 100%;
@@ -995,13 +983,6 @@ body {
             --quietText: #ffffff;
         }
 
-        html[data-theme="light"] .tab-rates .dynamics-section {
-            --color-roll: #ff8080;
-            --color-pitch: #80ff80;
-            --color-yaw: #8080ff;
-            --color-collective: #ffbb00;
-        }
-
         html[data-theme="dark"] {
             --color-neutral-950: hsl(248, 5%, 5%);
             --color-neutral-900: hsl(248, 5%, 10%);
@@ -1043,13 +1024,6 @@ body {
             --superSubtleAccent: var(--color-neutral-700);
             --quietHeader: #444444;
             --quietText: #ffffff;
-        }
-
-        html[data-theme="dark"] .tab-rates .dynamics-section {
-            --color-roll: #a00000;
-            --color-pitch: #00a000;
-            --color-yaw: #0000a0;
-            --color-collective: #c08000;
         }
 
         body {
@@ -1655,9 +1629,13 @@ body {
         .tab-rates .dynamics-grid-container {
             display: grid;
             grid-template-columns: max-content repeat(4, minmax(64px, 1fr));
-            gap: 4px;
+            /* No gaps at all: each axis column reads as ONE continuous
+               tinted band and neighbouring columns touch, exactly like the
+               tinted axis rows in the Rates box touch with no vertical gap
+               between them (same table, band direction rotated 90 deg). */
+            gap: 0;
             padding: 8px;
-            align-items: center;
+            align-items: stretch;
             width: 100%;
             box-sizing: border-box;
         }
@@ -1669,29 +1647,34 @@ body {
 
         .tab-rates .dynamics-axis-header {
             text-align: center;
-            font-weight: bold;
-            font-size: 10px;
+            font-weight: 600;
+            /* 12px = the inherited body size, i.e. exactly what the Rates
+               box axis_title cells render at - the four chips must match
+               the Rates box title text size 1:1. */
+            font-size: 12px;
             padding: 3px 0;
-            border-radius: 3px;
+            /* Square, full-bleed chip: mirrors the Rates box axis_title
+               cell (collapsed table borders render square corners). */
+            border-radius: 0;
             color: white;
             text-transform: uppercase;
         }
 
         .tab-rates .roll-header {
-            background-color: #ff6b6b;
+            background-color: var(--color-roll);
         }
 
         .tab-rates .pitch-header {
-            background-color: #51cf66;
+            background-color: var(--color-pitch);
         }
 
         .tab-rates .yaw-header {
-            background-color: #5c7cfa;
+            background-color: var(--color-yaw);
         }
 
         .tab-rates .collective-header {
-            background-color: #ffd43b;
-            color: #333;
+            background-color: var(--color-collective);
+            color: #1a1a1a;
         }
 
         .tab-rates .dynamics-label {
@@ -1722,6 +1705,21 @@ body {
             color: var(--color-text);
             border-color: #555;
         }
+
+        /* Column tints - the vertical counterpart of the tinted axis rows
+           in the Rates box (tr.ROLL/PITCH/YAW/COLLECTIVE use exactly these
+           rgba values). The tint lives on the CELL around the input, never
+           on the input itself: number inputs stay white like in the Rates
+           box, so each vertical axis column reads as one family. */
+        .tab-rates .dyn-cell {
+            display: flex;
+            align-items: center;
+            padding: 2px 3px;
+        }
+        .tab-rates .cell-roll       { background-color: rgba(232, 93, 93, 0.18); }
+        .tab-rates .cell-pitch      { background-color: rgba(93, 207, 93, 0.18); }
+        .tab-rates .cell-yaw        { background-color: rgba(107, 107, 255, 0.18); }
+        .tab-rates .cell-collective { background-color: rgba(255, 183, 0, 0.20); }
 
         .tab-rates .empty-cell {
             /* Empty cell for yaw-only parameters */
@@ -2066,10 +2064,10 @@ body {
                                                     <div class="dynamics-label">
                                                         Response Time [ms]
                                                     </div>
-                                                    <input type="number" name="roll_response" step="1" min="0" max="250" value="0" />
-                                                    <input type="number" name="pitch_response" step="1" min="0" max="250" value="0" />
-                                                    <input type="number" name="yaw_response" step="1" min="0" max="250" value="0" />
-                                                    <input type="number" name="coll_response" step="1" min="0" max="250" value="0" />
+                                                    <div class="dyn-cell cell-roll"><input type="number" name="roll_response" step="1" min="0" max="250" value="0" /></div>
+                                                    <div class="dyn-cell cell-pitch"><input type="number" name="pitch_response" step="1" min="0" max="250" value="0" /></div>
+                                                    <div class="dyn-cell cell-yaw"><input type="number" name="yaw_response" step="1" min="0" max="250" value="0" /></div>
+                                                    <div class="dyn-cell cell-collective"><input type="number" name="coll_response" step="1" min="0" max="250" value="0" /></div>
                                                 </div>
 
                                                 <!-- Setpoint Boost Gain Row -->
@@ -2077,10 +2075,10 @@ body {
                                                     <div class="dynamics-label">
                                                         Setpoint B Gain
                                                     </div>
-                                                    <input type="number" id="setpoint-boost-gain-roll" step="1" min="0" max="250" value="0" />
-                                                    <input type="number" id="setpoint-boost-gain-pitch" step="1" min="0" max="250" value="0" />
-                                                    <input type="number" id="setpoint-boost-gain-yaw" step="1" min="0" max="250" value="0" />
-                                                    <input type="number" id="setpoint-boost-gain-collective" step="1" min="0" max="250" value="0" />
+                                                    <div class="dyn-cell cell-roll"><input type="number" id="setpoint-boost-gain-roll" step="1" min="0" max="250" value="0" /></div>
+                                                    <div class="dyn-cell cell-pitch"><input type="number" id="setpoint-boost-gain-pitch" step="1" min="0" max="250" value="0" /></div>
+                                                    <div class="dyn-cell cell-yaw"><input type="number" id="setpoint-boost-gain-yaw" step="1" min="0" max="250" value="0" /></div>
+                                                    <div class="dyn-cell cell-collective"><input type="number" id="setpoint-boost-gain-collective" step="1" min="0" max="250" value="0" /></div>
                                                 </div>
 
                                                 <!-- Setpoint Boost Cutoff Row -->
@@ -2088,10 +2086,10 @@ body {
                                                     <div class="dynamics-label">
                                                         Setpoint B Cutoff [Hz]
                                                     </div>
-                                                    <input type="number" id="setpoint-boost-cutoff-roll" step="1" min="0" max="250" value="15" />
-                                                    <input type="number" id="setpoint-boost-cutoff-pitch" step="1" min="0" max="250" value="15" />
-                                                    <input type="number" id="setpoint-boost-cutoff-yaw" step="1" min="0" max="250" value="90" />
-                                                    <input type="number" id="setpoint-boost-cutoff-collective" step="1" min="0" max="250" value="15" />
+                                                    <div class="dyn-cell cell-roll"><input type="number" id="setpoint-boost-cutoff-roll" step="1" min="0" max="250" value="15" /></div>
+                                                    <div class="dyn-cell cell-pitch"><input type="number" id="setpoint-boost-cutoff-pitch" step="1" min="0" max="250" value="15" /></div>
+                                                    <div class="dyn-cell cell-yaw"><input type="number" id="setpoint-boost-cutoff-yaw" step="1" min="0" max="250" value="90" /></div>
+                                                    <div class="dyn-cell cell-collective"><input type="number" id="setpoint-boost-cutoff-collective" step="1" min="0" max="250" value="15" /></div>
                                                 </div>
 
                                                 <!-- Dynamic Ceiling Gain Row -->
@@ -2101,7 +2099,7 @@ body {
                                                     </div>
                                                     <div class="empty-cell"></div>
                                                     <div class="empty-cell"></div>
-                                                    <input type="number" id="yaw-dynamic-ceiling-gain" step="1" min="0" max="250" value="0" />
+                                                    <div class="dyn-cell cell-yaw"><input type="number" id="yaw-dynamic-ceiling-gain" step="1" min="0" max="250" value="0" /></div>
                                                     <div class="empty-cell"></div>
                                                 </div>
 
@@ -2112,7 +2110,7 @@ body {
                                                     </div>
                                                     <div class="empty-cell"></div>
                                                     <div class="empty-cell"></div>
-                                                    <input type="number" id="yaw-dynamic-deadband-gain" step="1" min="0" max="250" value="10" />
+                                                    <div class="dyn-cell cell-yaw"><input type="number" id="yaw-dynamic-deadband-gain" step="1" min="0" max="250" value="10" /></div>
                                                     <div class="empty-cell"></div>
                                                 </div>
 
@@ -2123,7 +2121,7 @@ body {
                                                     </div>
                                                     <div class="empty-cell"></div>
                                                     <div class="empty-cell"></div>
-                                                    <input type="number" id="yaw-dynamic-deadband-filter" step="0.1" min="0" max="25" value="6.0" />
+                                                    <div class="dyn-cell cell-yaw"><input type="number" id="yaw-dynamic-deadband-filter" step="0.1" min="0" max="25" value="6.0" /></div>
                                                     <div class="empty-cell"></div>
                                                 </div>
                                             </div>
