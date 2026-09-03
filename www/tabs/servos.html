@@ -849,6 +849,15 @@
                 this.prevConfig = null;
                 this.pollInterval = null;
                 this.init();
+
+                window.addEventListener('message', (e) => {
+                    if (!e || !e.data || e.data.t !== 'activeTab') return;
+                    if (e.data.v !== 'servos') return;
+                    this.isDirty = false;
+                    this.needSave = false;
+                    this.hideToolbar();
+                    this.loadDataFromFC();
+                });
             }
 
             init() {

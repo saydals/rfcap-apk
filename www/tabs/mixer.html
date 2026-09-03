@@ -1584,6 +1584,15 @@
                 this.overrideAxes.forEach(a => { a.dirty = false; });
 
                 this.init();
+
+                window.addEventListener('message', (e) => {
+                    if (!e || !e.data || e.data.t !== 'activeTab') return;
+                    if (e.data.v !== 'mixer') return;
+                    this.isDirty = false;
+                    this.needSave = false;
+                    this.hideToolbar();
+                    this.loadDataFromFC();
+                });
             }
 
             init() {
