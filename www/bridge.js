@@ -411,7 +411,8 @@
         const pad = document.createElement('div');
         pad.id = 'rf-numpad';
         const KEYS = ['7','8','9','BKSP', '4','5','6','UP', '1','2','3','DOWN', '.','0','-','DONE'];
-        pad.innerHTML = '<div class="rfnp-grid">' +
+        pad.innerHTML = '<div class="rfnp-handle" title="드래그하여 이동"><span></span></div>' +
+            '<div class="rfnp-grid">' +
             KEYS.map(k => {
                 const label = k === 'BKSP' ? '&#9003;' : k === 'UP' ? '&#9650;'
                             : k === 'DOWN' ? '&#9660;' : k === 'DONE' ? '&#10003;' : k;
@@ -504,7 +505,16 @@
             try {
                 ensureBottomSpace();
                 const padH = PADH || 230;
-                const limit = window.innerHeight - padH - 8 - 24;
+                /* The pad is dockable: when it is visible use its REAL top
+                   edge as the limit so the field still scrolls clear of it
+                   even after the user dragged it away from the bottom. */
+                let padTop = window.innerHeight - padH - 8;
+                try {
+                    if (pad.style.display !== 'none' && pad.offsetHeight) {
+                        padTop = pad.getBoundingClientRect().top;
+                    }
+                } catch (e) {}
+                const limit = Math.min(window.innerHeight - padH - 8, padTop) - 24;
                 const sp = getScrollContainer(el);
                 const scroller = sp || document.scrollingElement || document.documentElement;
                 const rect = el.getBoundingClientRect();
@@ -541,6 +551,49 @@
             } catch (e) {}
         }
         let PADH = 230;
+        /* ---- pad placement & dragging ----
+           Default docking: portrait -> bottom-RIGHT; landscape -> bottom of
+           whichever side is AWAY from the edited field, so the pad never
+           covers the cell being edited. The thin top handle lets the user
+           drag the pad anywhere; the spot is kept (localStorage) across
+           opens and clamped into the viewport on resize/rotate. */
+        let pos = null;                       /* {left, bottom} px, null until placed */
+        function clampPos() {
+            const w = pad.offsetWidth || 300, h = pad.offsetHeight || 250;
+            pos.left = Math.max(2, Math.min(window.innerWidth - w - 2, pos.left));
+            pos.bottom = Math.max(2, Math.min(window.innerHeight - h - 2, pos.bottom));
+        }
+        function applyPos() {
+            clampPos();
+            pad.style.right = 'auto';
+            pad.style.top = 'auto';
+            pad.style.left = pos.left + 'px';
+            pad.style.bottom = pos.bottom + 'px';
+        }
+        function defaultPos(el) {
+            const w = pad.offsetWidth || 300;
+            if (window.innerWidth < window.innerHeight) {
+                pos = { left: window.innerWidth - w - 8, bottom: 8 };      /* portrait: right */
+            } else {
+                const r = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+                const cx = r ? (r.left + r.width / 2) : window.innerWidth / 2;
+                pos = (cx <= window.innerWidth / 2)
+                    ? { left: window.innerWidth - w - 8, bottom: 8 }       /* field left  -> pad right */
+                    : { left: 8, bottom: 8 };                              /* field right -> pad left  */
+            }
+            applyPos();
+        }
+        function restorePos() {
+            try {
+                const raw = localStorage.getItem('rf-numpad-pos');
+                if (raw) { const p = JSON.parse(raw); if (p && isFinite(p.left) && isFinite(p.bottom)) { pos = p; applyPos(); return true; } }
+            } catch (e) {}
+            return false;
+        }
+        function savePos() {
+            try { localStorage.setItem('rf-numpad-pos', JSON.stringify(pos)); } catch (e) {}
+        }
+        window.addEventListener('resize', () => { if (pos && pad.style.display !== 'none') applyPos(); });
         function show(el) {
             /* re-tapping the field that is already focused does not fire
                focusin, so cancel any pending close for the same element. */
@@ -558,6 +611,9 @@
             pad.style.display = 'block';
             themePad();
             if (pad.offsetHeight) PADH = pad.offsetHeight;
+            /* Dock the pad: the user's saved spot if they dragged it there
+               before, otherwise the default away-from-the-field corner. */
+            if (!pos) { if (!restorePos()) defaultPos(el); } else applyPos();
             if (bottomSpacer) bottomSpacer.style.height = (PADH + 48) + 'px';
         }
         function fireEvents(el) {
@@ -656,6 +712,31 @@
             pad.addEventListener(ev, () => { if (holding()) stopHold(); }));
         window.addEventListener('pointerup', () => { if (holding()) stopHold(); });
 
+        /* ---- drag handle: move the pad anywhere by its thin top bar ---- */
+        const handle = pad.querySelector('.rfnp-handle');
+        let drag = null;
+        handle.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const r = pad.getBoundingClientRect();
+            drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+            try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        handle.addEventListener('pointermove', (e) => {
+            if (!drag) return;
+            e.preventDefault();
+            const top = e.clientY - drag.dy;
+            pos = {
+                left: e.clientX - drag.dx,
+                bottom: window.innerHeight - top - pad.offsetHeight
+            };
+            applyPos();
+        });
+        ['pointerup', 'pointercancel'].forEach(ev =>
+            handle.addEventListener(ev, () => {
+                if (drag) { drag = null; savePos(); }
+            }));
+
         pad.addEventListener('click', e => {
             const b = e.target.closest('button[data-k]');
             if (!b) return;
@@ -729,9 +810,14 @@
         /* pad grid styling (theme colours applied at show-time) */
         const css = document.createElement('style');
         css.textContent = [
-            '#rf-numpad{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;z-index:2147483647;',
-            'display:none;border:1px solid #555;border-radius:12px;padding:10px;max-width:min(92vw,340px);',
-            'box-shadow:0 6px 24px rgba(0,0,0,.45);touch-action:manipulation;}',
+            '#rf-numpad{position:fixed;bottom:8px;z-index:2147483647;',
+            'display:none;border:1px solid #555;border-radius:12px;padding:4px 10px 10px;',
+            'max-width:min(92vw,340px);box-shadow:0 6px 24px rgba(0,0,0,.45);touch-action:manipulation;}',
+            /* thin drag bar across the top of the pad */
+            '#rf-numpad .rfnp-handle{height:18px;margin:0 -6px 4px;display:flex;align-items:center;',
+            'justify-content:center;cursor:grab;touch-action:none;border-radius:8px 8px 0 0;}',
+            '#rf-numpad .rfnp-handle span{width:56px;height:5px;border-radius:3px;background:rgba(128,128,128,.5);}',
+            '#rf-numpad .rfnp-handle:active{cursor:grabbing;}',
             '#rf-numpad .rfnp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}',
             '#rf-numpad button{min-width:64px;height:46px;font-size:20px;font-family:inherit;',
             'border:none;border-radius:8px;background:rgba(128,128,128,.22);cursor:pointer;user-select:none;}',
