@@ -146,19 +146,30 @@
             height: 20px;
         }
     }
-    /* ---------- leave-confirmation dialog (dirty tab switch) ---------- */
+    /* ---------- leave-confirmation dialog (dirty tab switch) ----------
+       Unified with the tabs' own "Save changes?" dialogs: same title,
+       wording and style, with EXPLICIT fixed centering so it stays in the
+       middle of the screen even on WebViews whose UA modal positioning
+       is unreliable (no more top-of-screen appearance). */
     #leave-dialog {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        margin: 0;
         border: 1px solid var(--border);
         border-radius: 10px;
         background: var(--surface);
         color: var(--text);
         padding: 14px 16px;
         box-shadow: 0 8px 30px rgba(0,0,0,.4);
+        min-width: 280px;
         max-width: 86vw;
         font-family: inherit;
+        z-index: 20;
     }
     #leave-dialog::backdrop { background: rgba(0,0,0,.45); }
-    #leave-dialog .leave-title { font-weight: bold; font-size: 14px; margin-bottom: 6px; }
+    #leave-dialog h3 { margin: 0 0 8px 0; font-size: 14px; }
     #leave-dialog .leave-msg { font-size: 12px; color: var(--soft); margin-bottom: 14px; }
     #leave-dialog .leave-row { display: flex; gap: 8px; justify-content: flex-end; }
     #leave-dialog button {
@@ -186,7 +197,7 @@
         <iframe id="tab-mixer"    src="./tabs/mixer.html?v=120"    title="Mixer"></iframe>
         <iframe id="tab-servos"   src="./tabs/servos.html?v=119"   title="Servos"></iframe>
         <iframe id="tab-rates"    src="./tabs/Rates.html?v=122"    title="Rates"></iframe>
-        <iframe id="tab-profiles" src="./tabs/Profiles.html?v=121" title="Profiles"></iframe>
+        <iframe id="tab-profiles" src="./tabs/Profiles.html?v=122" title="Profiles"></iframe>
     </main>
 
     <nav id="tab-nav">
@@ -198,8 +209,8 @@
     </nav>
 
     <dialog id="leave-dialog">
-        <p class="leave-title">Unsaved changes</p>
-        <p class="leave-msg">This page has unsaved changes. Save them before leaving?</p>
+        <h3>Save changes?</h3>
+        <p class="leave-msg">Do you want to save changes before leaving?</p>
         <div class="leave-row">
             <button type="button" id="leave-save">Yes, save &amp; move</button>
             <button type="button" id="leave-discard">No, discard &amp; move</button>

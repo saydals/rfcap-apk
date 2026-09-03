@@ -549,18 +549,18 @@ window.RFHub.setRenderer((st) => {
 
 ## 14. 수정 우선순위 전체 요약
 
-| 순위 | 항목 | 파일 | 핵심 수정 |
-|------|------|------|----------|
-| P0 | MSP 배치화 | 각 탭 HTML | `loadDataFromFC()` → `MSP.batchCodes()` |
-| P1 | CRC 재전송 | MSPParser | `waitResponse()`에 setInterval 재전송 추가 |
-| P2 | 재조립기 guard | MSPParser | `MAX_MSP_FRAME_SIZE = 8192` 상한 추가 |
-| P3 | SPP base64 제거 | hub.js/bridge.js | ArrayBuffer 직접 전달 (Capacitor plugin 수정) |
-| P4 | BLE keepalive | hub.js | `_startBleKeepalive()` 패턴 구현 |
-| P5 | SPP keepalive | RfSerialPlugin.java | 5초 interval + 20초 watchdog |
-| P6 | 타임아웃 통일 | 각 탭 HTML | `waitResponse()` 기본 20초 |
-| P7 | BLE 스캔 최적화 | RfSerialPlugin.java | `setReportDelay(0)` + bonded device fallback |
-| P8 | 끊김 감지 전파 | hub.js/bridge.js | `rfState` → 모든 탭에 `connlost` 브로드캐스트 |
-| P9 | 자동 재연결 | hub.js | 끊김 감지 후 3초 delay → 마지막 장치 재연결 |
+| 순위 | 항목 | 파일 | 핵심 수정 | 상태 | 커밋 |
+|------|------|------|----------|------|------|
+| P0 | MSP 배치화 | 각 탭 HTML | `loadDataFromFC()` → `MSP.batchCodes()` | ✅ 완료 | `1d34a69` |
+| P1 | CRC 재전송 | MSPParser | `waitResponse()`에 setInterval 재전송 추가 | ✅ 완료 | `1cc8279` |
+| P2 | 재조립기 guard | MSPParser | `MAX_MSP_FRAME_SIZE = 8192` 상한 추가 | ✅ 완료 | `1cc8279` |
+| P3 | SPP base64 제거 | hub.js/bridge.js | ArrayBuffer 직접 전달 (Capacitor plugin 수정) | ✅ 완료 | `5fb9a75` |
+| P4 | BLE keepalive | hub.js | `_startBleKeepalive()` 패턴 구현 | ✅ 완료 | `5fb9a75` |
+| P5 | 타임아웃 통일 | 각 탭 HTML | `waitResponse()` 기본 20초 | ✅ 완료 | `1e6142a` |
+| P6 | SPP keepalive | RfSerialPlugin.java | 5초 interval + 20초 watchdog | ⬜ 미완료 | — |
+| P7 | BLE 스캔 최적화 | RfSerialPlugin.java | `setReportDelay(0)` + bonded device fallback | ⬜ 미완료 | — |
+| P8 | 끊김 감지 전파 | hub.js/bridge.js | `rfState` → 모든 탭에 `connlost` 브로드캐스트 | ⬜ 미완료 | — |
+| P9 | 자동 재연결 | hub.js | 끊김 감지 후 3초 delay → 마지막 장치 재연결 | ⬜ 미완료 | — |
 
 ---
 
