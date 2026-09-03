@@ -85,6 +85,62 @@
     .tab-btn.active { color:var(--accent); }
     html[data-theme="light"] .tab-btn.active .ico { opacity:1; filter:invert(.78) sepia(1) saturate(28) hue-rotate(172deg) brightness(.9); transform:scale(1.08); }
     html[data-theme="dark"]  .tab-btn.active .ico { opacity:1; filter:none; transform:scale(1.08); }
+
+    #header-save-btn {
+        display: inline-block;
+        padding: 4px 12px;
+        background-color: #2e7d32;
+        color: #fff;
+        border: 1px solid #1b5e20;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 12px;
+        cursor: pointer;
+        font-family: inherit;
+        line-height: 1.2;
+    }
+    #header-save-btn:hover {
+        background-color: #1b5e20;
+    }
+
+    @media (orientation: landscape) {
+        body {
+            flex-wrap: wrap;
+            flex-direction: row;
+            padding-top: 0;
+        }
+        #app-header {
+            flex: 0 0 100%;
+            width: 100%;
+        }
+        #tab-area {
+            flex: 1 1 auto;
+            order: 2;
+            min-height: 0;
+        }
+        #tab-nav {
+            order: 1;
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            border-top: none;
+            border-right: 1px solid var(--border);
+            padding-bottom: 0;
+            padding-right: env(safe-area-inset-right, 0px);
+            align-self: stretch;
+            width: 70px;
+        }
+        .tab-btn {
+            flex-direction: column;
+            justify-content: center;
+            padding: 4px 6px;
+            gap: 2px;
+        }
+        .tab-btn .ico {
+            width: 20px;
+            height: 20px;
+        }
+    }
 </style>
 </head>
 <body>
@@ -93,6 +149,7 @@
         <div id="conn-chip" title="Connection state (shared across all tabs)">
             <span id="conn-dot"></span>
             <span id="conn-text">Disconnected</span>
+            <a id="header-save-btn" href="#">Save</a>
         </div>
         <button id="exit-btn" title="Exit"><img src="./icons/exit.svg" alt="Exit"></button>
         <button id="theme-btn" title="Toggle theme">&#127769;</button>
@@ -108,7 +165,7 @@
 
     <nav id="tab-nav">
         <button class="tab-btn active" data-tab="status"><img class="ico" src="./icons/cf_icon_data_white.svg" alt="">Status</button>
-        <button class="tab-btn" data-tab="mixer"><img class="ico" src="./icons/cf_icon_heli.svg" alt="">Mixer</button>
+        <button class="tab-btn" data-tab="mixer"><img class="ico" src="./icons/cf_icon_mixer.svg" alt="">Mixer</button>
         <button class="tab-btn" data-tab="servos"><img class="ico" src="./icons/cf_icon_servo_white.svg" alt="">Servos</button>
         <button class="tab-btn" data-tab="rates"><img class="ico" src="./icons/cf_icon_pid_white.svg" alt="">Rates</button>
         <button class="tab-btn" data-tab="profiles"><img class="ico" src="./icons/cf_icon_settings_white.svg" alt="">Profiles</button>
