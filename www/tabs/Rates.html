@@ -2158,10 +2158,10 @@ body {
 
                     <div class="content_toolbar">
                         <div class="btn revert_btn">
-                            <a class="revert" href="#">Revert</a>
+                            <a class="revert" id="revert-btn" href="#">Revert</a>
                         </div>
                         <div class="btn save_btn">
-                            <a class="save" href="#">Save</a>
+                            <a class="save" id="save-btn" href="#">Save</a>
                         </div>
                     </div>
                 </div>
@@ -2923,6 +2923,7 @@ body {
                 this.currentRates = null;
                 this.cyclicRingEnabled = false;
                 this.polarRatesEnabled = false;
+                this.origRCTuning = null;
                 this.isChanged = false;
                 this.isDirty = false;
                 this._rateProfileChangeToken = 0;   /* supersedes in-flight reloads */
@@ -3111,6 +3112,7 @@ body {
 
                 this.initRatesSystem();
                 this.updateRates();
+                this.origRCTuning = JSON.parse(JSON.stringify(this.msp.data.RC_TUNING));
             }
 
             changeRatesLogo() {
@@ -3716,9 +3718,17 @@ body {
                 this.startPolling();
             }
 
+            hideToolbar() { document.querySelector('.tab-rates').classList.add('toolbar_hidden'); }
+
             async revert() {
+                if (!this.origRCTuning) return;
+                this.msp.data.RC_TUNING = JSON.parse(JSON.stringify(this.origRCTuning));
                 if (this.currentRateProfile !== this.savedRateProfile) {
                     await this.activateProfile(this.savedRateProfile);
+                } else {
+                    await this.loadDataFromFC();
+                    this.isDirty = false;
+                    this.hideToolbar();
                 }
             }
 
@@ -3784,11 +3794,11 @@ async activateProfile(index) {
             }
 
             bindButtons() {
-                document.querySelector('.content_toolbar .save_btn a').addEventListener('click', async (e) => {
+                document.getElementById('save-btn').addEventListener('click', async (e) => {
                     e.preventDefault();
                     await this.saveData();
                 });
-                document.querySelector('.content_toolbar .revert_btn a').addEventListener('click', async (e) => {
+                document.getElementById('revert-btn').addEventListener('click', async (e) => {
                     e.preventDefault();
                     await this.revert();
                 });

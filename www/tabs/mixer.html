@@ -1954,7 +1954,7 @@
             bindButtons() {
                 document.getElementById('save-btn').addEventListener('click', async (e) => {
                     e.preventDefault();
-                    await this.saveAndReboot();
+                    await this.saveData();
                 });
                 document.getElementById('revert-btn').addEventListener('click', async (e) => {
                     e.preventDefault();
@@ -2191,7 +2191,7 @@
                 document.querySelector('.tab-mixer').classList.add('toolbar_hidden');
             }
 
-            async saveData(reRead = true) {
+            async _saveMixerData(reRead = true) {
                 try {
                     this.msp.sendCommand(this.msp.buildSetMixerConfig());
                     for (let i = 1; i <= 4; i++) {
@@ -2220,8 +2220,8 @@
 
             // Mixer changes require a reboot. Save to EEPROM then reboot the FC
             // and drop the serial connection automatically.
-            async saveAndReboot() {
-                await this.saveData(false);
+            async saveData() {
+                await this._saveMixerData();
                 try {
                     await this.msp.sendCommand(68, []); // MSP_SET_REBOOT
                 } catch (e) {
@@ -2263,7 +2263,7 @@
                 this.overrideAxes.forEach(a => a.dirty = false);
                 this.needSave = false;
                 try {
-                    await this.saveData();
+                    await this._saveMixerData();
                 } catch (e) {
                     console.error('Revert failed:', e);
                 }
@@ -2275,7 +2275,7 @@
                 this.overrideAxes.forEach(a => a.dirty = true);
                 this.needSave = true;
                 try {
-                    await this.saveData();
+                    await this._saveMixerData();
                 } catch (e) {
                     console.error('Reset failed:', e);
                 }

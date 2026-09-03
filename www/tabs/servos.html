@@ -1235,7 +1235,7 @@
             // ---- Buttons / inputs ----
             bindButtons() {
                 document.getElementById('save-btn').addEventListener('click', async (e) => {
-                    e.preventDefault(); await this.save();
+                    e.preventDefault(); await this.saveData();
                 });
                 document.getElementById('revert-btn').addEventListener('click', async (e) => {
                     e.preventDefault(); await this.revert();
@@ -1259,7 +1259,7 @@
             showToolbar() { document.querySelector('.tab-servos').classList.remove('toolbar_hidden'); }
             hideToolbar() { document.querySelector('.tab-servos').classList.add('toolbar_hidden'); }
 
-            async save() {
+            async saveData() {
                 try {
                     this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.msp.sendCommand(m); });
                     this.data.SERVO_OVERRIDE.forEach((_, i) => { this.msp.sendCommand(this.msp.buildSetServoOverride(i), [], false); });

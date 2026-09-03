@@ -2945,6 +2945,7 @@ body {
                 this.savedProfile = 0;
                 this.isChanged = false;
                 this.isDirty = false;
+                this.origData = null;
                 this._profileChangeToken = 0;   /* supersedes in-flight reloads */
                 this._lastLoadAlert = 0;        /* throttles user-facing error alert */
                 this.serial = new SerialConnection();
@@ -3266,6 +3267,7 @@ body {
                 this.msp.missingParams.clear();
 
                 this.savedProfile = this.currentProfile;
+                this.origData = JSON.parse(JSON.stringify(this.data));
             }
 
             fieldToDomId(name) {
@@ -3369,9 +3371,7 @@ body {
                 // Revert
                 document.getElementById('revert-btn').addEventListener('click', async (e) => {
                     e.preventDefault();
-                    if (this.currentProfile !== this.savedProfile) {
-                        await this.activateProfile(this.savedProfile);
-                    }
+                    await this.revert();
                 });
                 // Copy Profile
                 document.getElementById('copyProfile').addEventListener('click', (e) => {
@@ -3535,6 +3535,20 @@ body {
                     this.isDirty = true;
                     this.isChanged = true;
                     document.querySelector('.tab-profiles').classList.remove('toolbar_hidden');
+                }
+            }
+
+            hideToolbar() { document.querySelector('.tab-profiles').classList.add('toolbar_hidden'); }
+
+            async revert() {
+                if (!this.origData) return;
+                this.data = JSON.parse(JSON.stringify(this.origData));
+                if (this.currentProfile !== this.savedProfile) {
+                    await this.activateProfile(this.savedProfile);
+                } else {
+                    await this.loadDataFromFC();
+                    this.isDirty = false;
+                    this.hideToolbar();
                 }
             }
 
