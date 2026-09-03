@@ -88,6 +88,7 @@
 
     #header-save-btn {
         display: inline-block;
+        margin-left: 4px;
         padding: 4px 12px;
         background-color: #2e7d32;
         color: #fff;
@@ -99,6 +100,8 @@
         font-family: inherit;
         line-height: 1.2;
     }
+    /* the status tab has nothing to save - shell.js hides the button there */
+    #header-save-btn[data-hidden="1"] { display: none; }
     #header-save-btn:hover {
         background-color: #1b5e20;
     }
@@ -151,8 +154,8 @@
         <div id="conn-chip" title="Connection state (shared across all tabs)">
             <span id="conn-dot"></span>
             <span id="conn-text">Disconnected</span>
-            <a id="header-save-btn" href="#">Save</a>
         </div>
+        <a id="header-save-btn" href="#" title="Save the active tab (same as the tab's own Save button)">Save</a>
         <button id="exit-btn" title="Exit"><img src="./icons/exit.svg" alt="Exit"></button>
         <button id="theme-btn" title="Toggle theme">&#127769;</button>
     </header>

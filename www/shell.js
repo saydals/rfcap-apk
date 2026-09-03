@@ -13,6 +13,7 @@
     function activate(t) {
         if (!frames[t] || t === current) return;
         current = t;
+        syncSaveBtn(t);
         btns.forEach(x => x.classList.toggle('active', x.dataset.tab === t));
         Object.entries(frames).forEach(([k, f]) => f.classList.toggle('active', k === t));
         /* tell every tab which one is now active (timers pause/resume,
@@ -22,6 +23,35 @@
     btns.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab)));
     /* tabs can request a switch remotely (mixer jumps to status after Save & Reboot) */
     if (window.RFHub) window.RFHub.setTabSwitcher(activate);
+
+    /* ---------- header Save button ----------
+       Behaves exactly like the ACTIVE tab's own bottom Save / Save & Reboot
+       button: the shell reaches into the same-origin iframe and clicks its
+       #save-btn, so any confirm dialog and page-side logic run unchanged.
+       Status has nothing to save - the button is hidden on that tab. */
+    const saveBtn = document.getElementById('header-save-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const f = frames[current];
+            if (!f || current === 'status') return;
+            try {
+                const doc = f.contentDocument;
+                const btn = doc && (doc.getElementById('save-btn') || doc.querySelector('.save_btn a'));
+                if (btn) btn.click();
+                else console.warn('[RFCap] no save button found in tab "' + current + '"');
+            } catch (err) {
+                console.warn('[RFCap] header save failed:', err);
+            }
+        });
+    }
+    const syncSaveBtn = (t) => {
+        if (saveBtn) {
+            if (t === 'status') saveBtn.setAttribute('data-hidden', '1');
+            else saveBtn.removeAttribute('data-hidden');
+        }
+    };
+    syncSaveBtn(current);
 
     /* ---------- theme ---------- */
     const KEY = 'rf-theme';
