@@ -59,7 +59,11 @@
                 pluginBle.addListener('dataReceived', (event) => {
                     const data = base64ToUint8Array(event && event.data);
                     this.bytesReceived += data.length;
-                    this.dispatchEvent(new CustomEvent('receive', { detail: data }));
+                    const ev = new CustomEvent('receive', { detail: data });
+                    /* P3: carry the raw native base64 so the fan-out can pass it
+                       to the iframes unchanged (no decode -> re-encode cycle) */
+                    ev.b64 = event && event.data;
+                    this.dispatchEvent(ev);
                 });
                 pluginBle.addListener('disconnected', () => {
                     this.connected = false;
@@ -276,7 +280,11 @@
                        removed on the Java side - it was never consumed) */
                     var data = base64ToUint8Array(event && event.b64);
                     self.bytesReceived += data.length;
-                    self.dispatchEvent(new CustomEvent('receive', { detail: data }));
+                    var ev = new CustomEvent('receive', { detail: data });
+                    /* P3: carry the raw native base64 so the fan-out can pass it
+                       to the iframes unchanged (no decode -> re-encode cycle) */
+                    ev.b64 = event && event.b64;
+                    self.dispatchEvent(ev);
                 });
                 pluginSerial.addListener('deviceAttached', function(device) {
                     self.handleDeviceAttached(device);
@@ -586,7 +594,10 @@
     if (rfBle) {
         rfBle.addEventListener('receive', function(ev) {
             var u8 = ev.detail;
-            broadcastData({ t: 'd', b64: uint8ArrayToBase64(u8) });
+            bumpLinkActivity();
+            /* P3: forward the native base64 as-is when available - the old path
+               decoded it to bytes just to re-encode it again for the iframes */
+            broadcastData({ t: 'd', b64: ev.b64 || uint8ArrayToBase64(u8) });
         });
         rfBle.addEventListener('disconnect', function() {
             setState({ on: false, kind: null, name: null, detail: 'link lost' });
@@ -599,7 +610,9 @@
     if (rfSerial) {
         rfSerial.addEventListener('receive', function(ev) {
             var u8 = ev.detail;
-            broadcastData({ t: 'd', b64: uint8ArrayToBase64(u8) });
+            bumpLinkActivity();
+            /* P3: forward the native base64 as-is when available */
+            broadcastData({ t: 'd', b64: ev.b64 || uint8ArrayToBase64(u8) });
         });
         rfSerial.addEventListener('disconnect', function() {
             setState({ on: false, kind: null, name: null, detail: 'link lost' });
@@ -608,6 +621,28 @@
            status tab renders them in the BLE device list otherwise. The serial
            list is populated via usbList polling instead. */
     }
+
+    /* ---------- BLE keepalive (P4) ----------
+       Many FC-side BLE modules drop the link after long silence. The original
+       configurator pokes the link with an MSP_STATUS request every ~15s of
+       idle time (_startBleKeepalive). Track link activity (any MSP write or
+       received byte) and send a tiny STATUS probe when idle for too long. */
+    var _lastLinkActivity = Date.now();
+    var _keepaliveBusy = false;
+    function bumpLinkActivity() { _lastLinkActivity = Date.now(); }
+    /* $M< len=0 code=101(MSP_STATUS) crc=101 */
+    var MSP_STATUS_PROBE = new Uint8Array([0x24, 0x4D, 0x3C, 0x00, 101, 101]);
+    setInterval(function() {
+        if (!RF.state.on || RF.state.kind !== 'ble' || _keepaliveBusy) return;
+        if (Date.now() - _lastLinkActivity < 15000) return;
+        _keepaliveBusy = true;
+        bumpLinkActivity();   /* do not re-poke every tick while in flight */
+        try {
+            rfBle.send(MSP_STATUS_PROBE)
+                .catch(function() {})
+                .then(function() { _keepaliveBusy = false; });
+        } catch (e) { _keepaliveBusy = false; }
+    }, 1000);
 
     function safePost(port, msg) { try { port.postMessage(msg); } catch (e) {} }
     function broadcast(msg) { RF.children.forEach(function(_v, port) { safePost(port, msg); }); }
@@ -665,6 +700,7 @@
 
         async write(msg) {
             if (!RF.state.on) throw new Error('not connected');
+            bumpLinkActivity();
             var u8 = b64ToU8(msg.b64);
             if (RF.state.kind === 'spp') {
                 await rfBle.sendSPP(u8);
