@@ -1248,7 +1248,7 @@ class MSPParser {
         }
     }
 
-    waitResponse(code, timeout = 3000) {
+    waitResponse(code, timeout = 20000) {
         return new Promise((resolve, reject) => {
             const t = setTimeout(() => {
                 delete this.callbacks[code];
@@ -1294,11 +1294,11 @@ class StatusMSP {
         };
     }
 
-    async send(code, payload = []) {
+    async send(code, payload = [], timeout) {
         /* Serialize all MSP commands through a single queue. The status poll
            fires every 100ms with 3 commands; without the queue, slow links
            make cycles overlap, waitResponse() callbacks overwrite each other
-           (single slot per code) and updates stall until the 3s timeout.
+           (single slot per code) and updates stall until the timeout.
            Same pattern as the Rates/Profiles tabs. */
         const job = async () => {
             /* P1 retry: a CRC-corrupted response frame never resolves
@@ -1309,7 +1309,7 @@ class StatusMSP {
             for (let attempt = 0; attempt <= 2; attempt++) {
                 try {
                     await this.serial.send(buildMSPMessage(code, payload));
-                    return await this.parser.waitResponse(code);
+                    return await this.parser.waitResponse(code, timeout);
                 } catch (e) {
                     lastErr = e;
                     if (attempt < 2) await new Promise(r => setTimeout(r, 300));
