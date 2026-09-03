@@ -146,6 +146,27 @@
             height: 20px;
         }
     }
+    /* ---------- leave-confirmation dialog (dirty tab switch) ---------- */
+    #leave-dialog {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        padding: 14px 16px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.4);
+        max-width: 86vw;
+        font-family: inherit;
+    }
+    #leave-dialog::backdrop { background: rgba(0,0,0,.45); }
+    #leave-dialog .leave-title { font-weight: bold; font-size: 14px; margin-bottom: 6px; }
+    #leave-dialog .leave-msg { font-size: 12px; color: var(--soft); margin-bottom: 14px; }
+    #leave-dialog .leave-row { display: flex; gap: 8px; justify-content: flex-end; }
+    #leave-dialog button {
+        padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+        background: var(--chip); color: var(--text);
+        font-family: inherit; font-size: 12px; cursor: pointer;
+    }
+    #leave-dialog #leave-save { background: #2e7d32; border-color: #1b5e20; color: #fff; }
 </style>
 </head>
 <body>
@@ -164,8 +185,8 @@
         <iframe id="tab-status"   src="./tabs/status.html?v=119"   class="active" title="Status"></iframe>
         <iframe id="tab-mixer"    src="./tabs/mixer.html?v=119"    title="Mixer"></iframe>
         <iframe id="tab-servos"   src="./tabs/servos.html?v=118"   title="Servos"></iframe>
-        <iframe id="tab-rates"    src="./tabs/Rates.html?v=120"    title="Rates"></iframe>
-        <iframe id="tab-profiles" src="./tabs/Profiles.html?v=119" title="Profiles"></iframe>
+        <iframe id="tab-rates"    src="./tabs/Rates.html?v=121"    title="Rates"></iframe>
+        <iframe id="tab-profiles" src="./tabs/Profiles.html?v=120" title="Profiles"></iframe>
     </main>
 
     <nav id="tab-nav">
@@ -176,6 +197,15 @@
         <button class="tab-btn" data-tab="profiles"><img class="ico" src="./icons/cf_icon_settings_white.svg" alt="">Profiles</button>
     </nav>
 
-<script src="./shell.js?v=118"></script>
+    <dialog id="leave-dialog">
+        <p class="leave-title">Unsaved changes</p>
+        <p class="leave-msg">This page has unsaved changes. Save them before leaving?</p>
+        <div class="leave-row">
+            <button type="button" id="leave-save">Yes, save &amp; move</button>
+            <button type="button" id="leave-discard">No, discard &amp; move</button>
+        </div>
+    </dialog>
+
+<script src="./shell.js?v=119"></script>
 </body>
 </html>

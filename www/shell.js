@@ -20,7 +20,90 @@
            resize kick for the three.js canvas) */
         if (window.RFHub) window.RFHub.broadcastActiveTab(t);
     }
-    btns.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab)));
+
+    /* ---------- dirty-state guard on tab switching ----------
+       Every tab shows its Save/Revert toolbar (removes the toolbar_hidden
+       class from its root element) while it has unsaved changes. When the
+       user switches away from a dirty tab, ask FIRST - exactly like the
+       rates tab's own profile-change dialog:
+         Yes -> click the tab's Save button, wait until it finishes, move.
+         No  -> click the tab's Revert button (discard), then move. */
+    const TAB_ROOT_SELECTOR = '.tab-mixer, .tab-servos, .tab-rates, .tab-profiles';
+    function tabIsDirty(t) {
+        if (t === 'status') return false;      /* nothing to save there */
+        const f = frames[t];
+        if (!f) return false;
+        try {
+            const doc = f.contentDocument;
+            const root = doc && doc.querySelector(TAB_ROOT_SELECTOR);
+            return !!(root && !root.classList.contains('toolbar_hidden'));
+        } catch (e) { return false; }
+    }
+    function clickInTab(t, id) {
+        const f = frames[t];
+        if (!f) return false;
+        try {
+            const doc = f.contentDocument;
+            const el = doc && doc.getElementById(id);
+            if (el) { el.click(); return true; }
+        } catch (e) { console.warn('[RFCap] click in tab failed:', e); }
+        return false;
+    }
+    /* wait until the tab's toolbar hides again (save/revert finished) */
+    function waitClean(t, timeoutMs) {
+        return new Promise((resolve) => {
+            const t0 = Date.now();
+            const iv = setInterval(() => {
+                if (!tabIsDirty(t) || Date.now() - t0 > timeoutMs) {
+                    clearInterval(iv);
+                    resolve();
+                }
+            }, 150);
+        });
+    }
+    const leaveDialog = document.getElementById('leave-dialog');
+    let leaveAnswer = null;
+    let switching = false;
+    function askLeave() {
+        return new Promise((resolve) => {
+            if (!leaveDialog || !leaveDialog.showModal) { resolve('no'); return; }
+            leaveAnswer = null;
+            leaveDialog.addEventListener('close', () => resolve(leaveAnswer || 'cancel'), { once: true });
+            document.getElementById('leave-save').onclick = (e) => {
+                e.preventDefault(); leaveAnswer = 'yes'; leaveDialog.close();
+            };
+            document.getElementById('leave-discard').onclick = (e) => {
+                e.preventDefault(); leaveAnswer = 'no'; leaveDialog.close();
+            };
+            try { leaveDialog.showModal(); } catch (err) { resolve('cancel'); }
+        });
+    }
+    function requestTab(t) {
+        if (switching || !frames[t] || t === current) return;
+        const from = current;
+        if (!tabIsDirty(from)) { activate(t); return; }
+        switching = true;
+        askLeave().then((answer) => {
+            if (answer === 'yes') {
+                clickInTab(from, 'save-btn');
+                waitClean(from, 10000).then(() => {
+                    /* a tab may have moved us itself (mixer jumps to status
+                       after Save & Reboot) - don't fight that switch */
+                    if (current === from) activate(t);
+                    switching = false;
+                });
+            } else if (answer === 'no') {
+                clickInTab(from, 'revert-btn');
+                waitClean(from, 8000).then(() => {
+                    if (current === from) activate(t);
+                    switching = false;
+                });
+            } else {
+                switching = false;   /* 'cancel' (Esc / no choice) -> stay */
+            }
+        });
+    }
+    btns.forEach(b => b.addEventListener('click', () => requestTab(b.dataset.tab)));
     /* tabs can request a switch remotely (mixer jumps to status after Save & Reboot) */
     if (window.RFHub) window.RFHub.setTabSwitcher(activate);
 
@@ -33,15 +116,9 @@
     if (saveBtn) {
         saveBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            const f = frames[current];
-            if (!f || current === 'status') return;
-            try {
-                const doc = f.contentDocument;
-                const btn = doc && (doc.getElementById('save-btn') || doc.querySelector('.save_btn a'));
-                if (btn) btn.click();
-                else console.warn('[RFCap] no save button found in tab "' + current + '"');
-            } catch (err) {
-                console.warn('[RFCap] header save failed:', err);
+            if (current === 'status') return;
+            if (!clickInTab(current, 'save-btn')) {
+                console.warn('[RFCap] no save button found in tab "' + current + '"');
             }
         });
     }

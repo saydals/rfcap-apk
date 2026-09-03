@@ -3319,7 +3319,9 @@ body {
                         tab.addEventListener('click', async () => {
                             if (index !== this.currentProfile) {
                                 if (this.isChanged) {
-                                    document.querySelector('.dialogProfileChange').showModal();
+                                    const d = document.querySelector('.dialogProfileChange');
+                                    if (d.open) return;    /* already asking - never showModal twice */
+                                    d.showModal();
                                     const yesBtn = document.querySelector('.dialogProfileChangeYesBtn');
                                     const noBtn = document.querySelector('.dialogProfileChangeNoBtn');
                                     yesBtn.onclick = async (e) => {
@@ -3331,6 +3333,12 @@ body {
                                     noBtn.onclick = async (e) => {
                                         e.preventDefault();
                                         document.querySelector('.dialogProfileChange').close();
+                                        /* user chose to DISCARD: clear the dirty flags
+                                           up-front so a failed/slow profile switch can
+                                           never leave the page stuck re-asking "save?" */
+                                        this.isChanged = false;
+                                        this.isDirty = false;
+                                        this.hideToolbar();
                                         await this.activateProfile(index);
                                     };
                                 } else {

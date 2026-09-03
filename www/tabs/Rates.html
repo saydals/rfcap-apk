@@ -3773,6 +3773,7 @@ async activateProfile(index) {
                         if (index !== this.currentRateProfile) {
                             if (this.isChanged) {
                                 const d = document.querySelector('.dialogProfileChange');
+                                if (d.open) return;    /* already asking - never showModal twice */
                                 d.showModal();
                                 document.querySelector('.dialogProfileChangeYesBtn').onclick = async (e) => {
                                     e.preventDefault();
