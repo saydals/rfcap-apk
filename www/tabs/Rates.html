@@ -2737,8 +2737,45 @@ body {
                 return tail;
             }
 
-            async readApiVersion() {
-                const resp = await this.sendCommand(MSP.API_VERSION);
+            /* ---- batched reads (P0) ----
+               Combine several read requests into ONE MSP write (a single link
+               round trip) and collect every response - the send_batch()/
+               batchCodes() pattern from the original configurator. Codes that
+               never answered (CRC loss on BLE) are re-requested on their own
+               until the deadline. Returns the responses in request order. */
+            async batchCodes(requests, timeout = 8000) {
+                const job = async () => {
+                    const combined = (list) => {
+                        const frames = list.map(r => buildMSPMessage(r.code, r.payload || []));
+                        const total = frames.reduce((s, f) => s + f.length, 0);
+                        const out = new Uint8Array(total);
+                        let off = 0;
+                        for (const f of frames) { out.set(f, off); off += f.length; }
+                        return out;
+                    };
+                    const deadline = Date.now() + timeout;
+                    let pending = requests.slice();
+                    const responses = new Map();
+                    while (pending.length && Date.now() < deadline) {
+                        await this.serial.send(combined(pending));
+                        const missed = [];
+                        await Promise.all(pending.map(async (r) => {
+                            try {
+                                responses.set(r.code, await this.parser.waitResponse(r.code, Math.max(750, deadline - Date.now())));
+                            } catch (e) { missed.push(r); }
+                        }));
+                        pending = missed;
+                    }
+                    if (pending.length) throw new Error('MSP batch timeout: ' + pending.map(p => p.code).join(','));
+                    return requests.map(r => responses.get(r.code));
+                };
+                const tail = this.queue.then(() => job(), () => job());
+                this.queue = tail.catch(() => {});
+                return tail;
+            }
+
+            async readApiVersion(pre) {
+                const resp = pre || await this.sendCommand(MSP.API_VERSION);
                 const p = resp.payload;
                 // p[0]=msp protocol, p[1]=major, p[2]=minor (patch 0)
                 const major = p[1] || 0;
@@ -2747,8 +2784,8 @@ body {
                 return this.apiVersion;
             }
 
-            async readStatus() {
-                const resp = await this.sendCommand(MSP.STATUS);
+            async readStatus(pre) {
+                const resp = pre || await this.sendCommand(MSP.STATUS);
                 const p = resp.payload;
                 let i = 0;
                 const u8 = () => (i < p.length ? p[i++] : 0);
@@ -3038,17 +3075,34 @@ body {
                 await new Promise(r => setTimeout(r, 1200));
                 this.msp.parser.buffer = [];
                 try {
+                    /* Batched (P0): API_VERSION + STATUS in ONE write; on a
+                       total batch failure fall back to sequential reads. */
                     try {
-                        await this.msp.readApiVersion();
-                    } catch (e) {
-                        console.warn('API version read failed, assuming 12.9:', e);
-                        this.msp.apiVersion = '12.9.0';
-                    }
-                    try {
-                        await this.msp.readStatus();
-                    } catch (e) {
-                        console.warn('Status read failed:', e);
-                        this.msp.rateProfile = 0;
+                        const rs = await this.msp.batchCodes([
+                            { code: MSP.API_VERSION },
+                            { code: MSP.STATUS },
+                        ]);
+                        try { await this.msp.readApiVersion(rs[0]); } catch (e) {
+                            console.warn('API version read failed, assuming 12.9:', e);
+                            this.msp.apiVersion = '12.9.0';
+                        }
+                        try { await this.msp.readStatus(rs[1]); } catch (e) {
+                            console.warn('Status read failed:', e);
+                            this.msp.rateProfile = 0;
+                        }
+                    } catch (batchErr) {
+                        try {
+                            await this.msp.readApiVersion();
+                        } catch (e) {
+                            console.warn('API version read failed, assuming 12.9:', e);
+                            this.msp.apiVersion = '12.9.0';
+                        }
+                        try {
+                            await this.msp.readStatus();
+                        } catch (e) {
+                            console.warn('Status read failed:', e);
+                            this.msp.rateProfile = 0;
+                        }
                     }
                 } catch (e) {
                     console.warn('Pre-init reads failed:', e);

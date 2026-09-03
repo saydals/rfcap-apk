@@ -2612,6 +2612,43 @@ body {
                 return tail;
             }
 
+            /* ---- batched reads (P0) ----
+               Combine several read requests into ONE MSP write (a single link
+               round trip) and collect every response - the send_batch()/
+               batchCodes() pattern from the original configurator. Codes that
+               never answered (CRC loss on BLE) are re-requested on their own
+               until the deadline. Returns the responses in request order. */
+            async batchCodes(requests, timeout = 8000) {
+                const job = async () => {
+                    const combined = (list) => {
+                        const frames = list.map(r => buildMSPMessage(r.code, r.payload || []));
+                        const total = frames.reduce((s, f) => s + f.length, 0);
+                        const out = new Uint8Array(total);
+                        let off = 0;
+                        for (const f of frames) { out.set(f, off); off += f.length; }
+                        return out;
+                    };
+                    const deadline = Date.now() + timeout;
+                    let pending = requests.slice();
+                    const responses = new Map();
+                    while (pending.length && Date.now() < deadline) {
+                        await this.serial.send(combined(pending));
+                        const missed = [];
+                        await Promise.all(pending.map(async (r) => {
+                            try {
+                                responses.set(r.code, await this.parser.waitResponse(r.code, Math.max(750, deadline - Date.now())));
+                            } catch (e) { missed.push(r); }
+                        }));
+                        pending = missed;
+                    }
+                    if (pending.length) throw new Error('MSP batch timeout: ' + pending.map(p => p.code).join(','));
+                    return requests.map(r => responses.get(r.code));
+                };
+                const tail = this.queue.then(() => job(), () => job());
+                this.queue = tail.catch(() => {});
+                return tail;
+            }
+
             async readStatus() {
                 const resp = await this.sendCommand(101);
                 const p = resp.payload;
@@ -2638,8 +2675,8 @@ body {
                 u8();  // numRateProfiles
             }
 
-            async readPID() {
-                const resp = await this.sendCommand(112);
+            async readPID(pre) {
+                const resp = pre || await this.sendCommand(112);
                 const pids = [[], [], []];
                 let idx = 0;
                 for (let i = 0; i < 3; i++) {        // RPY
@@ -2684,8 +2721,8 @@ body {
                 return obj;
             }
 
-            async readPIDProfile() {
-                const resp = await this.sendCommand(94);
+            async readPIDProfile(pre) {
+                const resp = pre || await this.sendCommand(94);
                 const fields = [
                     { key: 'pid_mode', type: 'u8' },
                     { key: 'error_decay_time_ground', type: 'u8' },
@@ -2735,8 +2772,8 @@ body {
                 return this.data.PID_PROFILE;
             }
 
-            async readRescueProfile() {
-                const resp = await this.sendCommand(146);
+            async readRescueProfile(pre) {
+                const resp = pre || await this.sendCommand(146);
                 const fields = [
                     { key: 'rescueMode', type: 'u8' },
                     { key: 'rescueFlipMode', type: 'u8' },
@@ -2762,8 +2799,8 @@ body {
                 return r;
             }
 
-            async readGovernorProfile() {
-                const resp = await this.sendCommand(148);
+            async readGovernorProfile(pre) {
+                const resp = pre || await this.sendCommand(148);
                 const fields = [
                     { key: 'gov_headspeed', type: 'u16' },
                     { key: 'gov_gain', type: 'u8' },
@@ -2785,8 +2822,8 @@ body {
                 return this.data.GOVERNOR;
             }
 
-            async readGovernorConfig() {
-                const resp = await this.sendCommand(142);
+            async readGovernorConfig(pre) {
+                const resp = pre || await this.sendCommand(142);
                 const fields = [
                     { key: 'gov_mode', type: 'u8' },
                     { key: 'gov_startup_time', type: 'u16' },
@@ -3134,11 +3171,20 @@ body {
                     });
                     this.msp.missingParams.clear();
 
-                    await this.msp.readPID();
-                    await this.msp.readPIDProfile();
-                    await this.msp.readRescueProfile();
-                    await this.msp.readGovernorProfile();
-                    await this.msp.readGovernorConfig();
+                    /* Batched load (P0): the 5 profile reads go out in ONE
+                       combined MSP write (1 round trip instead of 5). */
+                    const rs = await this.msp.batchCodes([
+                        { code: 112 },  // MSP_PID
+                        { code: 94 },   // MSP_PID_PROFILE
+                        { code: 146 },  // MSP_RESCUE_PROFILE
+                        { code: 148 },  // MSP_GOVERNOR_PROFILE
+                        { code: 142 },  // MSP_GOVERNOR_CONFIG
+                    ]);
+                    try { await this.msp.readPID(rs[0]); } catch (e) { throw e; }
+                    try { await this.msp.readPIDProfile(rs[1]); } catch (e) {}
+                    try { await this.msp.readRescueProfile(rs[2]); } catch (e) {}
+                    try { await this.msp.readGovernorProfile(rs[3]); } catch (e) {}
+                    try { await this.msp.readGovernorConfig(rs[4]); } catch (e) {}
                 } catch (e) {
                     console.warn('Failed to read from FC:', e);
                     // Throttled user-facing warning: only one alert per 5s.

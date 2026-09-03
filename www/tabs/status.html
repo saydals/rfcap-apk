@@ -1304,22 +1304,60 @@ class StatusMSP {
         return tail;
     }
 
-    async readAPIVersion() {
-        const r = await this.send(1);
+    /* ---- batched reads (P0) ----
+       Combine several read requests into ONE MSP write (a single link round
+       trip) and collect every response - the send_batch()/batchCodes()
+       pattern from the original configurator. Codes that never answered
+       (CRC loss on BLE) are re-requested on their own until the deadline,
+       so one lost frame no longer stalls the whole load. Returns the
+       responses in request order. */
+    async batchCodes(requests, timeout = 8000) {
+        const job = async () => {
+            const combined = (list) => {
+                const frames = list.map(r => buildMSPMessage(r.code, r.payload || []));
+                const total = frames.reduce((s, f) => s + f.length, 0);
+                const out = new Uint8Array(total);
+                let off = 0;
+                for (const f of frames) { out.set(f, off); off += f.length; }
+                return out;
+            };
+            const deadline = Date.now() + timeout;
+            let pending = requests.slice();
+            const responses = new Map();
+            while (pending.length && Date.now() < deadline) {
+                await this.serial.send(combined(pending));
+                const missed = [];
+                await Promise.all(pending.map(async (r) => {
+                    try {
+                        responses.set(r.code, await this.parser.waitResponse(r.code, Math.max(750, deadline - Date.now())));
+                    } catch (e) { missed.push(r); }
+                }));
+                pending = missed;
+            }
+            if (pending.length) throw new Error('MSP batch timeout: ' + pending.map(p => p.code).join(','));
+            return requests.map(r => responses.get(r.code));
+        };
+        const tail = this.queue.then(() => job(), () => job());
+        this.queue = tail.catch(() => {});
+        return tail;
+    }
+
+    async readAPIVersion(pre) {
+        const r = pre || await this.send(1);
         const p = r.payload;
         if (p.length >= 3) {
             this.data.CONFIG.apiVersion = `${p[1]}.${p[2]}.0`;
         }
     }
 
-    async readFCVariant() {
-        const r = await this.send(2);
+    async readFCVariant(pre) {
+        const r = pre || await this.send(2);
         const dec = new TextDecoder();
         this.data.CONFIG.flightControllerIdentifier = dec.decode(r.payload.slice(0, 4));
     }
 
-    async readBoardInfo() {
-        const r = await this.send(4);
+    async readBoardInfo(pre) {
+        const r = pre || await this.send(4);
         const dec = new TextDecoder();
         let idx = 0;
         this.data.CONFIG.boardIdentifier = dec.decode(r.payload.slice(0, 4));
@@ -1339,8 +1377,8 @@ class StatusMSP {
         }
     }
 
-    async readBuildInfo() {
-        const r = await this.send(5);
+    async readBuildInfo(pre) {
+        const r = pre || await this.send(5);
         const dec = new TextDecoder();
         const date = dec.decode(r.payload.slice(0, 11)).trim();
         const time = dec.decode(r.payload.slice(11, 19)).trim();
@@ -1349,8 +1387,8 @@ class StatusMSP {
         this.data.CONFIG.buildKey = rev;
     }
 
-    async readStatus() {
-        const r = await this.send(101); // MSP_STATUS
+    async readStatus(pre) {
+        const r = pre || await this.send(101); // MSP_STATUS
         const p = r.payload;
         if (p.length < 21) return;
         
@@ -1378,14 +1416,14 @@ class StatusMSP {
         // Handled in readStatus
     }
 
-    async readName() {
-        const r = await this.send(10); // MSP_NAME
+    async readName(pre) {
+        const r = pre || await this.send(10); // MSP_NAME
         const dec = new TextDecoder();
         this.data.CONFIG.name = dec.decode(r.payload).trim();
     }
 
-    async readAttitude() {
-        const r = await this.send(108); // MSP_ATTITUDE
+    async readAttitude(pre) {
+        const r = pre || await this.send(108); // MSP_ATTITUDE
         const p = r.payload;
         if (p.length >= 6) {
             // Signed 16-bit integers
@@ -1396,8 +1434,8 @@ class StatusMSP {
         }
     }
 
-    async readAnalog() {
-        const r = await this.send(110); // MSP_ANALOG
+    async readAnalog(pre) {
+        const r = pre || await this.send(110); // MSP_ANALOG
         const p = r.payload;
         if (p.length >= 9) {
             this.data.ANALOG.voltage = p[0] / 10.0;
@@ -1731,16 +1769,37 @@ class StatusTab {
     }
 
     async onConnect() {
+        /* Batched tab loading (P0): all init reads go out in ONE combined
+           MSP write instead of 8 sequential round trips - the same
+           batchCodes() pattern the original configurator uses. If the batch
+           fails entirely (FC that dislikes back-to-back frames), fall back
+           to the old sequential path. */
         try {
-            await this.msp.readAPIVersion();
-            await this.msp.readFCVariant();
-        } catch(e) {}
-        try { await this.msp.readBoardInfo(); } catch(e) {}
-        try { await this.msp.readBuildInfo(); } catch(e) {}
-        try { await this.msp.readName(); } catch(e) {}
-        try { await this.msp.readStatus(); } catch(e) {}
-        try { await this.msp.readArmingConfig(); } catch(e) {}
-        try { await this.msp.readAnalog(); } catch(e) {}
+            const rs = await this.msp.batchCodes([
+                { code: 1 },    // MSP_API_VERSION
+                { code: 2 },    // MSP_FC_VARIANT
+                { code: 4 },    // MSP_BOARD_INFO
+                { code: 5 },    // MSP_BUILD_INFO
+                { code: 10 },   // MSP_NAME
+                { code: 101 },  // MSP_STATUS
+                { code: 110 },  // MSP_ANALOG
+            ]);
+            try { await this.msp.readAPIVersion(rs[0]); } catch(e) {}
+            try { await this.msp.readFCVariant(rs[1]); } catch(e) {}
+            try { await this.msp.readBoardInfo(rs[2]); } catch(e) {}
+            try { await this.msp.readBuildInfo(rs[3]); } catch(e) {}
+            try { await this.msp.readName(rs[4]); } catch(e) {}
+            try { await this.msp.readStatus(rs[5]); } catch(e) {}
+            try { await this.msp.readAnalog(rs[6]); } catch(e) {}
+        } catch (e) {
+            try { await this.msp.readAPIVersion(); await this.msp.readFCVariant(); } catch(e2) {}
+            try { await this.msp.readBoardInfo(); } catch(e2) {}
+            try { await this.msp.readBuildInfo(); } catch(e2) {}
+            try { await this.msp.readName(); } catch(e2) {}
+            try { await this.msp.readStatus(); } catch(e2) {}
+            try { await this.msp.readArmingConfig(); } catch(e2) {}
+            try { await this.msp.readAnalog(); } catch(e2) {}
+        }
 
         this.updateInfoBox();
         this.updateArmingBox();
@@ -1885,9 +1944,19 @@ class StatusTab {
         if (this.pollInterval) return;
         this.pollInterval = setInterval(async () => {
             if (!this.serial.connected) { this.stopPolling(); return; }
-            try { await this.msp.readAttitude(); } catch(e) {}
-            try { await this.msp.readAnalog(); } catch(e) {}
-            try { await this.msp.readStatus(); } catch(e) {}
+            /* Batched poll (P0): ATTITUDE + ANALOG + STATUS in one write
+               (1 round trip instead of 3). Short timeout so a dead link
+               cannot pile up jobs on the MSP queue. */
+            try {
+                const rs = await this.msp.batchCodes([
+                    { code: 108 },  // MSP_ATTITUDE
+                    { code: 110 },  // MSP_ANALOG
+                    { code: 101 },  // MSP_STATUS
+                ], 2500);
+                try { await this.msp.readAttitude(rs[0]); } catch(e) {}
+                try { await this.msp.readAnalog(rs[1]); } catch(e) {}
+                try { await this.msp.readStatus(rs[2]); } catch(e) {}
+            } catch(e) {}
             this.updateInfoBox();
             this.updateArmingBox();
             this.updateAttitude();

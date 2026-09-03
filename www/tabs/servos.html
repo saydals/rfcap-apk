@@ -721,8 +721,45 @@
                 return result;
             }
 
-            async readApiVersion() {
-                const resp = await this.sendCommand(MSP.API_VERSION);
+            /* ---- batched reads (P0) ----
+               Combine several read requests into ONE MSP write (a single link
+               round trip) and collect every response - the send_batch()/
+               batchCodes() pattern from the original configurator. Codes that
+               never answered (CRC loss on BLE) are re-requested on their own
+               until the deadline. Returns the responses in request order. */
+            async batchCodes(requests, timeout = 8000) {
+                const run = async () => {
+                    const combined = (list) => {
+                        const frames = list.map(r => buildMSPMessage(r.code, r.payload || []));
+                        const total = frames.reduce((s, f) => s + f.length, 0);
+                        const out = new Uint8Array(total);
+                        let off = 0;
+                        for (const f of frames) { out.set(f, off); off += f.length; }
+                        return out;
+                    };
+                    const deadline = Date.now() + timeout;
+                    let pending = requests.slice();
+                    const responses = new Map();
+                    while (pending.length && Date.now() < deadline) {
+                        await this.serial.send(combined(pending));
+                        const missed = [];
+                        await Promise.all(pending.map(async (r) => {
+                            try {
+                                responses.set(r.code, await this.parser.waitResponse(r.code, Math.max(750, deadline - Date.now())));
+                            } catch (e) { missed.push(r); }
+                        }));
+                        pending = missed;
+                    }
+                    if (pending.length) throw new Error('MSP batch timeout: ' + pending.map(p => p.code).join(','));
+                    return requests.map(r => responses.get(r.code));
+                };
+                const result = this._busy.then(run, run);
+                this._busy = result.then(() => {}, () => {});
+                return result;
+            }
+
+            async readApiVersion(pre) {
+                const resp = pre || await this.sendCommand(MSP.API_VERSION);
                 this.data.apiVersion = resp.payload[1] + '.' + resp.payload[2] + '.0';
             }
 
@@ -730,8 +767,8 @@
                motorCount/servoCount at the tail (matches rfconfigurator
                MSPHelper). servoCount is the AUTHORITATIVE number of used
                servos; MSP 120 may return the full slot list instead. */
-            async readStatus() {
-                const resp = await this.sendCommand(MSP.STATUS);
+            async readStatus(pre) {
+                const resp = pre || await this.sendCommand(MSP.STATUS);
                 const p = resp.payload;
                 let i = 0;
                 if (i >= p.length) return;
@@ -750,8 +787,8 @@
                 if (i < p.length) this.data.servoCount = p[i++];   // authoritative used-servo count
             }
 
-            async readSerialConfig() {
-                const resp = await this.sendCommand(MSP.SERIAL_CONFIG);
+            async readSerialConfig(pre) {
+                const resp = pre || await this.sendCommand(MSP.SERIAL_CONFIG);
                 const p = resp.payload;
                 const ports = [];
                 const count = Math.floor(p.length / 9);
@@ -766,8 +803,8 @@
                 this.data.hasFbusSbus = ports.some(pt => (pt.functionMask & FBUS) || (pt.functionMask & SBUS));
             }
 
-            async readServoConfig() {
-                const resp = await this.sendCommand(MSP.SERVO_CONFIGURATIONS);
+            async readServoConfig(pre) {
+                const resp = pre || await this.sendCommand(MSP.SERVO_CONFIGURATIONS);
                 const p = resp.payload;
                 const configs = [];
                 const count = p[0];
@@ -788,8 +825,8 @@
                 this.data.SERVO_CONFIG = configs;
             }
 
-            async readServoOverride() {
-                const resp = await this.sendCommand(MSP.SERVO_OVERRIDE);
+            async readServoOverride(pre) {
+                const resp = pre || await this.sendCommand(MSP.SERVO_OVERRIDE);
                 const p = resp.payload;
                 const count = Math.floor(p.length / 2);
                 const ov = [];
@@ -797,8 +834,8 @@
                 this.data.SERVO_OVERRIDE = ov;
             }
 
-            async readServoData() {
-                const resp = await this.sendCommand(MSP.SERVO);
+            async readServoData(pre) {
+                const resp = pre || await this.sendCommand(MSP.SERVO);
                 const p = resp.payload;
                 const count = Math.floor(p.length / 2);
                 const data = [];
@@ -806,8 +843,8 @@
                 this.data.SERVO_DATA = data;
             }
 
-            async readBusServoConfig() {
-                const resp = await this.sendCommand(MSP.BUS_SERVO_CONFIG);
+            async readBusServoConfig(pre) {
+                const resp = pre || await this.sendCommand(MSP.BUS_SERVO_CONFIG);
                 const p = resp.payload;
                 const cfg = [];
                 for (let i = 0; i < ServoConst.BUS_SERVO_CHANNELS; i++) cfg.push(p[i] || 0);
@@ -907,15 +944,34 @@
 
             async loadDataFromFC() {
                 try {
-                    await this.msp.readApiVersion();
-                    await this.msp.readStatus();
-                    await this.msp.readSerialConfig();
-                    await this.msp.readServoConfig();
-                    await this.msp.readServoOverride();
+                    /* Batched load (P0): batch 1 = the always-needed reads in
+                       ONE write; batch 2 = SERVO (+BUS_SERVO_CONFIG when the
+                       API supports it) once the API version is known.
+                       6-7 round trips collapse into 2. */
+                    const rs = await this.msp.batchCodes([
+                        { code: MSP.API_VERSION },
+                        { code: MSP.STATUS },
+                        { code: MSP.SERIAL_CONFIG },
+                        { code: MSP.SERVO_CONFIGURATIONS },
+                        { code: MSP.SERVO_OVERRIDE },
+                    ]);
+                    try { await this.msp.readApiVersion(rs[0]); } catch (e) { throw e; }
+                    try { await this.msp.readStatus(rs[1]); } catch (e) {}
+                    try { await this.msp.readSerialConfig(rs[2]); } catch (e) {}
+                    try { await this.msp.readServoConfig(rs[3]); } catch (e) {}
+                    try { await this.msp.readServoOverride(rs[4]); } catch (e) {}
                     this.data = this.msp.data;
                     this.data.supportsBus = apiGte(this.data.apiVersion, 12, 9);
-                    if (this.data.supportsBus) await this.msp.readBusServoConfig();
-                    await this.msp.readServoData();
+                    const batch2 = [];
+                    if (this.data.supportsBus) batch2.push({ code: MSP.BUS_SERVO_CONFIG });
+                    batch2.push({ code: MSP.SERVO });
+                    const rs2 = await this.msp.batchCodes(batch2);
+                    if (this.data.supportsBus) {
+                        try { await this.msp.readBusServoConfig(rs2[0]); } catch (e) {}
+                        try { await this.msp.readServoData(rs2[1]); } catch (e) {}
+                    } else {
+                        try { await this.msp.readServoData(rs2[0]); } catch (e) {}
+                    }
                 } catch (e) {
                     console.error('Failed to read from FC:', e);
                     alert('Failed to read servo data from FC: ' + e.message);

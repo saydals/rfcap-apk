@@ -1431,9 +1431,46 @@
                 return result;
             }
 
+            /* ---- batched reads (P0) ----
+               Combine several read requests into ONE MSP write (a single link
+               round trip) and collect every response - the send_batch()/
+               batchCodes() pattern from the original configurator. Codes that
+               never answered (CRC loss on BLE) are re-requested on their own
+               until the deadline. Returns the responses in request order. */
+            async batchCodes(requests, timeout = 8000) {
+                const run = async () => {
+                    const combined = (list) => {
+                        const frames = list.map(r => buildMSPMessage(r.code, r.payload || []));
+                        const total = frames.reduce((s, f) => s + f.length, 0);
+                        const out = new Uint8Array(total);
+                        let off = 0;
+                        for (const f of frames) { out.set(f, off); off += f.length; }
+                        return out;
+                    };
+                    const deadline = Date.now() + timeout;
+                    let pending = requests.slice();
+                    const responses = new Map();
+                    while (pending.length && Date.now() < deadline) {
+                        await this.serial.send(combined(pending));
+                        const missed = [];
+                        await Promise.all(pending.map(async (r) => {
+                            try {
+                                responses.set(r.code, await this.parser.waitResponse(r.code, Math.max(750, deadline - Date.now())));
+                            } catch (e) { missed.push(r); }
+                        }));
+                        pending = missed;
+                    }
+                    if (pending.length) throw new Error('MSP batch timeout: ' + pending.map(p => p.code).join(','));
+                    return requests.map(r => responses.get(r.code));
+                };
+                const result = this._busy.then(run, run);
+                this._busy = result.then(() => {}, () => {});
+                return result;
+            }
+
             // ---- MIXER CONFIG ----
-            async readMixerConfig() {
-                const resp = await this.sendCommand(MSP.MIXER_CONFIG);
+            async readMixerConfig(pre) {
+                const resp = pre || await this.sendCommand(MSP.MIXER_CONFIG);
                 const p = resp.payload;
                 const c = this.data.MIXER_CONFIG;
                 this.missingParams = new Set();
@@ -1490,8 +1527,8 @@
             }
 
             // ---- MIXER INPUTS ----
-            async readMixerInputs() {
-                const resp = await this.sendCommand(MSP.MIXER_INPUTS);
+            async readMixerInputs(pre) {
+                const resp = pre || await this.sendCommand(MSP.MIXER_INPUTS);
                 const p = resp.payload;
                 const count = Math.floor(p.length / 6);
                 const inputs = [];
@@ -1519,8 +1556,8 @@
             }
 
             // ---- MIXER RULES ----
-            async readMixerRules() {
-                const resp = await this.sendCommand(MSP.MIXER_RULES);
+            async readMixerRules(pre) {
+                const resp = pre || await this.sendCommand(MSP.MIXER_RULES);
                 const p = resp.payload;
                 const count = Math.floor(p.length / 7);
                 const rules = [];
@@ -1538,8 +1575,8 @@
             }
 
             // ---- MIXER OVERRIDE ----
-            async readMixerOverride() {
-                const resp = await this.sendCommand(MSP.MIXER_OVERRIDE);
+            async readMixerOverride(pre) {
+                const resp = pre || await this.sendCommand(MSP.MIXER_OVERRIDE);
                 const p = resp.payload;
                 const count = Math.floor(p.length / 2);
                 const ov = [];
@@ -1660,10 +1697,18 @@
             // ---------- Data load ----------
             async loadDataFromFC() {
                 try {
-                    await this.msp.readMixerConfig();
-                    await this.msp.readMixerInputs();
-                    await this.msp.readMixerRules();
-                    await this.msp.readMixerOverride();
+                    /* Batched load (P0): the 4 reads go out in ONE combined MSP
+                       write (1 round trip instead of 4). */
+                    const rs = await this.msp.batchCodes([
+                        { code: MSP.MIXER_CONFIG },
+                        { code: MSP.MIXER_INPUTS },
+                        { code: MSP.MIXER_RULES },
+                        { code: MSP.MIXER_OVERRIDE },
+                    ]);
+                    try { await this.msp.readMixerConfig(rs[0]); } catch (e) { throw e; }
+                    try { await this.msp.readMixerInputs(rs[1]); } catch (e) {}
+                    try { await this.msp.readMixerRules(rs[2]); } catch (e) {}
+                    try { await this.msp.readMixerOverride(rs[3]); } catch (e) {}
                 } catch (e) {
                     console.error('Failed to read from FC:', e);
                     alert('Failed to read mixer data from FC: ' + e.message);
