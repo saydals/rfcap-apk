@@ -1224,6 +1224,11 @@ class MSPParser {
                 }
                 const ps = this.pos + hdrEnd;
                 const totalLen = hdrEnd + length + 1;
+                /* P2 resync guard: a corrupted length byte would make the parser
+                   wait for a frame that never arrives, silently swallowing every
+                   following valid frame. Anything implausible is skipped
+                   byte-by-byte until the stream realigns. */
+                if (totalLen > 8192) { this.pos++; continue; }
                 if (this.len - this.pos < totalLen) { parsed = false; break; }
                 const code = this.buf[this.pos + 4];
                 let crc;
@@ -1296,8 +1301,21 @@ class StatusMSP {
            (single slot per code) and updates stall until the 3s timeout.
            Same pattern as the Rates/Profiles tabs. */
         const job = async () => {
-            await this.serial.send(buildMSPMessage(code, payload));
-            return await this.parser.waitResponse(code);
+            /* P1 retry: a CRC-corrupted response frame never resolves
+               waitResponse, so a timeout means "answer lost" - resend the
+               same request a couple of times before failing (the original
+               configurator's bleRetryInterval / bleBatchMaxRetries pattern). */
+            let lastErr;
+            for (let attempt = 0; attempt <= 2; attempt++) {
+                try {
+                    await this.serial.send(buildMSPMessage(code, payload));
+                    return await this.parser.waitResponse(code);
+                } catch (e) {
+                    lastErr = e;
+                    if (attempt < 2) await new Promise(r => setTimeout(r, 300));
+                }
+            }
+            throw lastErr;
         };
         const tail = this.queue.then(() => job(), () => job());
         this.queue = tail.catch(() => {});

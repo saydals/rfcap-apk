@@ -620,6 +620,11 @@
                     }
                     const hdrEnd = jumbo ? 7 : 5;
                     const totalLen = hdrEnd + length + 1;
+                    /* P2 resync guard: a corrupted length byte would make the parser
+                       wait for a frame that never arrives, silently swallowing every
+                       following valid frame. Anything implausible is skipped
+                       byte-by-byte until the stream realigns. */
+                    if (totalLen > 8192) { this.pos++; continue; }
                     if (this.len - this.pos < totalLen) return false;
                     const code = this.buf[this.pos + 4];
                     const ps = this.pos + hdrEnd;
@@ -711,10 +716,22 @@
             async sendCommand(codeOrMsg, payload = [], expectResponse = true) {
                 const run = async () => {
                     const msg = (codeOrMsg instanceof Uint8Array) ? codeOrMsg : buildMSPMessage(codeOrMsg, payload);
-                    await this.serial.send(msg);
-                    if (!expectResponse) return null;
+                    if (!expectResponse) { await this.serial.send(msg); return null; }
                     const expectCode = (codeOrMsg instanceof Uint8Array) ? ((codeOrMsg.length > 4) ? codeOrMsg[4] : null) : codeOrMsg;
-                    return await this.parser.waitResponse(expectCode);
+                    /* P1 retry: a CRC-corrupted response frame never resolves
+                       waitResponse, so a timeout means "answer lost" - resend
+                       the same request a couple of times before failing. */
+                    let lastErr;
+                    for (let attempt = 0; attempt <= 2; attempt++) {
+                        try {
+                            await this.serial.send(msg);
+                            return await this.parser.waitResponse(expectCode);
+                        } catch (e) {
+                            lastErr = e;
+                            if (attempt < 2) await new Promise(r => setTimeout(r, 300));
+                        }
+                    }
+                    throw lastErr;
                 };
                 const result = this._busy.then(run, run);
                 this._busy = result.then(() => {}, () => {});
