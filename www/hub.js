@@ -972,7 +972,17 @@
         }
     };
 
-    /* ---------- auto-reconnect last device ---------- */
+    /* ---------- auto-reconnect last device ----------
+       FIX: dial through the OFFICIAL handlers (H.btConnect/H.bleConnect/
+       H.usbConnect) instead of poking the transport object directly.
+       The old code (rfBle.connectSPP / rfBle.connect) opened the native
+       socket WITHOUT calling setState() - the app restart came up with a
+       live link that no page could see or use ("zombie connection":
+       status shows Disconnected, every MSP write throws 'not connected',
+       and the open socket blocked manual reconnect until the module was
+       power-cycled). Going through H.* makes the state, header, status
+       page and all tab iframes agree, and the normal auto-attach
+       (bridge.js tryAutoConnectClick) kicks in for every tab. */
     (function() {
         if (!isNative) return;
         var last = null;
@@ -980,14 +990,21 @@
         if (!last || !last.kind || !last.address) return;
         setTimeout(function() {
             try {
+                if (RF.state.on) return;   /* already connected - never double-dial */
                 if (last.kind === 'spp') {
-                    rfBle.connectSPP(last.address);
+                    H.btConnect({ address: last.address }).catch(function(e) {
+                        console.warn('[hub] auto-reconnect failed:', e.message);
+                    });
                 } else if (last.kind === 'ble') {
-                    rfBle.connect('bluetooth-' + last.address, { baudRate: 115200 });
+                    H.bleConnect({ deviceId: last.address }).catch(function(e) {
+                        console.warn('[hub] auto-reconnect failed:', e.message);
+                    });
                 } else if (last.kind === 'usb') {
-                    H.usbConnect({ deviceId: last.address });
+                    H.usbConnect({ deviceId: last.address }).catch(function(e) {
+                        console.warn('[hub] auto-reconnect failed:', e.message);
+                    });
                 }
             } catch (e) { console.warn('[hub] auto-reconnect failed:', e.message); }
-        }, 1000);
+        }, 1500);
     })();
 })();

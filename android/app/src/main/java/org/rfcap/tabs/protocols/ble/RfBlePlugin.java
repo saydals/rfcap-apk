@@ -253,6 +253,15 @@ public class RfBlePlugin extends Plugin {
 		ioExecutor.execute(() -> {
 			BluetoothSocket socket = null;
 			try {
+				/* Zombie-socket guard: if a previous SPP socket is still open
+				   (e.g. an auto-reconnect JS never saw, or a racing double-dial),
+				   close it first or the module's single SPP channel stays occupied
+				   and every manual connect fails until the module is power-cycled. */
+				if (sppSocket != null) {
+					try { sppSocket.close(); } catch (Exception ignored) {}
+					sppSocket = null;
+				}
+
 				BluetoothDevice device = adapterRef.getRemoteDevice(addr);
 				java.util.UUID sppUuid = java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
@@ -294,6 +303,17 @@ public class RfBlePlugin extends Plugin {
 				}
 			} catch (Exception e) {
 				Log.w(TAG, "SPP reader stopped: " + e.getMessage());
+			} finally {
+				/* Link-loss detection: when the module drops the link (power
+				   cycle, out of range) the read loop dies here. Without this
+				   event JS kept a ghost "Connected" state. Idempotent with
+				   disconnectSPP()'s own notify. */
+				if (sppSocket == socket) {
+					sppSocket = null;
+				}
+				JSObject evt = new JSObject();
+				evt.put("success", false);
+				notifyListeners("disconnected", evt);
 			}
 		}).start();
 	}
