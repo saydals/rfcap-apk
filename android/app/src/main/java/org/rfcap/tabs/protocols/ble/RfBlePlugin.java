@@ -277,6 +277,14 @@ public class RfBlePlugin extends Plugin {
 				Log.i(TAG, "SPP: connected to " + addr);
 				JSObject result = new JSObject();
 				result.put("success", true);
+				/* Resolve the remote name so the UI shows the module name,
+				   not just the MAC - also for the auto-reconnect path. */
+				try {
+					String devName = device.getName();
+					if (devName != null) {
+						result.put("name", devName);
+					}
+				} catch (Exception ignored) {}
 				call.resolve(result);
 			} catch (Exception e) {
 				Log.e(TAG, "SPP connect error: " + e.getMessage(), e);
@@ -587,6 +595,15 @@ public class RfBlePlugin extends Plugin {
 			public void onDeviceReady(@NonNull BluetoothDevice device) {
 				JSObject res = new JSObject();
 				res.put("success", true);
+				/* Resolve the remote name (Android caches it for bonded
+				   devices) so the UI can show a friendly name even when
+				   the app skips scanning - e.g. the auto-reconnect path. */
+				try {
+					String devName = device.getName();
+					if (devName != null) {
+						res.put("name", devName);
+					}
+				} catch (Exception ignored) {}
 				call.resolve(res);
 			}
 

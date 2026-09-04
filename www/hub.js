@@ -54,6 +54,7 @@
             this.bytesSent = 0;
             this.bytesReceived = 0;
             this.connectionType = null;
+            this.deviceName = null;   /* friendly name resolved on connect */
 
             if (pluginBle) {
                 pluginBle.addListener('dataReceived', (event) => {
@@ -68,6 +69,7 @@
                 pluginBle.addListener('disconnected', () => {
                     this.connected = false;
                     this.connectionId = null;
+                    this.deviceName = null;
                     this.dispatchEvent(new CustomEvent('disconnect', { detail: true }));
                 });
             }
@@ -140,6 +142,8 @@
                 return await this.connectSPP(path.substring(4));
             }
 
+            this.deviceName = null;   /* stale name from a previous session */
+
             if (!this.devices.length) await this.getDevices();
 
             const device = this.devices.find(function(d) { return d.path === path; });
@@ -162,6 +166,12 @@
                 this.bytesSent = 0;
                 this.bytesReceived = 0;
                 this.bitrate = (options && options.baudRate) || 115200;
+                if (success) {
+                    /* Native connect() returns the cached remote name (see
+                       RfBlePlugin onDeviceReady); fall back to the scan list
+                       entry so the UI never has to show a bare MAC. */
+                    this.deviceName = (result && result.name) || device.displayName || null;
+                }
                 this.dispatchEvent(new CustomEvent('connect', { detail: success }));
                 return success;
             } catch (error) {
@@ -180,12 +190,14 @@
                 const result = await pluginBle.disconnect();
                 this.connected = false;
                 this.connectionId = null;
+                this.deviceName = null;
                 this.dispatchEvent(new CustomEvent('disconnect', { detail: !!(result && result.success) }));
                 return true;
             } catch (error) {
                 console.error('[RfBLE] Failed to disconnect', error);
                 this.connected = false;
                 this.connectionId = null;
+                this.deviceName = null;
                 this.dispatchEvent(new CustomEvent('disconnect', { detail: false }));
                 return false;
             }
@@ -208,6 +220,7 @@
 
         async connectSPP(address) {
             if (!pluginBle) return false;
+            this.deviceName = null;   /* stale name from a previous session */
             try {
                 const result = await pluginBle.sppConnect({ address: address });
                 const success = !!(result && result.success);
@@ -215,6 +228,7 @@
                     this.connected = true;
                     this.connectionId = address;
                     this.connectionType = 'spp';
+                    this.deviceName = (result && result.name) || null;
                 }
                 return success;
             } catch (error) {
@@ -230,12 +244,14 @@
                 this.connected = false;
                 this.connectionId = null;
                 this.connectionType = null;
+                this.deviceName = null;
                 this.dispatchEvent(new CustomEvent('disconnect', { detail: !!(result && result.success) }));
                 return true;
             } catch (error) {
                 console.error('[RfBLE] SPP disconnect failed', error);
                 this.connected = false;
                 this.connectionId = null;
+                this.deviceName = null;
                 this.dispatchEvent(new CustomEvent('disconnect', { detail: false }));
                 return false;
             }
@@ -722,8 +738,9 @@
         async btConnect(msg) {
             var r = await rfBle.connectSPP(msg.address);
             if (!r) throw new Error('SPP connect failed');
-            setState({ on: true, kind: 'spp', name: msg.address, detail: msg.address });
-            try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'spp', address: msg.address, name: msg.address })); } catch (e) {}
+            var nm = (rfBle.deviceName || msg.name || msg.address);
+            setState({ on: true, kind: 'spp', name: nm, detail: msg.address });
+            try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'spp', address: msg.address, name: nm })); } catch (e) {}
             return r;
         },
 
@@ -764,10 +781,12 @@
             var device = { path: 'bluetooth-' + msg.deviceId, address: msg.deviceId };
             var r = await rfBle.connect(device.path, { baudRate: 115200 });
             if (r) {
-                setState({ on: true, kind: 'ble', name: msg.deviceId, detail: msg.deviceId });
-                try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'ble', address: msg.deviceId, name: msg.deviceId })); } catch (e) {}
+                var nm = (rfBle.deviceName || msg.name || msg.deviceId);
+                setState({ on: true, kind: 'ble', name: nm, detail: msg.deviceId });
+                try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'ble', address: msg.deviceId, name: nm })); } catch (e) {}
+                return { name: nm };
             }
-            return r ? { name: msg.deviceId } : {};
+            return {};
         },
 
         async bleDisconnect() {
@@ -992,11 +1011,11 @@
             try {
                 if (RF.state.on) return;   /* already connected - never double-dial */
                 if (last.kind === 'spp') {
-                    H.btConnect({ address: last.address }).catch(function(e) {
+                    H.btConnect({ address: last.address, name: last.name }).catch(function(e) {
                         console.warn('[hub] auto-reconnect failed:', e.message);
                     });
                 } else if (last.kind === 'ble') {
-                    H.bleConnect({ deviceId: last.address }).catch(function(e) {
+                    H.bleConnect({ deviceId: last.address, name: last.name }).catch(function(e) {
                         console.warn('[hub] auto-reconnect failed:', e.message);
                     });
                 } else if (last.kind === 'usb') {
