@@ -394,6 +394,12 @@
             gap: 4px;
         }
 
+        /* ============ SENSORS BOX ============ */
+        .box-sensors {
+            flex: 1;
+            min-width: 220px;
+        }
+
         /* ---- Sensor detection status bar (bottom of status page) ---- */
         .box-sensors .sensor-status-row {
             list-style: none;
@@ -862,10 +868,8 @@
             justify-content: space-between;
             gap: 10px;
             padding: 10px 12px;
-            margin: 16px 0 30px;
             background-color: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 6px;
+            border-radius: 4px;
             color: var(--color-text);
             font-weight: 600;
         }
@@ -873,6 +877,12 @@
         .auto-connect-setting label:first-child {
             font-weight: 600;
             color: var(--color-text);
+        }
+
+        /* ============ AUTO CONNECT (OPTION) BOX ============ */
+        .box-auto-connect {
+            flex: 1;
+            min-width: 220px;
         }
     </style>
 </head>
@@ -1072,6 +1082,11 @@
                     </div>
                 </div>
 
+            </div><!-- /section-row -->
+
+            <!-- ROW 3: Sensors + Auto Connect -->
+            <div class="section-row">
+
                 <!-- SENSOR STATUS BOX -->
                 <div class="gui_box box-sensors">
                     <div class="gui_box_titlebar">Sensors</div>
@@ -1084,18 +1099,22 @@
                     </ul>
                 </div>
 
+                <!-- AUTO CONNECT OPTION BOX -->
+                <div class="gui_box box-auto-connect">
+                    <div class="gui_box_titlebar">Options</div>
+                    <div class="auto-connect-setting">
+                        <label for="ble-auto-connect-toggle">Auto Connect at Start</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="ble-auto-connect-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
             </div><!-- /section-row -->
 
         </div><!-- /tab-status -->
     </div><!-- /tab-content-container -->
-
-    <div class="auto-connect-setting">
-        <label for="ble-auto-connect-toggle">Auto Connect at Start</label>
-        <label class="toggle-switch">
-            <input type="checkbox" id="ble-auto-connect-toggle">
-            <span class="toggle-slider"></span>
-        </label>
-    </div>
 </div><!-- /main-wrapper -->
 
 <dialog class="dialogConfirmArming">
@@ -1313,7 +1332,8 @@ class StatusMSP {
             STATUS: {
                 isArmed: false,
                 armingDisableFlags: 0,
-                armingDisableCount: 27
+                armingDisableCount: 27,
+                statusReceived: false
             },
             SENSOR_DATA: { kinematics: [0, 0, 0] },
             ANALOG: {},
@@ -1452,6 +1472,11 @@ class StatusMSP {
         // 17..20: uint32 armingDisableFlags
         this.data.STATUS.armingDisableFlags = toUint32(p[idx], p[idx+1], p[idx+2], p[idx+3]);
         idx += 4;
+
+        /* Mark that we've received at least one STATUS frame so the UI
+           knows the arming-disable flag reflects FC truth and not the
+           initial zero in the constructor. */
+        this.data.STATUS.statusReceived = true;
 
         this.data.STATUS.isArmed = (mode & 1) !== 0;
         this.data.STATUS.activeSensors = sensors; // sensor detection mask (acc=0,baro=1,mag=2,gps=3,sonar=4,gyro=5)
@@ -1970,8 +1995,18 @@ class StatusTab {
         const flags = st.armingDisableFlags || 0;
         const armingEnabled = flags === 0;
 
+        /* Reflect the *actual* FC state (armingDisableFlags == 0 ⇒ enabled).
+           We do NOT use this.msp.data.CONFIG.armingDisabled here because the
+           app never reads it back from the FC, so it would stay at its
+           initial false value forever and the toggle would always show ON
+           after the first poll — even though every FC ships with arming
+           disabled until the configurator explicitly enables it.
+
+           Until the very first STATUS frame arrives the constructor default
+           (flags = 0) would briefly show the toggle as ON — so we keep it
+           OFF until the FC actually tells us anything. */
         const toggle = document.getElementById('arming-enable-toggle');
-        toggle.checked = !this.msp.data.CONFIG.armingDisabled;
+        toggle.checked = st.statusReceived === true && armingEnabled;
 
         const dangerRow = document.querySelector('.arm-danger-row');
         if (dangerRow) dangerRow.style.display = armingEnabled ? '' : 'none';
@@ -2006,6 +2041,7 @@ class StatusTab {
 
     resetArmingBox() {
         this.msp.data.CONFIG.armingDisabled = false;
+        this.msp.data.STATUS.statusReceived = false;
         document.getElementById('arming-enable-toggle').checked = false;
         const dangerRow = document.querySelector('.arm-danger-row');
         if (dangerRow) dangerRow.style.display = 'none';
