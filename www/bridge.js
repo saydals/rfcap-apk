@@ -251,11 +251,6 @@
     let lastAutoOn = false;
     /* Ask the shell to switch tabs (e.g. mixer -> status after Save & Reboot) */
     BR.gotoTab = (v) => post({ t: 'gotoTab', v });
-    /* Only the status tab owns the #connect-btn that adopts the shared link.
-       Every other tab has its own #connect-btn but the shared link is owned
-       centrally by the status page - re-dialling from there races with the
-       hub's native connect and breaks the link. */
-    const isStatusTab = /status\.html/i.test(location.pathname);
     function onStateChange() {
         const st = BR.state;
         if (!st.on) {
@@ -269,7 +264,7 @@
         }
         /* NEW: link just came up (or tab loaded while link up) — attach this
            page automatically so Status connection is shared by every tab */
-        if (!lastAutoOn && isStatusTab) {
+        if (!lastAutoOn) {
             lastAutoOn = true;
             setTimeout(tryAutoConnectClick, 400);
         }
@@ -277,7 +272,6 @@
 
     function tryAutoConnectClick() {
         if (!(BR.state && BR.state.on)) return;
-        if (!isStatusTab) return;
         const sel = document.getElementById('port-select');
         if (sel && (sel.value === 'none' || !sel.value)) {
             let opt = sel.querySelector('option[value="0"]');
@@ -372,10 +366,8 @@
             /* entering a tab with a live link: attach automatically and let
                the page run its own MSP init reads - no manual Connect press */
             if (BR.state && BR.state.on) {
-                if (isStatusTab) {
-                    lastAutoOn = true;
-                    setTimeout(tryAutoConnectClick, 200);
-                }
+                lastAutoOn = true;
+                setTimeout(tryAutoConnectClick, 200);
             }
         }
         /* NOTE: do NOT close sharedPort here - its reader must survive so
@@ -393,10 +385,8 @@
             const st = await request({ t: 'getState' });
             Object.assign(BR.state, st);
             if (BR.state.on) {
-                if (isStatusTab) {
-                    lastAutoOn = true;
-                    setTimeout(tryAutoConnectClick, 500);
-                }
+                lastAutoOn = true;
+                setTimeout(tryAutoConnectClick, 500);
             }
         } catch (e) {}
     }
