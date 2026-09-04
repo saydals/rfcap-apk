@@ -2312,9 +2312,6 @@ class StatusTab {
 
         scanBtn.addEventListener('click', async () => {
             if (sppScanning) return;
-            // Reset any stale connection before scanning, so the next
-            // Connect click goes through the normal handshake path.
-            try { if (window.RFHub && window.RFHub.api && window.RFHub.api.btDisconnect) await window.RFHub.api.btDisconnect(); } catch (e) {}
             sppScanning = true;
             scanBtn.classList.add('scan-active');
             scanBtn.textContent = '⏳ Scanning...';
@@ -2644,10 +2641,6 @@ class StatusTab {
                 this.bleSetStatus('', `Found ${bleDevices.length} device(s)`);
                 return;
             }
-
-            // Reset any stale BLE connection before scanning, so the next
-            // Connect click goes through the normal handshake path.
-            try { if (window.RFHub && window.RFHub.api && window.RFHub.api.bleDisconnect) await window.RFHub.api.bleDisconnect(); } catch (e) {}
 
             bleScanning = true;
             bleDevices = [];
