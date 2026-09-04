@@ -1893,6 +1893,9 @@ class StatusTab {
         this.updateArmingBox();
         this.updateSensorStatus();
         this.startPolling();
+
+        this.msp.data.CONFIG.armingDisabled = true;
+        try { await this.msp.send(99, [1]); } catch(e) {}
     }
 
     onDisconnect() {
