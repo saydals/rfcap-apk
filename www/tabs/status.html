@@ -2004,19 +2004,6 @@ class StatusTab {
         const flags = st.armingDisableFlags || 0;
         const armingEnabled = flags === 0;
 
-        /* Reflect the *actual* FC state (armingDisableFlags == 0 ⇒ enabled).
-           We do NOT use this.msp.data.CONFIG.armingDisabled here because the
-           app never reads it back from the FC, so it would stay at its
-           initial false value forever and the toggle would always show ON
-           after the first poll — even though every FC ships with arming
-           disabled until the configurator explicitly enables it.
-
-           Until the very first STATUS frame arrives the constructor default
-           (flags = 0) would briefly show the toggle as ON — so we keep it
-           OFF until the FC actually tells us anything. */
-        const toggle = document.getElementById('arming-enable-toggle');
-        toggle.checked = st.statusReceived === true && armingEnabled;
-
         const dangerRow = document.querySelector('.arm-danger-row');
         if (dangerRow) dangerRow.style.display = armingEnabled ? '' : 'none';
 
