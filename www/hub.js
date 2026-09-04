@@ -1007,14 +1007,16 @@
         var last = null;
         try { last = JSON.parse(localStorage.getItem('rf-last-conn') || 'null'); } catch (e) {}
         if (!last || !last.kind || !last.address) return;
-        if (last.kind === 'ble') {
+        var autoConn = null;
+        try { autoConn = localStorage.getItem('rfcap_auto_connect'); } catch(e) {}
+        if (autoConn === null) {
             try {
-                var autoConn = localStorage.getItem('rfcap_ble_auto_connect');
-                if (autoConn === '0') {
-                    console.log('[hub] BLE auto-connect disabled by user setting');
-                    return;
-                }
+                autoConn = localStorage.getItem('rfcap_ble_auto_connect');
             } catch(e) {}
+        }
+        if (autoConn === '0') {
+            console.log('[hub] auto-connect disabled by user setting (kind=' + last.kind + ')');
+            return;
         }
         setTimeout(function() {
             try {

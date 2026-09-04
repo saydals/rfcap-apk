@@ -1103,9 +1103,9 @@
                 <div class="gui_box box-auto-connect">
                     <div class="gui_box_titlebar">Options</div>
                     <div class="auto-connect-setting">
-                        <label for="ble-auto-connect-toggle">Auto Connect at Start</label>
+                        <label for="auto-connect-toggle">Auto Connect at Start</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="ble-auto-connect-toggle">
+                            <input type="checkbox" id="auto-connect-toggle">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -1717,8 +1717,10 @@ class StatusTab {
         const linkUp = !!(br && br.state && br.state.on);
         const last = this.lastConn;
 
-        if (linkUp && last && (!br.state.kind || br.state.kind === last.type)) {
-            await this.adoptLink(last.type, last.device);
+        if (linkUp) {
+            const linkType = br.state.kind || (last && last.type) || 'webserial';
+            const linkDevice = (last && last.type === linkType) ? last.device : null;
+            await this.adoptLink(linkType, linkDevice);
             return;
         }
 
@@ -1756,7 +1758,8 @@ class StatusTab {
         }
         this.serial.connected = true;
         try {
-            if (!this.serial.reader && navigator.serial) {
+            const needsWebSerial = (type === 'webserial' || type === 'serial' || !type);
+            if (needsWebSerial && !this.serial.reader && navigator.serial) {
                 const ports = await navigator.serial.getPorts();
                 if (ports && ports.length) {
                     this.serial.port = ports[0];
@@ -1976,14 +1979,20 @@ class StatusTab {
     }
 
     bindAutoConnectSetting() {
-        const toggle = document.getElementById('ble-auto-connect-toggle');
+        const toggle = document.getElementById('auto-connect-toggle');
         if (!toggle) return;
         try {
-            const saved = localStorage.getItem('rfcap_ble_auto_connect');
+            let saved = localStorage.getItem('rfcap_auto_connect');
+            if (saved === null) {
+                saved = localStorage.getItem('rfcap_ble_auto_connect');
+                if (saved !== null) {
+                    localStorage.setItem('rfcap_auto_connect', saved);
+                }
+            }
             toggle.checked = saved !== '0';
             toggle.addEventListener('change', () => {
                 try {
-                    localStorage.setItem('rfcap_ble_auto_connect', toggle.checked ? '1' : '0');
+                    localStorage.setItem('rfcap_auto_connect', toggle.checked ? '1' : '0');
                 } catch(e) {}
             });
         } catch(e) {}
