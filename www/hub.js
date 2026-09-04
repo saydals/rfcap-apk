@@ -1007,6 +1007,15 @@
         var last = null;
         try { last = JSON.parse(localStorage.getItem('rf-last-conn') || 'null'); } catch (e) {}
         if (!last || !last.kind || !last.address) return;
+        if (last.kind === 'ble') {
+            try {
+                var autoConn = localStorage.getItem('rfcap_ble_auto_connect');
+                if (autoConn === '0') {
+                    console.log('[hub] BLE auto-connect disabled by user setting');
+                    return;
+                }
+            } catch(e) {}
+        }
         setTimeout(function() {
             try {
                 if (RF.state.on) return;   /* already connected - never double-dial */

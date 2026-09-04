@@ -855,6 +855,25 @@
         @media (orientation: landscape) {
             .tab-status .gui_box { flex: 1 1 calc(50% - 6px); min-width: 0; }
         }
+
+        .auto-connect-setting {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            margin: 16px 0 30px;
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            color: var(--color-text);
+            font-weight: 600;
+        }
+
+        .auto-connect-setting label:first-child {
+            font-weight: 600;
+            color: var(--color-text);
+        }
     </style>
 </head>
 <body>
@@ -1069,6 +1088,14 @@
 
         </div><!-- /tab-status -->
     </div><!-- /tab-content-container -->
+
+    <div class="auto-connect-setting">
+        <label for="ble-auto-connect-toggle">Auto Connect at Start</label>
+        <label class="toggle-switch">
+            <input type="checkbox" id="ble-auto-connect-toggle">
+            <span class="toggle-slider"></span>
+        </label>
+    </div>
 </div><!-- /main-wrapper -->
 
 <dialog class="dialogConfirmArming">
@@ -1550,6 +1577,7 @@ class StatusTab {
     init() {
         this.bindConnection();
         this.bindArming();
+        this.bindAutoConnectSetting();
         this.bindSPP();
         this.bindBLE();
         this.bindUSB();
@@ -1665,7 +1693,7 @@ class StatusTab {
         const last = this.lastConn;
 
         if (linkUp && last && (!br.state.kind || br.state.kind === last.type)) {
-            this.adoptLink(last.type, last.device);
+            await this.adoptLink(last.type, last.device);
             return;
         }
 
@@ -1695,13 +1723,27 @@ class StatusTab {
     }
 
     /* Mark a box as owning an already-live shared link without re-dialling. */
-    adoptLink(type, device) {
+    async adoptLink(type, device) {
         if (device) {
             if (type === 'spp') { this.sppDevice = device; this.sppConnected = true; }
             else if (type === 'ble') { this.bleDevice = device; this.bleConnected = true; }
             else if (type === 'usb') { this.usbDevice = device; this.usbConnected = true; }
         }
         this.serial.connected = true;
+        try {
+            if (!this.serial.reader && navigator.serial) {
+                const ports = await navigator.serial.getPorts();
+                if (ports && ports.length) {
+                    this.serial.port = ports[0];
+                    await this.serial.port.open({ baudRate: 115200 });
+                    this.serial.writer = this.serial.port.writable.getWriter();
+                    this.serial.reader = this.serial.port.readable.getReader();
+                    this.serial.readLoop();
+                }
+            }
+        } catch(e) {
+            console.warn('[StatusTab] adoptLink: sharedPort open failed:', e);
+        }
         this.serial.onStatusChange && this.serial.onStatusChange(true);
     }
 
@@ -1906,6 +1948,20 @@ class StatusTab {
             dialog.close();
             toggle.checked = false;
         });
+    }
+
+    bindAutoConnectSetting() {
+        const toggle = document.getElementById('ble-auto-connect-toggle');
+        if (!toggle) return;
+        try {
+            const saved = localStorage.getItem('rfcap_ble_auto_connect');
+            toggle.checked = saved !== '0';
+            toggle.addEventListener('change', () => {
+                try {
+                    localStorage.setItem('rfcap_ble_auto_connect', toggle.checked ? '1' : '0');
+                } catch(e) {}
+            });
+        } catch(e) {}
     }
 
     updateArmingBox() {
