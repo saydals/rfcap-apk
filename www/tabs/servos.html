@@ -1236,9 +1236,11 @@
                 }
 
                 function applyRaw() {
+                    // Servo override values are RAM-only on the FC and reset on
+                    // reboot, so they must not count toward the tab's dirty
+                    // state (no Save action will ever persist them).
                     const v = enableEl.checked ? computeRaw(Math.round(parseFloat(inputEl.value) || 0)) : ServoConst.OVERRIDE_OFF;
                     self.data.SERVO_OVERRIDE[mspIndex] = v;
-                    self.setDirty();
                 }
 
                 enableEl.addEventListener('change', () => {
@@ -1327,10 +1329,13 @@
                 document.getElementById('servoEnableOverrideSwitch').addEventListener('change', (e) => {
                     const checked = e.target.checked;
                     document.querySelector('.tab-servos .override').classList.toggle('visible', checked);
+                    // Toggling the master override switch just toggles every
+                    // per-servo override checkbox; each child's `change` handler
+                    // sends SET_SERVO_OVERRIDE to FC RAM. Override values are
+                    // RAM-only, so this must NOT mark the tab dirty.
                     document.querySelectorAll('.servoOverrideEnable input').forEach(cb => {
                         if (cb.checked !== checked) { cb.checked = checked; cb.dispatchEvent(new Event('change')); }
                     });
-                    this.setDirty();
                 });
             }
 
@@ -1343,7 +1348,11 @@
             async saveData() {
                 try {
                     this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.msp.sendCommand(m); });
-                    this.data.SERVO_OVERRIDE.forEach((_, i) => { this.msp.sendCommand(this.msp.buildSetServoOverride(i), [], false); });
+                    // NOTE: SERVO_OVERRIDE is intentionally NOT re-sent here.
+                    // Override values are RAM-only on the FC (see UI text:
+                    // "The override values are not saved, and will be reset
+                    // after a reboot.") and are already pushed live to FC RAM
+                    // by the per-row change handlers.
                     await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
                     this.isDirty = false;
                     this.hideToolbar();
@@ -1361,6 +1370,19 @@
                     this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.msp.sendCommand(m); });
                     this.renderConfigRows();
                     this.processWarnings();
+                    // Force every FC servo override back to OFF. Override is
+                    // RAM-only and may have been left enabled by the user
+                    // during setup; reverting the tab means "go back to
+                    // what was loaded from the FC", and the FC's own loaded
+                    // override state is whatever it was at tab open (we don't
+                    // keep a snapshot, so the safest revert is OFF).
+                    for (let i = 0; i < this.data.SERVO_OVERRIDE.length; i++) {
+                        this.data.SERVO_OVERRIDE[i] = ServoConst.OVERRIDE_OFF;
+                        try { this.msp.sendCommand(this.msp.buildSetServoOverride(i), [], false); }
+                        catch (oe) { /* ignore - FC may be gone */ }
+                    }
+                    this.renderOverrideRows();
+                    this.updateOverrideVisibility();
                     this.isDirty = false;
                     this.hideToolbar();
                 } catch (e) {

@@ -1942,6 +1942,11 @@
                     const sliderEl = tr.querySelector('.mixerOverrideSlider');
 
                     function updateOverrideValue() {
+                        // Mixer override values are RAM-only on the FC (see
+                        // UI text on the override box) and reset on reboot,
+                        // so they must NOT contribute to the tab's dirty
+                        // state and must NOT be re-sent on Save. We still push
+                        // them live to FC RAM so the mixer reacts in real time.
                         let value = MixerConst.OVERRIDE_OFF;
                         const ov = enableEl.checked;
                         const pt = passEl.checked;
@@ -1950,11 +1955,6 @@
                             else value = Math.round(parseFloat(valEl.value || 0) / axis.scale);
                         }
                         self.msp.data.MIXER_OVERRIDE[axis.axis] = value;
-                        axis.dirty = true;
-                        self.setDirty();
-                        // Send to FC RAM immediately (no save needed) so the servo
-                        // reacts live as the override is changed — matches the
-                        // original configurator's behaviour.
                         self.msp.sendCommand(self.msp.buildSetMixerOverride(axis.axis));
                     }
 
@@ -2082,14 +2082,16 @@
                     if (!checked) {
                         document.getElementById('mixerPassthroughEnableSwitch').checked = false;
                     }
-                    // Apply to all per-axis enable checkboxes
+                    // Apply to all per-axis enable checkboxes; each child's
+                    // `change` handler sends SET_MIXER_OVERRIDE to FC RAM.
+                    // Mixer overrides are RAM-only and must NOT mark the
+                    // tab dirty.
                     document.querySelectorAll('.mixerOverrideEnable').forEach(cb => {
                         if (cb.checked !== checked) {
                             cb.checked = checked;
                             cb.dispatchEvent(new Event('change'));
                         }
                     });
-                    this.setDirty();
                 });
 
                 document.getElementById('mixerPassthroughEnableSwitch').addEventListener('change', (e) => {
@@ -2101,13 +2103,15 @@
                             document.querySelector('.mixerOverrideAxis').classList.add('visible');
                         }
                     }
+                    // Per-axis passthrough change handlers push SET_MIXER_OVERRIDE
+                    // live to FC RAM. Passthrough is also RAM-only and must
+                    // NOT mark the tab dirty.
                     document.querySelectorAll('.mixerPassthroughEnable').forEach(cb => {
                         if (cb.checked !== checked) {
                             cb.checked = checked;
                             cb.dispatchEvent(new Event('change'));
                         }
                     });
-                    this.setDirty();
                 });
 
                 // Number input clamping
@@ -2268,16 +2272,16 @@
                         const msg = this.msp.buildSetMixerInput(i);
                         if (msg) await this.msp.sendCommand(msg);
                     }
-                    this.overrideAxes.forEach(a => {
-                        if (a.dirty) this.msp.sendCommand(this.msp.buildSetMixerOverride(a.axis));
-                    });
-                    if (this.needSave || this.overrideAxes.some(a => a.dirty)) {
+                    // Mixer override values are RAM-only on the FC and are
+                    // already pushed live by the per-row handlers. Do NOT
+                    // re-send them here and do NOT make EEPROM_WRITE depend
+                    // on override state.
+                    if (this.needSave) {
                         await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
                     }
                     if (reRead) {
                         await this.loadDataFromFC();
                     } else {
-                        this.overrideAxes.forEach(a => a.dirty = false);
                         this.needSave = false;
                         this.hideToolbar();
                     }
@@ -2329,11 +2333,24 @@
             async revert() {
                 this.msp.data.MIXER_CONFIG = JSON.parse(JSON.stringify(this.origConfig));
                 this.msp.data.MIXER_INPUTS = JSON.parse(JSON.stringify(this.origInputs));
-                this.msp.data.MIXER_OVERRIDE = JSON.parse(JSON.stringify(this.origOverride));
-                this.overrideAxes.forEach(a => a.dirty = false);
+                // Step 1: Force every FC mixer override to OFF first.
+                //   Overrides are RAM-only; "Revert" means "no setup
+                //   overrides left enabled". We do this BEFORE re-sending
+                //   config/inputs so the OFF value is what gets captured by
+                //   the subsequent loadDataFromFC() read.
+                for (const a of this.overrideAxes) {
+                    this.msp.data.MIXER_OVERRIDE[a.axis] = MixerConst.OVERRIDE_OFF;
+                    try { this.msp.sendCommand(this.msp.buildSetMixerOverride(a.axis), [], false); }
+                    catch (oe) { /* ignore - FC may be gone */ }
+                }
+                // Step 2: Restore config/inputs and push to FC RAM. needSave
+                //   is false here because the only EEPROM-resident changes
+                //   (config/inputs) are restored to their *original* values
+                //   — there is nothing new to persist.
                 this.needSave = false;
                 try {
                     await this._saveMixerData();
+                    this.updateOverrideFlagsAndVisibility();
                 } catch (e) {
                     console.error('Revert failed:', e);
                 }
@@ -2341,11 +2358,18 @@
 
             async resetMixer() {
                 // Reset overrides to OFF and config/inputs to defaults handled by firmware via re-read.
+                // Overrides are RAM-only; config/inputs are EEPROM-resident.
                 this.msp.data.MIXER_OVERRIDE = this.msp.data.MIXER_OVERRIDE.map(() => MixerConst.OVERRIDE_OFF);
-                this.overrideAxes.forEach(a => a.dirty = true);
                 this.needSave = true;
                 try {
                     await this._saveMixerData();
+                    // Push the OFF overrides to FC RAM (already in data, but
+                    // make sure FC actually received them).
+                    for (const a of this.overrideAxes) {
+                        try { this.msp.sendCommand(this.msp.buildSetMixerOverride(a.axis), [], false); }
+                        catch (oe) { /* ignore */ }
+                    }
+                    this.updateOverrideFlagsAndVisibility();
                 } catch (e) {
                     console.error('Reset failed:', e);
                 }
