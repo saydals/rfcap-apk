@@ -3006,6 +3006,24 @@ body {
                 this.initHeli3D();
             }
 
+            /* Reset page content to initial state when the shared
+               link drops. Called by bridge.js via window.__rfPageDisconnect. */
+            resetOnDisconnect() {
+                this.stopPolling();
+                this.isChanged = false;
+                this.isDirty = false;
+                this.currentRateProfile = 0;
+                this.savedRateProfile = 0;
+                this.currentRates = null;
+                this.liveData = { raw_setpoint_roll: 0, raw_setpoint_pitch: 0, raw_setpoint_yaw: 0, raw_setpoint_collective: 0, raw_setpoint_polar_cyclic: 0, actual_setpoint_roll: 0, actual_setpoint_pitch: 0, actual_setpoint_yaw: 0, actual_setpoint_collective: 0, polar_rc_command: 0 };
+                this.rcCommand = [0, 0, 0, 0];
+                const btn = document.getElementById('connect-btn');
+                if (btn) { btn.textContent = 'Connect'; btn.classList.remove('active'); }
+                const statusEl = document.getElementById('connection-status');
+                if (statusEl) { statusEl.textContent = 'Disconnected'; statusEl.classList.remove('connected'); }
+            }
+
+
             /* The curve canvases are sized from their CSS box, so the backing
                store has to be recomputed whenever the box changes (rotation,
                keyboard show/hide, tab activation) or the theme switches (the
@@ -4309,7 +4327,8 @@ async activateProfile(index) {
         RatesTab.prototype.TAB_NAMES = ['rateProfile1', 'rateProfile2', 'rateProfile3'];
 
         document.addEventListener('DOMContentLoaded', () => {
-            new RatesTab();
+            window._ratesTab = new RatesTab();
+            window.__rfPageDisconnect = () => { try { window._ratesTab.resetOnDisconnect(); } catch(e) {} };
         });
     </script>
     <script src="../bridge.js"></script>

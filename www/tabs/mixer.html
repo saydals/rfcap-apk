@@ -1656,6 +1656,29 @@
                 this.renderOverrideRows();
             }
 
+            /* Reset page content to initial state when the shared
+               link drops. Called by bridge.js via window.__rfPageDisconnect. */
+            resetOnDisconnect() {
+                if (this.origConfig) {
+                    this.msp.data.MIXER_CONFIG = JSON.parse(JSON.stringify(this.origConfig));
+                    this.msp.data.MIXER_INPUTS = JSON.parse(JSON.stringify(this.origInputs));
+                    this.msp.data.MIXER_RULES = JSON.parse(JSON.stringify(this.origRules || []));
+                    this.msp.data.MIXER_OVERRIDE = JSON.parse(JSON.stringify(this.origOverride || []));
+                }
+                this.isDirty = false;
+                this.needSave = false;
+                this.needReboot = false;
+                this.customConfig = false;
+                this.customRules = false;
+                this.hideToolbar();
+                this.populateForm();
+                this.renderOverrideRows();
+                const btn = document.getElementById('connect-btn');
+                if (btn) { btn.textContent = 'Connect'; btn.classList.remove('active'); }
+                const statusEl = document.getElementById('connection-status');
+                if (statusEl) { statusEl.textContent = 'Disconnected'; statusEl.classList.remove('connected'); }
+            }
+
             // ---------- Connection ----------
             bindConnection() {
                 const connectBtn = document.getElementById('connect-btn');
@@ -2378,12 +2401,13 @@
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {
-            const tab = new MixerTab();
+            window._mixerTab = new MixerTab();
             // Tail mode listener (bound after rows rendered)
-            tab.bindTailMode();
+            window._mixerTab.bindTailMode();
             // Theme toggle button
             const tt = document.getElementById('theme-toggle-btn');
             if (tt) tt.addEventListener('click', window.toggleTheme);
+            window.__rfPageDisconnect = () => { try { window._mixerTab.resetOnDisconnect(); } catch(e) {} };
         });
     </script>
     <script src="../bridge.js"></script>

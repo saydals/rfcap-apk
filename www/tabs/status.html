@@ -2954,6 +2954,7 @@ window.__HELI_GLB_DATA_URI__ = '../models/heli.glb';
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
     window._statusTab = new StatusTab();
+    window.__rfPageDisconnect = () => { try { window._statusTab.onDisconnect(); } catch(e) {} };
 });
 </script>
     <script src="../bridge.js"></script>

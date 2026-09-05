@@ -260,6 +260,13 @@
             if (btn && btn.classList.contains('active')) { try { btn.click(); } catch (e) {} }
             try { sharedPort.close(); } catch (e) {}
             lastAutoOn = false;
+            /* Notify all pages to reset their content to initial state.
+               Each tab registers a window.__rfPageDisconnect handler or
+               listens for the 'rf-disconnect' custom event. */
+            window.dispatchEvent(new CustomEvent('rf-disconnect'));
+            if (typeof window.__rfPageDisconnect === 'function') {
+                try { window.__rfPageDisconnect(); } catch (e) { console.warn('[bridge] page disconnect reset failed:', e); }
+            }
             return;
         }
         /* NEW: link just came up (or tab loaded while link up) — attach this

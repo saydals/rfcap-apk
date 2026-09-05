@@ -3012,6 +3012,24 @@ body {
                 this.bindInputs();
             }
 
+            /* Reset page content to initial state when the shared
+               link drops. Called by bridge.js via window.__rfPageDisconnect. */
+            resetOnDisconnect() {
+                this.stopPolling();
+                this.isChanged = false;
+                this.isDirty = false;
+                this.currentProfile = 0;
+                this.savedProfile = 0;
+                if (this.origData) {
+                    this.msp.data = JSON.parse(JSON.stringify(this.origData));
+                }
+                const btn = document.getElementById('connect-btn');
+                if (btn) { btn.textContent = 'Connect'; btn.classList.remove('active'); }
+                const statusEl = document.getElementById('connection-status');
+                if (statusEl) { statusEl.textContent = 'Disconnected'; statusEl.classList.remove('connected'); }
+            }
+
+
             bindConnection() {
                 const connectBtn = document.getElementById('connect-btn');
                 const portSelect = document.getElementById('port-select');
@@ -3781,7 +3799,8 @@ body {
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {
-            new ProfilesTab();
+            window._profilesTab = new ProfilesTab();
+            window.__rfPageDisconnect = () => { try { window._profilesTab.resetOnDisconnect(); } catch(e) {} };
         });
     </script>
     <script src="../bridge.js"></script>

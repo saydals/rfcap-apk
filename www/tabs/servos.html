@@ -919,6 +919,30 @@
                 this.bindInputs();
             }
 
+            /* Reset page content to initial state when the shared
+               link drops. Called by bridge.js via window.__rfPageDisconnect. */
+            resetOnDisconnect() {
+                if (this.prevConfig) {
+                    this.data.SERVO_CONFIG = JSON.parse(JSON.stringify(this.prevConfig));
+                }
+                if (this.data.SERVO_OVERRIDE) {
+                    this.data.SERVO_OVERRIDE.forEach((_, i) => {
+                        this.data.SERVO_OVERRIDE[i] = ServoConst.OVERRIDE_OFF;
+                    });
+                }
+                this.isDirty = false;
+                this.needSave = false;
+                this.needReboot = false;
+                this.hideToolbar();
+                this.renderConfigRows();
+                this.renderOverrideRows();
+                this.processWarnings();
+                const btn = document.getElementById('connect-btn');
+                if (btn) { btn.textContent = 'Connect'; btn.classList.remove('active'); }
+                const statusEl = document.getElementById('connection-status');
+                if (statusEl) { statusEl.textContent = 'Disconnected'; statusEl.classList.remove('connected'); }
+            }
+
             bindConnection() {
                 const connectBtn = document.getElementById('connect-btn');
                 const portSelect = document.getElementById('port-select');
@@ -1392,9 +1416,10 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const tab = new ServosTab();
+            window._servosTab = new ServosTab();
             const tt = document.getElementById('theme-toggle-btn');
             if (tt) tt.addEventListener('click', window.toggleTheme);
+            window.__rfPageDisconnect = () => { try { window._servosTab.resetOnDisconnect(); } catch(e) {} };
         });
     </script>
     <script src="../bridge.js"></script>
