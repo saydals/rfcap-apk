@@ -935,7 +935,7 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};window.addEventListener('message',(e)=>{if(!e||!e.data||e.data.t!=='activeTab')return;if(e.data.v!=='adjustment')return;window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.loadDataFromFC();});});
+    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};window.addEventListener('message',(e)=>{if(!e||!e.data)return;if(e.data.t==='reconnect'){window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.loadDataFromFC();return;}if(e.data.t!=='activeTab')return;if(e.data.v!=='adjustment')return;window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.loadDataFromFC();});});
     </script>
     <dialog class="dialogSaving">
         <h3>Saving...</h3>

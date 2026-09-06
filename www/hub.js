@@ -933,6 +933,7 @@
         if (!lastAutoOn) {
             lastAutoOn = true;
             setTimeout(tryAutoConnectClick, 400);
+            broadcast({ t: 'reconnect' });
         }
     }
 

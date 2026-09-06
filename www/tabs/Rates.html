@@ -4332,7 +4332,15 @@ async activateProfile(index) {
             window._ratesTab = new RatesTab();
             window.__rfPageDisconnect = () => { try { window._ratesTab.resetOnDisconnect(); } catch(e) {} };
             window.addEventListener('message', (e) => {
-                if (!e || !e.data || e.data.t !== 'activeTab') return;
+                if (!e || !e.data) return;
+                if (e.data.t === 'reconnect') {
+                    window._ratesTab.isDirty = false;
+                    window._ratesTab.needSave = false;
+                    window._ratesTab.hideToolbar();
+                    window._ratesTab.loadDataFromFC();
+                    return;
+                }
+                if (e.data.t !== 'activeTab') return;
                 if (e.data.v !== 'rates') return;
                 window._ratesTab.isDirty = false;
                 window._ratesTab.needSave = false;
