@@ -326,6 +326,7 @@
             this.prevConfig=null;
             this.pollInterval=null;
             this.infoInterval=null;
+            this._saving=false;
             this.init();
         }
 
@@ -419,20 +420,20 @@
                     if(slot.enabled&&slot.enaChannel>=0){slot.dirty=true;this.setDirty();}
                 });
             });
-            // switch display is live RC state - no manual interaction, no dirty marking
             document.querySelectorAll('.adj-enable').forEach(cb=>{
                 cb.addEventListener('change',e=>{
                     const slotIdx=parseInt(e.target.dataset.slot);
                     const slot=this.slots[slotIdx];
                     slot.enabled=e.target.checked;
                     if(!slot.enabled){
-                        // deselecting is a real change (slot gets zeroed on Save)
                         slot.dirty=true;this.setDirty();
-                    }else if(slot.enaChannel>=0){
-                        // re-enabled with an already confirmed AUX -> savable change
-                        slot.dirty=true;this.setDirty();
+                    }else{
+                        // enabling: force back to AUTO regardless of previously loaded value
+                        slot.enaChannel=-1;
+                        slot.adjChannel=-1;
+                        const aux=document.querySelector(`.aux-select[data-slot="${slotIdx}"]`);
+                        if(aux)aux.value='-1';
                     }
-                    // enabling with AUX still AUTO: nothing savable yet -> NOT dirty
                     this.autoDetector.reset();
                     this.updateRowDisabled(slotIdx);
                 });
@@ -496,12 +497,14 @@
         // read every info source independently so one failure only greys its own
         // Current fields (Status / PID gains / Stop gains) and never the whole column.
         async refreshCurrent(){
+            if(this._saving)return;
             const results=await Promise.allSettled([
                 this.msp.readStatus().catch(e=>{console.warn('[cur] STATUS fail:',e.message);throw e;}),
                 this.msp.readPidTuning().catch(e=>{console.warn('[cur] PID_TUNING fail:',e.message);throw e;}),
                 this.msp.readPidProfile().catch(e=>{console.warn('[cur] PID_PROFILE fail:',e.message);throw e;}),
             ]);
             void results;
+            if(this._saving)return;
             this.updateCurrentColumn();
         }
 
@@ -660,12 +663,19 @@
             this.hideToolbar();
         }
 
+        stopPolling(){
+            if(this.pollInterval){clearInterval(this.pollInterval);this.pollInterval=null;}
+            if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
+            if(this.msp) this.msp._busy=Promise.resolve();
+        }
+
         startPolling(){
-            // 200 ms: RC monitor + AUTO detection
-            this.pollInterval=setInterval(()=>{if(this.serial.connected)this.msp.readRC().then(()=>{this.updateRCMonitor();this.runAutoDetection();}).catch(e=>console.warn('[rc] read failed:',e.message));},200);
-            // 500 ms: read-only Current column (active profile + gains + stop gains)
+            this.pollInterval=setInterval(()=>{
+                if(this._saving||!this.serial.connected)return;
+                this.msp.readRC().then(()=>{this.updateRCMonitor();this.runAutoDetection();}).catch(e=>console.warn('[rc] read failed:',e.message));
+            },100);
             this.infoInterval=setInterval(()=>{
-                if(!this.serial.connected)return;
+                if(this._saving||!this.serial.connected)return;
                 this.refreshCurrent();
             },500);
         }
@@ -684,12 +694,16 @@
 
         async save(){
             if(!this.serial.connected){alert('Not connected to FC');return;}
+            if(this._saving)return;
+            this._saving=true;
             // AUTO-unresolved (AUX not confirmed) slots cannot be saved: block the whole save
             const unresolved=this.slots.filter(s=>s.enabled&&s.enaChannel===-1);
             if(unresolved.length){
                 alert('AUTO 상태(AUX 미확정) 항목이 있어 저장할 수 없습니다.\n조종기의 스위치를 움직여 AUX를 먼저 확정하세요:\n- '+unresolved.map(s=>s.funcName).join('\n- '));
+                this._saving=false;
                 return;
             }
+            this.stopPolling();
             try{
                 let sentCount=0;
                 for(let i=0;i<this.slots.length;i++){
@@ -713,6 +727,10 @@
                 this.prevConfig=JSON.parse(JSON.stringify(this.slots));
                 alert('Saved '+sentCount+' slot(s) to FC.');
             }catch(e){console.error('Save failed:',e);alert('Save failed: '+e.message);}
+            finally{
+                this._saving=false;
+                this.startPolling();
+            }
         }
 
         buildAdjRange(slot){
