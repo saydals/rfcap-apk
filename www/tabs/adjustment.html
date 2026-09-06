@@ -784,6 +784,7 @@
             await this.msp.readPidProfile().catch(e=>console.warn('[cur] PID_PROFILE fail:',e.message));
             await this.msp.readRC().catch(e=>console.warn('[rc] RC fail:',e.message));
             this.loadFromMSP();
+            this.renderTable();
             this.updateCurrentColumn();
         }
 
