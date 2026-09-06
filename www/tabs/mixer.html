@@ -1752,7 +1752,9 @@
                     try { await this.msp.readMixerOverride(rs[3]); } catch (e) {}
                 } catch (e) {
                     console.error('Failed to read from FC:', e);
-                    alert('Failed to read mixer data from FC: ' + e.message);
+                    /* FIX: no user-facing popup for load timeouts - the
+                       retry/reload machinery recovers on its own. */
+                    console.warn('Failed to read mixer data from FC:', e.message);
                     return;
                 }
 

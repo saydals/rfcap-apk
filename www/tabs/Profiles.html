@@ -3001,7 +3001,6 @@ body {
                 this.isDirty = false;
                 this.origData = null;
                 this._profileChangeToken = 0;   /* supersedes in-flight reloads */
-                this._lastLoadAlert = 0;        /* throttles user-facing error alert */
                 this.serial = new SerialConnection();
                 this.msp = new RealMSP(this.serial);
                 this.init();
@@ -3224,12 +3223,10 @@ body {
                     try { await this.msp.readGovernorConfig(rs[4]); } catch (e) {}
                 } catch (e) {
                     console.warn('Failed to read from FC:', e);
-                    // Throttled user-facing warning: only one alert per 5s.
-                    const now = Date.now();
-                    if (!this._lastLoadAlert || now - this._lastLoadAlert > 5000) {
-                        this._lastLoadAlert = now;
-                        alert('Failed to read data from FC: ' + e.message);
-                    }
+                    /* FIX: no user-facing popup for load timeouts - the
+                       retry/reload machinery recovers on its own, so this
+                       alert was a false alarm. Keep a console trace only. */
+                    console.warn('Failed to read data from FC:', e.message);
                     return;
                 }
 
