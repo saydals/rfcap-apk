@@ -42,7 +42,7 @@
             --color-btn-bg-disabled: var(--color-neutral-400); --color-switch: hsl(202,40%,40%); --color-switch-handle: var(--color-neutral-100);
             --accent: hsl(202,40%,40%); --subtleAccent: var(--color-neutral-700); --superSubtleAccent: var(--color-neutral-700);
         }
-        body { background-color: var(--color-bg); overflow-x: hidden; }
+        body { background-color: var(--color-bg); overflow-x: hidden; overflow-y: hidden; }
         a { text-decoration: none; color: var(--color-border-accent); font-weight: bold; }
         a.disabled { pointer-events: none; cursor: default; color: var(--color-text-disabled); }
         #connection-panel { background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -147,6 +147,25 @@
             .rc-channel .rc-val { min-width:20px; font-size:8px; flex-shrink:1; }
             .rc-monitor { flex-wrap:wrap; }
         }
+        dialog {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px 20px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            min-width: 280px;
+        }
+        dialog h3 { margin: 0 0 8px 0; }
+        dialog .spinner {
+            display: block;
+            margin: 20px auto;
+            width: 30px; height: 30px;
+            border: 3px solid var(--color-border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body data-theme="light">
@@ -520,8 +539,6 @@
                     const slotIdx=parseInt(e.target.dataset.slot);
                     const slot=this.slots[slotIdx];
                     slot.stepSize=parseInt(e.target.value);
-                    // only a savable change when the slot is enabled with a confirmed AUX
-                    if(slot.enabled&&slot.enaChannel>=0){slot.dirty=true;this.setDirty();}
                 });
             });
             // switch display is live RC state - no manual interaction, no dirty marking
@@ -531,13 +548,8 @@
                     const slot=this.slots[slotIdx];
                     slot.enabled=e.target.checked;
                     if(!slot.enabled){
-                        // deselecting is a real change (slot gets zeroed on Save)
-                        slot.dirty=true;this.setDirty();
-                    }else if(slot.enaChannel>=0){
-                        // re-enabled with an already confirmed AUX -> savable change
                         slot.dirty=true;this.setDirty();
                     }
-                    // enabling with AUX still AUTO: nothing savable yet -> NOT dirty
                     this.autoDetector.reset();
                     this.updateRowDisabled(slotIdx);
                 });
@@ -648,22 +660,17 @@
             const detected=this.autoDetector.detect(ch);
             const statusEl=document.getElementById('auto-status');
             if(detected>=0){
-                statusEl.textContent=`AUTO: Detected AUX${detected+1} - assigned to all AUTO slots (dirty)`;
+                statusEl.textContent=`AUTO: Detected AUX${detected+1} - assigned to all AUTO slots`;
                 statusEl.className='auto-status detected';
                 // Confirmed AUX -> write it into every enabled AUTO slot.
-                // This is the moment those slots become really dirty (savable).
-                let anyDirty=false;
                 this.slots.forEach((slot,idx)=>{
                     if(slot.enabled&&slot.enaChannel===-1){
                         slot.enaChannel=detected;
                         slot.adjChannel=detected;
-                        slot.dirty=true;
-                        anyDirty=true;
                         const sel=document.querySelector(`.aux-select[data-slot="${idx}"]`);
                         if(sel)sel.value=String(detected);
                     }
                 });
-                if(anyDirty)this.setDirty();
             }else{
                 statusEl.textContent='AUTO: Waiting for movement...';
                 statusEl.className='auto-status detecting';
@@ -812,12 +819,13 @@
 
         async save(){
             if(!this.serial.connected){alert('Not connected to FC');return;}
-            // AUTO-unresolved (AUX not confirmed) slots cannot be saved: block the whole save
             const unresolved=this.slots.filter(s=>s.enabled&&s.enaChannel===-1);
             if(unresolved.length){
                 alert('AUTO 상태(AUX 미확정) 항목이 있어 저장할 수 없습니다.\n조종기의 스위치를 움직여 AUX를 먼저 확정하세요:\n- '+unresolved.map(s=>s.funcName).join('\n- '));
                 return;
             }
+            const savingDialog=document.querySelector('.dialogSaving');
+            savingDialog.showModal();
             try{
                 let sentCount=0;
                 for(let i=0;i<this.slots.length;i++){
@@ -826,12 +834,10 @@
                     if(slot.enabled){
                         adjRange=this.buildAdjRange(slot);
                     }else if(slot.loadedFunction===slot.funcId&&slot.loadedFunction!==0){
-                        // deselected -> reset that slot (function = 0)
                         adjRange=this.zeroAdjRange();
                     }
-                    // loadedFunction was a foreign function -> leave the FC slot untouched
                     if(!adjRange)continue;
-                    const msg=this.msp.buildSetAdjustmentRange(i+4,adjRange);   // 0-based FC index for slots 5..17
+                    const msg=this.msp.buildSetAdjustmentRange(i+4,adjRange);
                     await this.msp.sendCommand(msg);
                     slot.dirty=false;sentCount++;
                 }
@@ -839,8 +845,13 @@
                 this.slots.forEach(s=>{s.loadedFunction=s.enabled?s.funcId:0;});
                 this.isDirty=false;this.hideToolbar();
                 this.prevConfig=JSON.parse(JSON.stringify(this.slots));
-                alert('Settings saved.');
-            }catch(e){console.error('Save failed:',e);alert('Save failed: '+e.message);}
+            }catch(e){
+                console.error('Save failed:',e);
+                savingDialog.close();
+                alert('Save failed: '+e.message);
+                return;
+            }
+            savingDialog.close();
         }
 
         buildAdjRange(slot){
@@ -887,6 +898,13 @@
 
     document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};});
     </script>
+    <dialog class="dialogSaving">
+        <h3>Saving...</h3>
+        <div class="content">
+            <div style="margin-top: 10px">Writing to FC, please wait...</div>
+            <div class="spinner" style="margin: 20px auto; width: 30px; height: 30px; border: 3px solid var(--color-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        </div>
+    </dialog>
     <script src="../bridge.js"></script>
 </body>
 </html>
