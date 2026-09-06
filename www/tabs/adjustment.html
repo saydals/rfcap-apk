@@ -772,13 +772,28 @@
         }
 
         async onConnect(){
-            await this.loadDataFromFC();
-            this.startPolling();
+            /* single-flight: 'reconnect' broadcast and the bridge auto-connect
+               click can both land here - run only one load+poll sequence. */
+            if(this._connecting)return;
+            this._connecting=true;
+            try{
+                await this.loadDataFromFC();
+                this.startPolling();
+            }finally{
+                this._connecting=false;
+            }
         }
 
         async loadDataFromFC(){
             await this.msp.readApiVersion().catch(e=>console.warn('[cur] API_VERSION fail:',e.message));
-            await this.msp.readAdjustmentRanges().catch(e=>console.error('ADJUSTMENT_RANGES fail:',e.message));
+            let adjOk=true;
+            await this.msp.readAdjustmentRanges().catch(e=>{adjOk=false;console.error('ADJUSTMENT_RANGES fail:',e.message);});
+            /* Never render ranges left over from an earlier read: if the fresh
+               FC read failed, blank them so the UI shows "unknown" (and Save
+               stays a safe no-op) instead of possibly stale checkbox state.
+               The FC may have been reconfigured elsewhere while the link was
+               down, so ONLY data read from the FC right now may be displayed. */
+            if(!adjOk)this.msp.data.ADJUSTMENT_RANGES=[];
             await this.msp.readStatus().catch(e=>console.warn('[cur] STATUS fail:',e.message));
             await this.msp.readPidTuning().catch(e=>console.warn('[cur] PID_TUNING fail:',e.message));
             await this.msp.readPidProfile().catch(e=>console.warn('[cur] PID_PROFILE fail:',e.message));
@@ -824,6 +839,8 @@
         }
 
         startPolling(){
+            /* idempotent: never stack duplicate intervals across reconnects */
+            if(this.pollInterval||this.infoInterval)return;
             this.pollInterval=setInterval(()=>{
                 if(this._saving||!this.serial.connected)return;
                 this.msp.readRC().then(()=>{this.updateRCMonitor();this.runAutoDetection();}).catch(e=>console.warn('[rc] read failed:',e.message));
@@ -936,7 +953,7 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};window.addEventListener('message',(e)=>{if(!e||!e.data)return;if(e.data.t==='disconnect'){try{window._adjustmentTab.resetOnDisconnect();}catch(ex){}return;}if(e.data.t==='reconnect'){window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.loadDataFromFC();return;}if(e.data.t!=='activeTab')return;if(e.data.v!=='adjustment')return;window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.loadDataFromFC();});});
+    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};window.addEventListener('message',(e)=>{if(!e||!e.data)return;if(e.data.t==='disconnect'){try{window._adjustmentTab.resetOnDisconnect();}catch(ex){}return;}if(e.data.t==='reconnect'){window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.onConnect();return;}if(e.data.t!=='activeTab')return;if(e.data.v!=='adjustment')return;window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.loadDataFromFC();});});
     </script>
     <dialog class="dialogSaving">
         <h3>Saving...</h3>

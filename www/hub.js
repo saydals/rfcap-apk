@@ -702,6 +702,11 @@
         Object.assign(RF.state, patch);
         broadcast(Object.assign({ t: 'st' }, RF.state));
         if (RF.render) { try { RF.render(RF.state); } catch (e) {} }
+        /* FIX: fire the on/off transition broadcasts ('disconnect'/'reconnect')
+           to every tab. onStateChange() was previously unreachable (only called
+           from a dead 'res' path), so tabs never learned about reconnects and
+           stayed in the wiped (all-unchecked) state after a link restore. */
+        onStateChange();
     }
 
     /* ---------- request handlers ---------- */

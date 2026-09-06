@@ -48,7 +48,12 @@
             case 'd': onDataChunk(m.b64); break;
             case 'scan': onScanResult(m.dev); break;
             case 'theme': applyTheme(m.v); break;
-            case 'activeTab': onActiveTab(m.v); break;
+            case 'activeTab':
+                onActiveTab(m.v);
+                /* FIX: also forward to the page - the Tune tab reloads its FC
+                   data (loadDataFromFC) when it becomes the active tab. */
+                window.postMessage(m, '*');
+                break;
             case 'reconnect':
             case 'disconnect':
                 window.postMessage(m, '*');
