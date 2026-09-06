@@ -1371,12 +1371,8 @@
 
             async saveData() {
                 try {
-                    this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.msp.sendCommand(m); });
-                    // NOTE: SERVO_OVERRIDE is intentionally NOT re-sent here.
-                    // Override values are RAM-only on the FC (see UI text:
-                    // "The override values are not saved, and will be reset
-                    // after a reboot.") and are already pushed live to FC RAM
-                    // by the per-row change handlers.
+                    this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.serial.send(m); });
+                    await new Promise(r => setTimeout(r, 100));
                     await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
                     this.isDirty = false;
                     this.hideToolbar();
@@ -1391,7 +1387,7 @@
                 this.data.SERVO_CONFIG = JSON.parse(JSON.stringify(this.prevConfig));
                 this.needSave = true;
                 try {
-                    this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.msp.sendCommand(m); });
+                    this.data.SERVO_CONFIG.forEach((_, i) => { const m = this.msp.buildSetServoConfig(i); if (m) this.serial.send(m); });
                     this.renderConfigRows();
                     this.processWarnings();
                     // Force every FC servo override back to OFF. Override is
@@ -1402,7 +1398,7 @@
                     // keep a snapshot, so the safest revert is OFF).
                     for (let i = 0; i < this.data.SERVO_OVERRIDE.length; i++) {
                         this.data.SERVO_OVERRIDE[i] = ServoConst.OVERRIDE_OFF;
-                        try { this.msp.sendCommand(this.msp.buildSetServoOverride(i), [], false); }
+                        try { await this.serial.send(this.msp.buildSetServoOverride(i)); }
                         catch (oe) { /* ignore - FC may be gone */ }
                     }
                     this.renderOverrideRows();

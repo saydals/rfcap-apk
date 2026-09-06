@@ -525,3 +525,106 @@ cp www/tabs/mixer.html www/tabs/mytab.html
 4. 4단계 검증 체크리스트로 통신 확인
 
 **`adjustment.html`을 템플릿으로 사용하지 마세요.** 이 파일은 모든 통신 문제의 원인이 된 탭입니다.
+
+---
+
+## 8. FC 펌웨어와의 MSP 통신 — 저장 패턴
+
+### 8-1. 문제의 근본 원인
+
+`rotorflight` FC 펌웨어(`src/main/msp/msp.c`)에서 `MSP_SET_*` 명령을 처리할 때, `mspFcProcessOutCommandWithArg` 함수가 `reply.buf`에 데이터를 쓰지 않습니다. `sbufBytesRemaining(&reply.buf)`는 전체 버퍼 크기(예: 2048)를 반환합니다.
+
+이로 인해 FC는 다음과 같은 잘못된 MSP 프레임을 전송합니다:
+- **Header**: `$M>` 또는 `$M!`
+- **Length**: `b3 = 0` (256이 `uint8_t`로 오버플로우) 또는 JUMBO 모드
+- **Payload**: 2048바이트의 쓰레기 데이터
+- **CRC**: 쓰레기 데이터로 계산된 CRC
+
+앱의 `MSPParser`는 CRC를 검사합니다. FC의 CRC와 앱의 CRC가 일치하지 않으므로 프레임이 거부됩니다. `waitResponse()`가 20초 타임아웃되어 저장 다이얼로그가 사라지지 않습니다.
+
+**`project/adjustment.html`(구식 개발 페이지)은 CRC를 검사하지 않는 구식 `MSPParser`를 사용하므로 정상 동작합니다.**
+
+### 8-2. 올바른 저장 패턴 (Rates 탭 패턴)
+
+모든 탭의 저장 메서드는 아래 패턴을 따라야 합니다:
+
+```javascript
+async saveData() {
+    // 1. SET 명령은 serial.send()로 직접 전송 (응답 대기 우회)
+    await this.serial.send(this.msp.buildSetPIDTuning());
+    await this.serial.send(this.msp.buildSetPIDProfile());
+    // ... 기타 SET 명령들
+
+    // 2. 100ms 대기 (FC가 명령을 처리할 시간)
+    await new Promise(r => setTimeout(r, 100));
+
+    // 3. EEPROM_WRITE는 sendCommand()로 전송 (FC가 유효한 응답을 보냄)
+    await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
+}
+```
+
+**왜 `serial.send()`를 사용하는가:**
+- `serial.send()`는 `_busy` 체인과 `waitResponse`을 완전히 우회합니다
+- FC의 잘못된 CRC 응답으로 인한 타임아웃이 발생하지 않습니다
+- 명령은 순차적으로 전송되지만 응답을 기다리지 않습니다
+
+**왜 `EEPROM_WRITE`만 `sendCommand()`를 사용하는가:**
+- FC는 `MSP_EEPROM_WRITE`에 대해 유효한 응답을 보냅니다
+- `sendCommand()`의 `_busy` 체인이 명령을 직렬화하여 순서를 보장합니다
+
+**100ms 지연의 목적:**
+- FC가 여러 SET 명령을 처리할 시간을 줍니다
+- `serial.send()`는 비동기이므로, 지연 없이 연속으로 명령이 전송될 수 있습니다
+- 100ms 지연으로 FC의 처리량을 보장합니다
+
+### 8-3. 전체 탭의 통일된 저장 패턴
+
+| 탭 | SET 명령 방식 | EEPROM_WRITE 방식 | 지연 |
+|----|--------------|-------------------|------|
+| **Rates** | `serial.send()` | `sendCommand()` | 100ms |
+| **Tune** | `serial.send()` | `sendCommand()` | 100ms |
+| **Mixer** | `serial.send()` | `sendCommand()` | 100ms |
+| **Profiles** | `serial.send()` | `sendCommand()` | 100ms |
+| **Servos** | `serial.send()` | `sendCommand()` | 100ms |
+
+### 8-4. Anti-Pattern (피해야 할 패턴)
+
+```javascript
+// WRONG: sendCommand()로 SET 명령을 전송하면 CRC 문제로 타임아웃
+await this.msp.sendCommand(this.msp.buildSetAdjustmentRange(i, adjRange));
+
+// WRONG: serial.send() 없이 sendCommand()만 사용
+await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
+// → _busy 체인이 이전 명령이 타임아웃되면 다음 명령도 대기
+
+// WRONG: 지연 없이 연속으로 sendCommand() 호출
+await this.msp.sendCommand(cmd1);
+await this.msp.sendCommand(cmd2);
+await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
+// → _busy 체인이 명령을 직렬화하지만, 각 명령이 20초 타임아웃 가능
+```
+
+### 8-5. `sendCommand` 메서드 참고
+
+`RealMSP.sendCommand()`는 `_busy` 체인을 사용하여 명령을 직렬화합니다:
+
+```javascript
+async sendCommand(codeOrMsg, payload = [], timeout = 20000) {
+    const run = async () => {
+        const msg = (codeOrMsg instanceof Uint8Array) ? codeOrMsg : buildMSPMessage(codeOrMsg, payload);
+        const expectCode = (codeOrMsg instanceof Uint8Array) ? codeOrMsg[4] : codeOrMsg;
+        await this.serial.send(msg);
+        return await this.parser.waitResponse(expectCode, timeout);
+    };
+    const result = this._busy.then(run, run);
+    this._busy = result.then(() => {}, () => {});
+    return result;
+}
+```
+
+- `this._busy`는 `Promise.resolve()`로 초기화됩니다
+- 각 `sendCommand` 호출은 `this._busy`에 체인됩니다
+- `_busy` 체인은 이전 명령이 완료될 때까지 다음 명령을 대기시킵니다
+- `waitResponse()`는 20초 타임아웃 후 `reject`됩니다
+
+**`serial.send()`를 사용하면 `_busy` 체인과 `waitResponse`을 모두 우회하므로 타임아웃 문제가 발생하지 않습니다.**

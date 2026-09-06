@@ -57,7 +57,7 @@
         #connection-panel #connection-status.connected { color: #2e8b2e; }
         #theme-toggle-btn { margin-left: auto; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-btn-bg); color: var(--color-btn-fg); cursor: pointer; }
         #main-wrapper { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #tab-content-container { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; }
+        #tab-content-container { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; padding-bottom: 200px; }
         .tab-adjustment { width: 100%; margin: 0; }
         .tab-adjustment .tab_title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: var(--color-text); }
         .tab-adjustment .sub-title { font-size: 18px; font-weight: bold; }
@@ -109,7 +109,7 @@
         .rc-channel .rc-val { font-size: 10px; font-weight: bold; min-width: 38px; }
         .rc-channel .rc-auto-tag { font-size: 9px; color: #d32f2f; font-weight: bold; margin-left: 2px; }
         .tab-adjustment.toolbar_hidden .content_toolbar { display: none; }
-        .tab-adjustment .content_toolbar { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 0 2px 0; }
+        .tab-adjustment .content_toolbar { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 0 2px 0; margin-bottom: 20px; }
         .tab-adjustment .content_toolbar .btn a { display: inline-block; padding: 6px 18px; border: 1px solid var(--color-border); border-radius: 4px; background-color: var(--color-btn-bg); color: var(--color-btn-fg); cursor: pointer; }
         .tab-adjustment .content_toolbar .btn a:hover { background-color: var(--color-btn-bg-hover); }
         .tab-adjustment .content_toolbar .save_btn a { background-color: #2e7d32; color: #fff; border-color: #1b5e20; }
@@ -464,17 +464,16 @@
 
         buildSlots(){
             this.slots=SLOT_FUNC_LIST.map((func,idx)=>({
-                slotIndex:idx+5,          // 1-based slot number shown in UI (5..17)
+                slotIndex:idx+5,
                 funcId:func.id,
                 funcName:func.name,
                 cur:func.cur,
-                loadedFunction:0,         // function value found in this FC slot at load time
-                enaChannel:-1,            // -1 = AUTO (not yet confirmed)
+                loadedFunction:0,
+                enaChannel:-1,
                 adjChannel:-1,
                 stepSize:1,
                 enabled:false,
                 dirty:false,
-                currentAuxValue:1500,
             }));
             this.prevConfig=JSON.parse(JSON.stringify(this.slots));
         }
@@ -667,10 +666,12 @@
                     if(slot.enabled&&slot.enaChannel===-1){
                         slot.enaChannel=detected;
                         slot.adjChannel=detected;
+                        slot.dirty=true;
                         const sel=document.querySelector(`.aux-select[data-slot="${idx}"]`);
                         if(sel)sel.value=String(detected);
                     }
                 });
+                this.setDirty();
             }else{
                 statusEl.textContent='AUTO: Waiting for movement...';
                 statusEl.className='auto-status detecting';
@@ -728,6 +729,9 @@
                     this.onConnect();
                 }
             };
+            document.addEventListener('visibilitychange',()=>{
+                if(document.hidden){this.stopPolling();}else if(this.serial.connected){this.startPolling();}
+            });
         }
 
         /* Called by bridge.js when the shared link drops. Reset to initial
@@ -795,6 +799,11 @@
             this.hideToolbar();
         }
 
+        stopPolling(){
+            if(this.pollInterval){clearInterval(this.pollInterval);this.pollInterval=null;}
+            if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
+        }
+
         startPolling(){
             // 200 ms: RC monitor + AUTO detection
             this.pollInterval=setInterval(()=>{if(this.serial.connected)this.msp.readRC().then(()=>{this.updateRCMonitor();this.runAutoDetection();}).catch(e=>console.warn('[rc] read failed:',e.message));},200);
@@ -809,6 +818,7 @@
         showToolbar(){document.querySelector('.tab-adjustment').classList.remove('toolbar_hidden');}
         hideToolbar(){document.querySelector('.tab-adjustment').classList.add('toolbar_hidden');}
         resetPage(){
+            this.stopPolling();
             this.isDirty=false;this.needSave=false;this.prevConfig=null;
             this.autoDetector.reset();
             this.currentValues=[];
@@ -825,6 +835,8 @@
                 return;
             }
             const savingDialog=document.querySelector('.dialogSaving');
+            if(!savingDialog){console.error('Saving dialog not found');return;}
+            this.stopPolling();
             savingDialog.showModal();
             try{
                 let sentCount=0;
@@ -838,20 +850,34 @@
                     }
                     if(!adjRange)continue;
                     const msg=this.msp.buildSetAdjustmentRange(i+4,adjRange);
-                    await this.msp.sendCommand(msg);
+                    await this.sendWithRetry(msg,2000,10);
                     slot.dirty=false;sentCount++;
                 }
                 await this.msp.sendCommand(MSP.EEPROM_WRITE,[]);
                 this.slots.forEach(s=>{s.loadedFunction=s.enabled?s.funcId:0;});
                 this.isDirty=false;this.hideToolbar();
                 this.prevConfig=JSON.parse(JSON.stringify(this.slots));
+                this.startPolling();
             }catch(e){
                 console.error('Save failed:',e);
+                this.startPolling();
                 savingDialog.close();
                 alert('Save failed: '+e.message);
                 return;
             }
             savingDialog.close();
+        }
+
+        async sendWithRetry(msg, timeout, maxRetries){
+            const expectCode=(msg instanceof Uint8Array)?msg[4]:null;
+            for(let retry=0;retry<maxRetries;retry++){
+                try{
+                    await this.serial.send(msg);
+                    return await this.msp.parser.waitResponse(expectCode,timeout);
+                }catch(e){
+                    if(retry>=maxRetries-1)throw e;
+                }
+            }
         }
 
         buildAdjRange(slot){
@@ -892,7 +918,10 @@
         async revert(){
             this.slots = JSON.parse(JSON.stringify(this.prevConfig));
             this.autoDetector.reset();
-            this.renderTable(); this.setDirty();
+            this.currentValues=[];
+            this.renderTable();
+            this.updateCurrentColumn();
+            this.setDirty();
         }
     }
 

@@ -31,7 +31,7 @@
          No  -> click the tab's Revert button (discard), then move. */
     const TAB_ROOT_SELECTOR = '.tab-mixer, .tab-servos, .tab-rates, .tab-profiles, .tab-adjustment';
     function tabIsDirty(t) {
-        if (t === 'status') return false;      /* nothing to save there */
+        if (t === 'status' || t === 'adjustment') return false;
         const f = frames[t];
         if (!f) return false;
         try {
@@ -79,8 +79,18 @@
             try { leaveDialog.showModal(); } catch (err) { resolve('cancel'); }
         });
     }
+    function isSavingDialogOpen(){
+        const f=frames[current];
+        if(!f)return false;
+        try{
+            const doc=f.contentDocument;
+            const d=doc&&doc.querySelector('.dialogSaving');
+            return !!(d&&d.open);
+        }catch(e){return false;}
+    }
     function requestTab(t) {
         if (switching || !frames[t] || t === current) return;
+        if (isSavingDialogOpen()) return;
         const from = current;
         if (!tabIsDirty(from)) { activate(t); return; }
         switching = true;

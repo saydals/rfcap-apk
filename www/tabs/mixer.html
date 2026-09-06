@@ -2290,15 +2290,12 @@
 
             async _saveMixerData(reRead = true) {
                 try {
-                    this.msp.sendCommand(this.msp.buildSetMixerConfig());
+                    await this.serial.send(this.msp.buildSetMixerConfig());
                     for (let i = 1; i <= 4; i++) {
                         const msg = this.msp.buildSetMixerInput(i);
-                        if (msg) await this.msp.sendCommand(msg);
+                        if (msg) await this.serial.send(msg);
                     }
-                    // Mixer override values are RAM-only on the FC and are
-                    // already pushed live by the per-row handlers. Do NOT
-                    // re-send them here and do NOT make EEPROM_WRITE depend
-                    // on override state.
+                    await new Promise(r => setTimeout(r, 100));
                     if (this.needSave) {
                         await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
                     }

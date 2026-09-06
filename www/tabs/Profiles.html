@@ -3652,10 +3652,11 @@ body {
                 savingDialog.showModal();
                 this.stopPolling();
                 try {
-                    await this.msp.sendCommand(this.msp.buildSetPIDTuning());
-                    await this.msp.sendCommand(this.msp.buildSetPIDProfile());
-                    await this.msp.sendCommand(this.msp.buildSetRescueProfile());
-                    await this.msp.sendCommand(this.msp.buildSetGovernorProfile());
+                    await this.serial.send(this.msp.buildSetPIDTuning());
+                    await this.serial.send(this.msp.buildSetPIDProfile());
+                    await this.serial.send(this.msp.buildSetRescueProfile());
+                    await this.serial.send(this.msp.buildSetGovernorProfile());
+                    await new Promise(r => setTimeout(r, 100));
                     await this.msp.sendCommand(250, []);
                     await this.msp.sendCommand(210, [this.currentProfile]);
                     await this.loadDataFromFC();
