@@ -370,7 +370,8 @@
                    : /mixer/i.test(location.pathname) ? 'mixer'
                    : /servo/i.test(location.pathname) ? 'servos'
                    : /rate/i.test(location.pathname) ? 'rates'
-                   : /profile/i.test(location.pathname) ? 'profiles' : null;
+                   : /profile/i.test(location.pathname) ? 'profiles'
+                   : /adjustment/i.test(location.pathname) ? 'adjustment' : null;
         const nowActive = (name === mine);
         const wasActive = BR.active === true;
         BR.active = nowActive;

@@ -673,6 +673,7 @@
         if (/servo/i.test(href)) return 'servos';
         if (/rate/i.test(href)) return 'rates';
         if (/profile/i.test(href)) return 'profiles';
+        if (/adjustment/i.test(href)) return 'adjustment';
         return null;
     }
     function broadcastData(msg) {
@@ -957,7 +958,8 @@
                    : /mixer/i.test(location.pathname) ? 'mixer'
                    : /servo/i.test(location.pathname) ? 'servos'
                    : /rate/i.test(location.pathname) ? 'rates'
-                   : /profile/i.test(location.pathname) ? 'profiles' : null;
+                   : /profile/i.test(location.pathname) ? 'profiles'
+                   : /adjustment/i.test(location.pathname) ? 'adjustment' : null;
         var nowActive = (name === mine);
         var wasActive = RF.activeTab === true;
         RF.activeTab = nowActive;

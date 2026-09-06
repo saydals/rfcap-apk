@@ -1347,19 +1347,20 @@ class StatusMSP {
            make cycles overlap, waitResponse() callbacks overwrite each other
            (single slot per code) and updates stall until the timeout.
            Same pattern as the Rates/Profiles tabs. */
+        const RETRY_INTERVAL = 2000;  // 2초 간격 재시도 (원래 configurator의 bleRetryInterval)
         const job = async () => {
             /* P1 retry: a CRC-corrupted response frame never resolves
-               waitResponse, so a timeout means "answer lost" - resend the
-               same request a couple of times before failing (the original
-               configurator's bleRetryInterval / bleBatchMaxRetries pattern). */
+               waitResponse, so a timeout means "answer lost" - resend
+               every 2 seconds until the overall 20-second deadline
+               (the original configurator's bleRetryInterval / bleBatchMaxRetries pattern). */
+            const deadline = Date.now() + (timeout || 20000);
             let lastErr;
-            for (let attempt = 0; attempt <= 2; attempt++) {
+            while (Date.now() < deadline) {
                 try {
                     await this.serial.send(buildMSPMessage(code, payload));
-                    return await this.parser.waitResponse(code, timeout);
+                    return await this.parser.waitResponse(code, Math.min(RETRY_INTERVAL, deadline - Date.now()));
                 } catch (e) {
                     lastErr = e;
-                    if (attempt < 2) await new Promise(r => setTimeout(r, 300));
                 }
             }
             throw lastErr;
