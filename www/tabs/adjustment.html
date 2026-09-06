@@ -772,8 +772,11 @@
         }
 
         async onConnect(){
-            // each read is tried independently so one unsupported command never
-            // blocks the rest (RC monitor / slots / the other Current fields).
+            await this.loadDataFromFC();
+            this.startPolling();
+        }
+
+        async loadDataFromFC(){
             await this.msp.readApiVersion().catch(e=>console.warn('[cur] API_VERSION fail:',e.message));
             await this.msp.readAdjustmentRanges().catch(e=>console.error('ADJUSTMENT_RANGES fail:',e.message));
             await this.msp.readStatus().catch(e=>console.warn('[cur] STATUS fail:',e.message));
@@ -782,7 +785,6 @@
             await this.msp.readRC().catch(e=>console.warn('[rc] RC fail:',e.message));
             this.loadFromMSP();
             this.updateCurrentColumn();
-            this.startPolling();
         }
 
         loadFromMSP(){
@@ -933,7 +935,7 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};});
+    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};window.addEventListener('message',(e)=>{if(!e||!e.data||e.data.t!=='activeTab')return;if(e.data.v!=='adjustment')return;window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.loadDataFromFC();});});
     </script>
     <dialog class="dialogSaving">
         <h3>Saving...</h3>

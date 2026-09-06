@@ -3804,6 +3804,14 @@ body {
         document.addEventListener('DOMContentLoaded', () => {
             window._profilesTab = new ProfilesTab();
             window.__rfPageDisconnect = () => { try { window._profilesTab.resetOnDisconnect(); } catch(e) {} };
+            window.addEventListener('message', (e) => {
+                if (!e || !e.data || e.data.t !== 'activeTab') return;
+                if (e.data.v !== 'profiles') return;
+                window._profilesTab.isDirty = false;
+                window._profilesTab.needSave = false;
+                window._profilesTab.hideToolbar();
+                window._profilesTab.loadDataFromFC();
+            });
         });
     </script>
     <script src="../bridge.js"></script>
