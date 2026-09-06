@@ -49,6 +49,10 @@
             case 'scan': onScanResult(m.dev); break;
             case 'theme': applyTheme(m.v); break;
             case 'activeTab': onActiveTab(m.v); break;
+            case 'reconnect':
+            case 'disconnect':
+                window.postMessage(m, '*');
+                break;
         }
     }
 
