@@ -7,7 +7,8 @@
         mixer: document.getElementById('tab-mixer'),
         servos: document.getElementById('tab-servos'),
         rates: document.getElementById('tab-rates'),
-        profiles: document.getElementById('tab-profiles')
+        profiles: document.getElementById('tab-profiles'),
+        adjustment: document.getElementById('tab-adjustment')
     };
     let current = 'status';
     function activate(t) {
@@ -28,7 +29,7 @@
        rates tab's own profile-change dialog:
          Yes -> click the tab's Save button, wait until it finishes, move.
          No  -> click the tab's Revert button (discard), then move. */
-    const TAB_ROOT_SELECTOR = '.tab-mixer, .tab-servos, .tab-rates, .tab-profiles';
+    const TAB_ROOT_SELECTOR = '.tab-mixer, .tab-servos, .tab-rates, .tab-profiles, .tab-adjustment';
     function tabIsDirty(t) {
         if (t === 'status') return false;      /* nothing to save there */
         const f = frames[t];

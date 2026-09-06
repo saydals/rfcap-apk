@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotorflight Configurator - Tune</title>
+    <style>
+        :root { --animation-speed: 0.2s ease; --radius-sm: 4px; --radius-md: 8px; }
+        * { outline: none; user-select: none; -webkit-user-drag: none; -webkit-app-region: no-drag; box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-500); }
+        html, body { height: 100%; margin: 0; padding: 0; font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif; font-size: 12px; color: var(--color-text); background-color: var(--color-surface); transition: background-color var(--animation-speed), color var(--animation-speed); }
+        html[data-theme="light"] {
+            --color-neutral-50: hsl(220,5%,98%); --color-neutral-100: hsl(220,5%,97%); --color-neutral-200: hsl(220,5%,92%);
+            --color-neutral-300: hsl(220,5%,85%); --color-neutral-400: hsl(220,5%,70%); --color-neutral-500: hsl(220,5%,50%);
+            --color-neutral-600: hsl(220,5%,30%); --color-neutral-700: hsl(220,5%,15%); --color-neutral-800: hsl(220,5%,8%);
+            --color-neutral-900: hsl(220,5%,3%); --color-neutral-950: hsl(220,5%,2%);
+            --color-bg: var(--color-neutral-200); --color-surface: var(--color-neutral-100); --color-surface-alt: var(--color-neutral-600);
+            --color-surface-float: var(--color-neutral-50); --color-hover: var(--color-neutral-200); --color-border: var(--color-neutral-400);
+            --color-border-soft: var(--color-neutral-300); --color-border-accent: hsl(202,100%,50%); --color-text: var(--color-neutral-900);
+            --color-text-alt: var(--color-neutral-100); --color-text-soft: var(--color-neutral-700); --color-text-disabled: var(--color-neutral-500);
+            --color-input-bg: var(--color-neutral-50); --color-input-bg-disabled: var(--color-neutral-200); --color-input-bg-hover: var(--color-neutral-200);
+            --color-input-bg-active: var(--color-neutral-300); --color-btn-fg: var(--color-neutral-800); --color-btn-fg-disabled: var(--color-neutral-500);
+            --color-btn-bg: var(--color-neutral-300); --color-btn-bg-hover: var(--color-neutral-400); --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-200); --color-switch: hsl(202,100%,50%); --color-switch-handle: var(--color-neutral-50);
+            --accent: hsl(202,100%,50%); --subtleAccent: var(--color-neutral-400); --superSubtleAccent: var(--color-neutral-300);
+        }
+        html[data-theme="dark"] {
+            --color-neutral-950: hsl(248,5%,5%); --color-neutral-900: hsl(248,5%,10%); --color-neutral-800: hsl(248,5%,20%);
+            --color-neutral-700: hsl(248,5%,30%); --color-neutral-600: hsl(248,5%,40%); --color-neutral-500: hsl(248,5%,50%);
+            --color-neutral-400: hsl(248,5%,60%); --color-neutral-300: hsl(248,5%,70%); --color-neutral-200: hsl(248,5%,80%);
+            --color-neutral-100: hsl(248,5%,90%); --color-neutral-50: hsl(248,5%,95%);
+            --color-bg: var(--color-neutral-950); --color-surface: var(--color-neutral-900); --color-surface-alt: var(--color-neutral-800);
+            --color-surface-float: var(--color-neutral-800); --color-hover: var(--color-neutral-800); --color-border: var(--color-neutral-700);
+            --color-border-soft: var(--color-neutral-700); --color-border-accent: hsl(202,40%,40%); --color-text: var(--color-neutral-50);
+            --color-text-alt: var(--color-neutral-100); --color-text-soft: var(--color-neutral-100); --color-text-disabled: var(--color-neutral-300);
+            --color-input-bg: var(--color-neutral-800); --color-input-bg-disabled: var(--color-neutral-700); --color-input-bg-hover: var(--color-neutral-700);
+            --color-input-bg-active: var(--color-neutral-600); --color-btn-fg: var(--color-neutral-900); --color-btn-fg-disabled: var(--color-neutral-700);
+            --color-btn-bg: var(--color-neutral-200); --color-btn-bg-hover: var(--color-neutral-400); --color-btn-bg-active: var(--color-neutral-500);
+            --color-btn-bg-disabled: var(--color-neutral-400); --color-switch: hsl(202,40%,40%); --color-switch-handle: var(--color-neutral-100);
+            --accent: hsl(202,40%,40%); --subtleAccent: var(--color-neutral-700); --superSubtleAccent: var(--color-neutral-700);
+        }
+        body { background-color: var(--color-bg); overflow-x: hidden; }
+        a { text-decoration: none; color: var(--color-border-accent); font-weight: bold; }
+        a.disabled { pointer-events: none; cursor: default; color: var(--color-text-disabled); }
+        #connection-panel { background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        #connection-panel .panel-title { font-weight: bold; font-size: 14px; margin-right: 12px; }
+        #connection-panel select, #connection-panel input[type="text"] { padding: 4px 8px; border: 1px solid var(--color-border); border-radius: 4px; background-color: var(--color-input-bg); color: var(--color-text); font-size: 12px; height: 28px; }
+        #connection-panel button { padding: 4px 16px; border: 1px solid var(--color-border); border-radius: 4px; background-color: var(--color-btn-bg); color: var(--color-btn-fg); font-size: 12px; font-weight: bold; cursor: pointer; height: 28px; }
+        #connection-panel button:hover:not(:disabled) { background-color: var(--color-btn-bg-hover); }
+        #connection-panel button:disabled { background-color: var(--color-btn-bg-disabled); color: var(--color-btn-fg-disabled); cursor: not-allowed; }
+        #connection-panel button.active { background-color: #d32f2f; color: white; border-color: #b71c1c; }
+        #connection-panel button.active:hover { background-color: #b71c1c; }
+        #connection-panel #connection-status { font-weight: bold; color: var(--color-text-soft); }
+        #connection-panel #connection-status.connected { color: #2e8b2e; }
+        #theme-toggle-btn { margin-left: auto; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-btn-bg); color: var(--color-btn-fg); cursor: pointer; }
+        #main-wrapper { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #tab-content-container { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; }
+        .tab-adjustment { width: 100%; margin: 0; }
+        .tab-adjustment .tab_title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: var(--color-text); }
+        .tab-adjustment .sub-title { font-size: 18px; font-weight: bold; }
+        .tab-adjustment .sub-title.secondary { color: var(--color-text-soft); font-size: 12px; font-weight: 200; }
+        .tab-adjustment .content_wrapper { display:flex; flex-direction:row; gap:12px; }
+        .tab-adjustment .gui_box { flex:1 1 420px; margin-bottom:12px; padding-bottom:6px; padding-top:28px; position:relative; border:1px solid #CCCCCC; background-color:#F5F5F5; border-radius:5px; overflow:visible; min-width:0; max-width:600px; }
+        .tab-adjustment .gui_box:first-child { flex:0 0 calc(40% - 6px); max-width:calc(40% - 6px); margin-right:6px; }
+        .tab-adjustment .gui_box:last-child { flex:0 0 calc(60% - 6px); max-width:calc(60% - 6px); }
+        html[data-theme="dark"] .tab-adjustment .gui_box { background-color: #2a2a2a; border-color: #555555; }
+        .tab-adjustment .gui_box_titlebar { font-size: 13px; font-weight: 700; margin-bottom: 0; padding: 3px 14px; background-color: #555555; color: #ffffff; position: absolute; top: 0; left: 0; height: 22px; border-radius: 5px; display: flex; align-items: center; white-space: nowrap; }
+        html[data-theme="dark"] .tab-adjustment .gui_box_titlebar { background-color: #444444; color: #ffffff; }
+        .tab-adjustment .spacer_box { padding: 4px 6px; }
+        .tab-adjustment table.adjTable { width: 100%; border-collapse: collapse; }
+        .tab-adjustment table.adjTable th { background-color: var(--color-surface-alt); color: var(--color-text-alt); font-weight: 600; padding: 6px 4px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--color-border-soft); }
+        .tab-adjustment table.adjTable td { padding: 4px 3px; border-bottom: 1px solid var(--color-border-soft); vertical-align: middle; white-space: nowrap; }
+        .tab-adjustment table.adjTable input[type="number"], .tab-adjustment table.adjTable select { padding: 3px 6px; border: 1px solid var(--subtleAccent); border-radius: var(--radius-sm); background-color: var(--color-input-bg); color: var(--color-text); font-size: 12px; height: 26px; }
+        .tab-adjustment table.adjTable input[type="number"]:focus, .tab-adjustment table.adjTable select:focus { border-color: var(--color-border-accent); }
+        .tab-adjustment table.adjTable input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+        .tab-adjustment .slot-index { font-weight: bold; width: 40px; text-align: center; }
+        .tab-adjustment .func-name { font-weight: 600; min-width: 150px; }
+        .tab-adjustment .aux-select { width: auto; }
+        .tab-adjustment .step-select { width: auto; padding-left: 2px; padding-right: 2px; }
+        .tab-adjustment table.adjTable select:disabled { opacity: .35; color: var(--color-text-disabled); cursor: not-allowed; }
+        .tab-adjustment .adj-enable { width: 16px; height: 16px; cursor: pointer; }
+        .tab-adjustment .cur-box {
+            display: inline-block; width: 52px; height: 26px; line-height: 24px;
+            text-align: center; font-weight: bold; font-variant-numeric: tabular-nums;
+            border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+            background-color: var(--color-input-bg); color: var(--color-text);
+            font-size: 12px; white-space: nowrap; vertical-align: middle;
+        }
+        /* grey background = FC did not answer, or the value is out of range (0-255) */
+        .tab-adjustment .cur-box.invalid {
+            background-color: var(--color-neutral-400);
+            color: var(--color-surface);
+            opacity: .75;
+        }
+        /* pink background = current value changed since last check */
+        .tab-adjustment .cur-box.changed { background-color: #89CFF0; color: #fff; }
+        .tab-adjustment .spacer_box { overflow-x: auto; }
+        .rc-monitor { display: flex; flex-direction: column; gap: 6px; padding: 8px; background-color: var(--color-input-bg); border-radius: var(--radius-sm); margin-bottom: 8px; }
+        .rc-channel { display: flex; align-items: center; gap: 4px; width: 100%; }
+        .rc-channel .rc-label { font-size: 10px; color: var(--color-text-soft); min-width: 45px; }
+        .rc-channel .rc-bar { flex: 1; height: 14px; background-color: var(--color-border-soft); border-radius: 3px; overflow: hidden; position: relative; }
+        .rc-channel .rc-bar::before { content:" "; position:absolute; left:50%; top:0; bottom:0; width:1px; background:#000000; transform:translateX(-50%); z-index:2; border-radius:2px; }
+        .rc-channel .rc-bar-fill { position:absolute; top:0; height:100%; transition:all 0.15s; }
+        .rc-channel .rc-fill-left { right:50%; background:#89CFF0; }
+        .rc-channel .rc-fill-right { left:50%; background:#F5A6A6; }
+        .rc-channel .rc-val { font-size: 10px; font-weight: bold; min-width: 38px; }
+        .rc-channel .rc-auto-tag { font-size: 9px; color: #d32f2f; font-weight: bold; margin-left: 2px; }
+        .tab-adjustment.toolbar_hidden .content_toolbar { display: none; }
+        .tab-adjustment .content_toolbar { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 0 2px 0; }
+        .tab-adjustment .content_toolbar .btn a { display: inline-block; padding: 6px 18px; border: 1px solid var(--color-border); border-radius: 4px; background-color: var(--color-btn-bg); color: var(--color-btn-fg); cursor: pointer; }
+        .tab-adjustment .content_toolbar .btn a:hover { background-color: var(--color-btn-bg-hover); }
+        .tab-adjustment .content_toolbar .save_btn a { background-color: #2e7d32; color: #fff; border-color: #1b5e20; }
+        .tab-adjustment .content_toolbar .revert_btn a { background-color: #6c757d; color: #fff; border-color: #495057; }
+        .auto-status { font-size: 10px; padding: 2px 6px; }
+        .auto-status.detecting { color: #d32f2f; }
+        .auto-status.detected { color: #2e7d32; }
+        /* landscape/portrait breakpoint at 870px */
+        @media (max-width: 870px) {
+            .tab-adjustment .content_wrapper { flex-direction:column; }
+            .rc-monitor { flex-direction:row; flex-wrap:wrap; }
+            .rc-channel { width: calc(33.33% - 4px); gap: 2px; }
+            .tab-adjustment .gui_box { flex:0 0 auto; max-width:100%; }
+            .tab-adjustment .gui_box:first-child { flex:0 0 auto; max-width:100%; }
+            .tab-adjustment .gui_box:last-child { flex:0 0 auto; max-width:100%; }
+        }
+        /* smartphone portrait */
+        @media (max-width: 560px) {
+            #tab-content-container { padding: 6px; }
+            .tab-adjustment .gui_box { padding-top: 24px; }
+            .tab-adjustment table.adjTable th, .tab-adjustment table.adjTable td { padding: 4px 3px; font-size: 11px; }
+            .tab-adjustment .func-name { min-width: 0; font-size: 11px; }
+            .tab-adjustment .slot-index { width: auto; }
+            .rc-monitor { gap: 5px; padding: 6px; }
+            .rc-channel { gap: 2px; }
+            .rc-channel .rc-label { min-width: 30px; font-size: 9px; }
+            .rc-channel .rc-bar { width: 28px; }
+            .rc-channel .rc-val { min-width: 30px; font-size: 9px; }
+            .content_toolbar .btn a { padding: 5px 12px; }
+            #connection-panel { padding: 8px; gap: 6px; }
+            /* portrait: allow RC row to shrink further */
+            .rc-channel { flex-wrap:wrap; gap:1px; }
+            .rc-channel .rc-label { min-width:20px; font-size:8px; flex-shrink:1; }
+            .rc-channel .rc-bar { min-width:20px; width:auto; flex:1; flex-shrink:1; }
+            .rc-channel .rc-val { min-width:20px; font-size:8px; flex-shrink:1; }
+            .rc-monitor { flex-wrap:wrap; }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div id="main-wrapper">
+        <!--
+          Connection panel: kept for compatibility with bridge.js (which
+          expects connect-btn + port-select + connection-status in each
+          page so it can auto-adopt the shared link from the shell hub).
+          The actual transport (SPP/BLE/USB) is owned by the Status tab +
+          header chip; this panel only mirrors that state.
+        -->
+        <div id="connection-panel">
+            <span class="panel-title">Connection</span>
+            <select id="port-select"><option value="none">Select Port</option></select>
+            <select id="baud-select"><option value="1000000">1000000</option><option value="500000">500000</option><option value="250000">250000</option><option value="115200" selected>115200</option><option value="57600">57600</option><option value="38400">38400</option></select>
+            <button id="connect-btn">Connect</button>
+            <span id="connection-status">Disconnected</span>
+            <button id="theme-toggle-btn">&#127769; / &#9728;&#65039;</button>
+        </div>
+        <div id="tab-content-container">
+            <div class="tab-adjustment toolbar_hidden">
+                <div class="tab_title">Tune <span class="sub-title secondary">3pot Switch Model</span></div>
+                <div class="content_wrapper">
+                    <div class="gui_box">
+                        <div class="gui_box_titlebar"><div class="spacer_box_title">RC Monitor &amp; AUTO Detection</div></div>
+                        <div class="spacer_box"><div class="rc-monitor" id="rc-monitor"></div><div class="auto-status" id="auto-status">AUTO: Waiting for movement...</div></div>
+                    </div>
+                    <div class="gui_box">
+                        <div class="gui_box_titlebar"><div class="spacer_box_title">Adjustment Slots (5-17)</div></div>
+                        <div class="spacer_box"><table class="adjTable"><thead><tr><th>Enable</th><th>Function</th><th>Current</th><th>AUX</th><th>Step</th><th>Slot</th></tr></thead><tbody id="adj-tbody"></tbody></table></div>
+                    </div>
+                </div>
+                <div class="content_toolbar">
+                    <div class="btn revert_btn"><a href="#" id="revert-btn">Revert</a></div>
+                    <div class="btn save_btn"><a href="#" id="save-btn">Save</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    // ==================== Theme ====================
+    (function(){const k='rf-theme';function apply(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem(k,t);}const s=localStorage.getItem(k);const p=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;apply(s||(p?'dark':'light'));window.toggleTheme=()=>{const c=document.documentElement.getAttribute('data-theme');apply(c==='dark'?'light':'dark');};})();
+
+    // ==================== MSP Protocol ====================
+    function mspChecksum(l,c,p){let c2=l^c;for(let i=0;i<p.length;i++)c2^=p[i];return c2&0xFF;}
+    function readU16(p,i){return(p[i+1]<<8)|p[i];}
+    function readS16(p,i){let v=(p[i+1]<<8)|p[i];if(v>32767)v-=65536;return v;}
+    function readS8(b){return(b<<24)>>24;}
+    function buildMSPMessage(code,payload=[]){const l=payload.length;const buf=new Uint8Array(6+l);buf[0]=0x24;buf[1]=0x4D;buf[2]=0x3C;buf[3]=l&0xFF;buf[4]=code&0xFF;payload.forEach((b,i)=>{buf[5+i]=b&0xFF;});buf[5+l]=mspChecksum(l,code,payload);return buf;}
+
+    const MSP={API_VERSION:1,STATUS:101,RC:105,ADJUSTMENT_RANGES:52,SET_ADJUSTMENT_RANGE:53,PID_TUNING:112,PID_PROFILE:94,EEPROM_WRITE:250};
+    const ADJ_FUNC={NONE:0,RATE_PROFILE:1,PID_PROFILE:2,PITCH_P:14,PITCH_I:15,PITCH_D:16,ROLL_P:18,ROLL_I:19,ROLL_D:20,YAW_P:22,YAW_I:23,YAW_D:24,YAW_CW:26,YAW_CCW:27};
+    const SLOT_FUNC_LIST=[
+        {id:ADJ_FUNC.RATE_PROFILE,name:'Rate Selection',cur:'rateProfile'},
+        {id:ADJ_FUNC.PID_PROFILE,name:'Profile Selection',cur:'pidProfile'},
+        {id:ADJ_FUNC.PITCH_P,name:'Pitch P gain',cur:[1,0]},
+        {id:ADJ_FUNC.PITCH_I,name:'Pitch I gain',cur:[1,1]},
+        {id:ADJ_FUNC.PITCH_D,name:'Pitch D gain',cur:[1,2]},
+        {id:ADJ_FUNC.ROLL_P,name:'Roll P gain',cur:[0,0]},
+        {id:ADJ_FUNC.ROLL_I,name:'Roll I gain',cur:[0,1]},
+        {id:ADJ_FUNC.ROLL_D,name:'Roll D gain',cur:[0,2]},
+        {id:ADJ_FUNC.YAW_P,name:'Yaw P gain',cur:[2,0]},
+        {id:ADJ_FUNC.YAW_I,name:'Yaw I gain',cur:[2,1]},
+        {id:ADJ_FUNC.YAW_D,name:'Yaw D gain',cur:[2,2]},
+        {id:ADJ_FUNC.YAW_CW,name:'Yaw CW Stop Gain',cur:'stopCW'},
+        {id:ADJ_FUNC.YAW_CCW,name:'Yaw CCW Stop Gain',cur:'stopCCW'},
+    ];
+    const STEP_OPTIONS=[1,2,3];
+    const MAX_AUX=8;
+    const ALWAYS_ON=0xFF;
+    const PRIMARY_CHANNEL_COUNT=5;
+    // 3-position switch ranges in step units (5µs step, 0=1500µs)
+    // Low: 900-1400µs → -120 to -20
+    // Mid: 1400-1600µs → -20 to 20
+    // High: 1600-2100µs → 20 to 120
+    const SWITCH_RANGES = {
+        low:  { start: -120, end: -20 },
+        mid:  { start: -20,  end: 20  },
+        high: { start: 20,   end: 120 },
+    };
+    const FULL_RANGE = { start: -125, end: 125 };
+    // RC monitor layout (MSP_RC channel index order):
+    // ch0-3 = RC1-RC4 (sticks), ch4 = RC5 (rotorflight CONTROL_CHANNEL_COUNT=5
+    // makes the 5th control channel a stream member too), ch5-12 = AUX1-AUX8
+    // (display AUX1 = code AUX index 0 = MSP_RC channel index 5)
+    const RC_DISPLAY=[
+        {label:'RC1',ch:0},{label:'RC2',ch:1},{label:'RC3',ch:2},{label:'RC4',ch:3},
+        {label:'RC5',ch:4},
+        {label:'AUX1',ch:5},{label:'AUX2',ch:6},{label:'AUX3',ch:7},{label:'AUX4',ch:8},
+        {label:'AUX5',ch:9},{label:'AUX6',ch:10},{label:'AUX7',ch:11},{label:'AUX8',ch:12},
+    ];
+
+    // ==================== Serial Connection ====================
+    class SerialConnection {
+        constructor(){this.port=null;this.reader=null;this.writer=null;this.connected=false;this.baudRate=115200;this.onData=null;this.onStatusChange=null;}
+        async requestPort(){this.port=await navigator.serial.requestPort();await this.updatePorts();return this.port;}
+        async updatePorts(){const ports=await navigator.serial.getPorts();const sel=document.getElementById('port-select');sel.innerHTML='<option value="none">Select Port</option>';ports.forEach((port,index)=>{const opt=document.createElement('option');opt.value=index;opt.textContent=port.getInfo().usbVendorId?`USB (VID: ${port.getInfo().usbVendorId?.toString(16).padStart(4,'0')})`:`Serial ${index+1}`;sel.appendChild(opt);});}
+        async connect(portIndex,baudRate){try{const ports=await navigator.serial.getPorts();if(portIndex>=ports.length)throw new Error('Invalid port');this.port=ports[portIndex];this.baudRate=parseInt(baudRate);await this.port.open({baudRate:this.baudRate});this.connected=true;this.writer=this.port.writable.getWriter();this.reader=this.port.readable.getReader();this.onStatusChange?.(true);this.readLoop();return true;}catch(e){this.onStatusChange?.(false);return false;}}
+        async disconnect(){if(this.reader){await this.reader.cancel();this.reader.releaseLock();this.reader=null;}if(this.writer){this.writer.releaseLock();this.writer=null;}if(this.port){await this.port.close();this.port=null;}this.connected=false;this.onStatusChange?.(false);}
+        async readLoop(){try{while(this.port&&this.reader){const{value,done}=await this.reader.read();if(done)break;if(value&&this.onData)this.onData(value);}}catch(e){console.error('Read error:',e);}}
+        async send(data){if(this.writer&&this.connected)await this.writer.write(data);}
+    }
+
+    class MSPParser {
+        constructor(){this.buffer=[];this.pendingResponse=null;this.timeout=null;}
+        feed(data){for(let i=0;i<data.length;i++){this.buffer.push(data[i]);this.tryParse();}}
+        tryParse(){if(this.buffer.length<6)return;if(this.buffer[0]!==0x24||this.buffer[1]!==0x4D||this.buffer[2]!==0x3E){this.buffer.shift();return;}const len=this.buffer[3],totalLen=6+len;if(this.buffer.length<totalLen)return;const payload=this.buffer.slice(5,5+len),code=this.buffer[4];this.buffer=this.buffer.slice(totalLen);if(this.pendingResponse){const done=this.pendingResponse({code,payload:new Uint8Array(payload)});if(done===true){clearTimeout(this.timeout);this.pendingResponse=null;}}}
+        waitResponse(code,timeout=1500){return new Promise((resolve,reject)=>{const check=(frame)=>{if(frame.code===code){clearTimeout(this.timeout);this.pendingResponse=null;resolve(frame);return true;}return false;};this.pendingResponse=check;this.timeout=setTimeout(()=>{this.pendingResponse=null;reject(new Error('MSP timeout'));},timeout);});}
+    }
+
+    class RealMSP {
+        constructor(serial){this.serial=serial;this.parser=new MSPParser();this.data={apiVersion:'1.0',RC:{channels:[],active_channels:8},ADJUSTMENT_RANGES:[],status:null,PIDS:[],stopGains:null};this.serial.onData=(bytes)=>this.parser.feed(bytes);this._busy=Promise.resolve();}
+        async sendCommand(codeOrMsg,payload=[]){const reqCode=(codeOrMsg instanceof Uint8Array)?codeOrMsg[4]:codeOrMsg;const run=async()=>{const msg=(codeOrMsg instanceof Uint8Array)?codeOrMsg:buildMSPMessage(codeOrMsg,payload);await this.serial.send(msg);return await this.parser.waitResponse(reqCode);};const result=this._busy.then(run,run);this._busy=result.then(()=>{},()=>{});return result;}
+        async readApiVersion(){const r=await this.sendCommand(MSP.API_VERSION);this.data.apiVersion=r.payload[0]+'.'+r.payload[1]+'.'+r.payload[2];}
+        async readStatus(){
+            // variable-length payload; FC.CONFIG.profile / .rateProfile are at the tail (0-based).
+            // Rotorflight sends >=30 bytes (flagsCount=0). Throw (not silently skip) so a
+            // wrong/lagacy FC layout surfaces in the console instead of grey boxes with no clue.
+            const r=await this.sendCommand(MSP.STATUS);
+            const p=r.payload;
+            if(p.length<27)throw new Error('MSP_STATUS payload '+p.length+'B < 27');
+            let i=15;                       // skip cycle times, sensors, mode(4), compat profile, loads
+            const flagCount=p[i];i+=1+flagCount;
+            if(p.length<i+11)throw new Error('MSP_STATUS payload too short after '+flagCount+' flags');
+            i+=1;                           // armingDisableCount
+            i+=4;                           // armingDisableFlags (u32)
+            i+=1;                           // rebootRequired
+            i+=1;                           // configurationState
+            const profile=p[i];i+=1;
+            const numProfiles=p[i];i+=1;
+            const rateProfile=p[i];i+=1;
+            const numRateProfiles=p[i];
+            this.data.status={profile,numProfiles,rateProfile,numRateProfiles};
+        }
+        // active PID profile gains: axes ROLL,PITCH,YAW each with P,I,D,F (u16) = 34B + B/O
+        async readPidTuning(){
+            const r=await this.sendCommand(MSP.PID_TUNING);
+            const p=r.payload;
+            if(p.length<34)throw new Error('MSP_PID_TUNING payload '+p.length+'B < 34');
+            const PIDS=[];
+            for(let a=0;a<3;a++){const row=[];for(let t=0;t<4;t++){row.push(readU16(p,(a*4+t)*2));}PIDS.push(row);}
+            this.data.PIDS=PIDS;
+        }
+        // active PID profile extras: yaw stop gains are u8 #21/#22 of MSP_PID_PROFILE (offsets 20/21)
+        async readPidProfile(){
+            const r=await this.sendCommand(MSP.PID_PROFILE);
+            const p=r.payload;
+            if(p.length<22)throw new Error('MSP_PID_PROFILE payload '+p.length+'B < 22');
+            this.data.stopGains={cw:p[20],ccw:p[21]};
+        }
+        async readRC(){const r=await this.sendCommand(MSP.RC);const p=r.payload;const count=Math.floor(p.length/2);const ch=[];for(let i=0;i<count;i++)ch.push(readS16(p,i*2));this.data.RC.channels=ch;this.data.RC.active_channels=Math.max(count,this.data.RC.active_channels||8);}
+        async readAdjustmentRanges(){const r=await this.sendCommand(MSP.ADJUSTMENT_RANGES);const p=r.payload;const count=Math.floor(p.length/14);this.data.ADJUSTMENT_RANGES=[];for(let i=0;i<count;i++){const idx=i*14;this.data.ADJUSTMENT_RANGES.push({function:p[idx],enaChannel:p[idx+1],enaRangeStart:readS8(p[idx+2]),enaRangeEnd:readS8(p[idx+3]),adjChannel:p[idx+4],adjRange1Start:readS8(p[idx+5]),adjRange1End:readS8(p[idx+6]),adjRange2Start:readS8(p[idx+7]),adjRange2End:readS8(p[idx+8]),adjMin:readS16(p,idx+9),adjMax:readS16(p,idx+11),adjStep:p[idx+13]});}}
+        buildSetAdjustmentRange(index,adjRange){const payload=[index&0xFF,adjRange.function,adjRange.enaChannel,adjRange.enaRangeStart,adjRange.enaRangeEnd,adjRange.adjChannel,adjRange.adjRange1Start,adjRange.adjRange1End,adjRange.adjRange2Start,adjRange.adjRange2End,adjRange.adjMin&0xFF,(adjRange.adjMin>>8)&0xFF,adjRange.adjMax&0xFF,(adjRange.adjMax>>8)&0xFF,adjRange.adjStep];return buildMSPMessage(MSP.SET_ADJUSTMENT_RANGE,payload);}
+    }
+
+    // ==================== AUTO Detection ====================
+    class AutoDetector {
+        constructor(){this.prevRC=null;this.detectedChannel=-1;}
+        detect(currentRC){
+            const auxCount=currentRC.length-PRIMARY_CHANNEL_COUNT;
+            if(auxCount<=0)return -1;
+            const currentAux=currentRC.slice(PRIMARY_CHANNEL_COUNT);
+            if(!this.prevRC){this.prevRC=currentAux.slice();return -1;}
+            let bestChannel=-1,bestDelta=100;
+            for(let i=0;i<currentAux.length;i++){const delta=Math.abs(currentAux[i]-this.prevRC[i]);if(delta>bestDelta){bestChannel=i;bestDelta=delta;}}
+            // keep the reference frame until a channel is found (configurator behaviour:
+            // slow continuous movement accumulates against the first stored frame)
+            if(bestChannel>=0){this.detectedChannel=bestChannel;}
+            return bestChannel;
+        }
+        getDetectedChannel(){return this.detectedChannel;}
+        reset(){this.prevRC=null;this.detectedChannel=-1;}
+    }
+
+    // ==================== Adjustment Tab ====================
+    class AdjustmentTab {
+        constructor(){
+            this.serial=new SerialConnection();
+            this.msp=new RealMSP(this.serial);
+            this.autoDetector=new AutoDetector();
+            this.slots=[];
+            this.isDirty=false;
+            this.needSave=false;
+            this.prevConfig=null;
+            this.pollInterval=null;
+            this.infoInterval=null;
+            this.init();
+        }
+
+        init(){
+            this.buildSlots();
+            this.currentValues=[];
+            this.initRCMonitor();
+            this.renderTable();
+            this.bindConnection();
+            this.bindButtons();
+        }
+
+        buildSlots(){
+            this.slots=SLOT_FUNC_LIST.map((func,idx)=>({
+                slotIndex:idx+5,          // 1-based slot number shown in UI (5..17)
+                funcId:func.id,
+                funcName:func.name,
+                cur:func.cur,
+                loadedFunction:0,         // function value found in this FC slot at load time
+                enaChannel:-1,            // -1 = AUTO (not yet confirmed)
+                adjChannel:-1,
+                stepSize:1,
+                enabled:false,
+                dirty:false,
+                currentAuxValue:1500,
+            }));
+            this.prevConfig=JSON.parse(JSON.stringify(this.slots));
+        }
+
+        initRCMonitor(){
+            const monitor=document.getElementById('rc-monitor');
+            monitor.innerHTML='';
+            RC_DISPLAY.forEach((rc,i)=>{
+                monitor.innerHTML+=`<div class="rc-channel"><span class="rc-label">${rc.label}</span><div class="rc-bar"><div class="rc-bar-fill rc-fill-left" id="rc-fill-left-${i}" style="width:0%"></div><div class="rc-bar-fill rc-fill-right" id="rc-fill-right-${i}" style="width:0%"></div></div><span class="rc-val" id="rc-val-${i}">1500</span></div>`;
+            });
+        }
+
+        buildAuxDropdown(slotIdx){
+            const slot=this.slots[slotIdx];
+            let html=`<select class="aux-select" data-slot="${slotIdx}" ${slot.enabled?'':'disabled'}>`;
+            html+=`<option value="-1" ${slot.enaChannel===-1?'selected':''}>AUTO</option>`;
+            for(let i=0;i<MAX_AUX;i++){html+=`<option value="${i}" ${slot.enaChannel===i?'selected':''}>AUX ${i+1}</option>`;}
+            html+='</select>';
+            return html;
+        }
+
+        buildStepDropdown(slotIdx){
+            const slot=this.slots[slotIdx];
+            let html=`<select class="step-select" data-slot="${slotIdx}" ${(slot.enabled&&!this.isProfile(slot))?'':'disabled'}>`;
+            STEP_OPTIONS.forEach(s=>{html+=`<option value="${s}" ${slot.stepSize===s?'selected':''}>${s}</option>`;});
+            html+='</select>';
+            return html;
+        }
+
+        renderTable(){
+            const tbody=document.getElementById('adj-tbody');
+            tbody.innerHTML='';
+            this.slots.forEach((slot,idx)=>{
+                const tr=document.createElement('tr');
+                tr.dataset.slot=idx;
+                tr.innerHTML=`<td><input type="checkbox" class="adj-enable" data-slot="${idx}" ${slot.enabled?'checked':''}/></td><td class="func-name">${slot.funcName}</td><td><div class="cur-box invalid" id="cur-${idx}">—</div></td><td>${this.buildAuxDropdown(idx)}</td><td>${this.buildStepDropdown(idx)}</td><td class="slot-index">#${slot.slotIndex}</td>`;
+                tbody.appendChild(tr);
+            });
+            this.bindTableEvents();
+        }
+
+        bindTableEvents(){
+            document.querySelectorAll('.aux-select').forEach(sel=>{
+                sel.addEventListener('change',e=>{
+                    const slotIdx=parseInt(e.target.dataset.slot);
+                    const val=parseInt(e.target.value);
+                    const slot=this.slots[slotIdx];
+                    slot.enaChannel=val;
+                    slot.adjChannel=val;
+                    if(val>=0){
+                        // AUX confirmed -> this is the real dirty state (savable)
+                        slot.dirty=true;this.setDirty();
+                    }else{
+                        // back to AUTO: nothing savable yet -> not dirty
+                        slot.dirty=false;
+                        this.autoDetector.reset();
+                    }
+                });
+            });
+            document.querySelectorAll('.step-select').forEach(sel=>{
+                sel.addEventListener('change',e=>{
+                    const slotIdx=parseInt(e.target.dataset.slot);
+                    const slot=this.slots[slotIdx];
+                    slot.stepSize=parseInt(e.target.value);
+                    // only a savable change when the slot is enabled with a confirmed AUX
+                    if(slot.enabled&&slot.enaChannel>=0){slot.dirty=true;this.setDirty();}
+                });
+            });
+            // switch display is live RC state - no manual interaction, no dirty marking
+            document.querySelectorAll('.adj-enable').forEach(cb=>{
+                cb.addEventListener('change',e=>{
+                    const slotIdx=parseInt(e.target.dataset.slot);
+                    const slot=this.slots[slotIdx];
+                    slot.enabled=e.target.checked;
+                    if(!slot.enabled){
+                        // deselecting is a real change (slot gets zeroed on Save)
+                        slot.dirty=true;this.setDirty();
+                    }else if(slot.enaChannel>=0){
+                        // re-enabled with an already confirmed AUX -> savable change
+                        slot.dirty=true;this.setDirty();
+                    }
+                    // enabling with AUX still AUTO: nothing savable yet -> NOT dirty
+                    this.autoDetector.reset();
+                    this.updateRowDisabled(slotIdx);
+                });
+            });
+        }
+
+        // Current column: read-only values fetched from the FC (active profile,
+        // active profile gains, yaw stop gains). Never written by Save.
+        // Valid ranges (firmware-verified): PID gains 0..255 (adjustment UI range),
+        // stop gains uint8 0..255, profile/rate index 0..2 (displayed as 1..3).
+        // Invalid or missing -> greyed box so the user sees the value is not live.
+        currentValueOf(slot){
+            const d=this.msp.data;
+            const bad={text:'—',valid:false};
+            if(slot.cur==='pidProfile'){
+                if(!d.status||d.status.profile===undefined)return bad;
+                const v=d.status.profile;
+                if(!Number.isFinite(v)||v<0||v>2)return bad;
+                return{text:String(v+1),valid:true};           // simple 1/2/3
+            }
+            if(slot.cur==='rateProfile'){
+                if(!d.status||d.status.rateProfile===undefined)return bad;
+                const v=d.status.rateProfile;
+                if(!Number.isFinite(v)||v<0||v>2)return bad;
+                return{text:String(v+1),valid:true};           // simple 1/2/3
+            }
+            if(slot.cur==='stopCW'||slot.cur==='stopCCW'){
+                if(!d.stopGains)return bad;
+                const v=(slot.cur==='stopCW')?d.stopGains.cw:d.stopGains.ccw;
+                if(!Number.isFinite(v)||v<0||v>255)return bad;
+                return{text:String(v),valid:true};
+            }
+            if(Array.isArray(slot.cur)){
+                const a=slot.cur[0],t=slot.cur[1];
+                if(!d.PIDS||!d.PIDS[a]||d.PIDS[a][t]===undefined)return bad;
+                const v=d.PIDS[a][t];
+                if(!Number.isFinite(v)||v<0||v>255)return bad;  // max 3 digits
+                return{text:String(v),valid:true};
+            }
+            return bad;
+        }
+
+        updateCurrentColumn(){
+            this.slots.forEach((slot,idx)=>{
+                const el=document.getElementById('cur-'+idx);
+                if(!el)return;
+                const r=this.currentValueOf(slot);
+                const newText=r.valid?r.text:'—';
+                const oldText=this.currentValues[idx]||'';
+                el.textContent=r.text;
+                el.classList.toggle('invalid',!r.valid);
+                if(r.valid&&newText!==oldText){
+                    el.classList.add('changed');
+                }else{
+                    el.classList.remove('changed');
+                }
+                this.currentValues[idx]=newText;
+            });
+        }
+
+        // read every info source independently so one failure only greys its own
+        // Current fields (Status / PID gains / Stop gains) and never the whole column.
+        async refreshCurrent(){
+            const results=await Promise.allSettled([
+                this.msp.readStatus().catch(e=>{console.warn('[cur] STATUS fail:',e.message);throw e;}),
+                this.msp.readPidTuning().catch(e=>{console.warn('[cur] PID_TUNING fail:',e.message);throw e;}),
+                this.msp.readPidProfile().catch(e=>{console.warn('[cur] PID_PROFILE fail:',e.message);throw e;}),
+            ]);
+            void results;
+            this.updateCurrentColumn();
+        }
+
+        updateRowDisabled(idx){
+            const slot=this.slots[idx];
+            const aux=document.querySelector(`.aux-select[data-slot="${idx}"]`);
+            if(aux)aux.disabled=!slot.enabled;
+            const stp=document.querySelector(`.step-select[data-slot="${idx}"]`);
+            if(stp)stp.disabled=!slot.enabled||this.isProfile(slot);
+        }
+
+        isProfile(slot){return slot.funcId===ADJ_FUNC.PID_PROFILE||slot.funcId===ADJ_FUNC.RATE_PROFILE;}
+
+        updateRCMonitor(){
+            const ch=this.msp.data.RC.channels;
+            RC_DISPLAY.forEach((rc,i)=>{
+                const val=ch[rc.ch]!==undefined?ch[rc.ch]:1500;
+                const fillLeft=document.getElementById(`rc-fill-left-${i}`);
+                const fillRight=document.getElementById(`rc-fill-right-${i}`);
+                const valEl=document.getElementById(`rc-val-${i}`);
+                if(fillLeft&&fillRight&&valEl){
+                    const range=600;
+                    const diff=Math.round((val-1500)/range*100);
+                    if(diff<0){
+                        fillLeft.style.width=(-diff)+'%';
+                        fillRight.style.width='0%';
+                    }else{
+                        fillLeft.style.width='0%';
+                        fillRight.style.width=diff+'%';
+                    }
+                    valEl.textContent=val;
+                }
+            });
+        }
+
+        runAutoDetection(){
+            const ch=this.msp.data.RC.channels;
+            if(!ch||ch.length<PRIMARY_CHANNEL_COUNT)return;
+            const detected=this.autoDetector.detect(ch);
+            const statusEl=document.getElementById('auto-status');
+            if(detected>=0){
+                statusEl.textContent=`AUTO: Detected AUX${detected+1} - assigned to all AUTO slots (dirty)`;
+                statusEl.className='auto-status detected';
+                // Confirmed AUX -> write it into every enabled AUTO slot.
+                // This is the moment those slots become really dirty (savable).
+                let anyDirty=false;
+                this.slots.forEach((slot,idx)=>{
+                    if(slot.enabled&&slot.enaChannel===-1){
+                        slot.enaChannel=detected;
+                        slot.adjChannel=detected;
+                        slot.dirty=true;
+                        anyDirty=true;
+                        const sel=document.querySelector(`.aux-select[data-slot="${idx}"]`);
+                        if(sel)sel.value=String(detected);
+                    }
+                });
+                if(anyDirty)this.setDirty();
+            }else{
+                statusEl.textContent='AUTO: Waiting for movement...';
+                statusEl.className='auto-status detecting';
+            }
+            this.updateRCMonitor();
+        }
+
+        bindConnection(){
+            /* Same shape as mixer/servos: a local Connect button exists for
+               bridge.js to auto-click on state changes (see tryAutoConnectClick
+               in bridge.js). The actual SPP/BLE/USB transport is the shared
+               one owned by the shell hub. */
+            const connectBtn=document.getElementById('connect-btn');
+            const portSelect=document.getElementById('port-select');
+            const baudSelect=document.getElementById('baud-select');
+            const statusEl=document.getElementById('connection-status');
+            connectBtn.addEventListener('click',async(e)=>{
+                e.preventDefault();
+                if(this.serial.connected){
+                    await this.serial.disconnect();
+                    connectBtn.textContent='Connect';connectBtn.classList.remove('active');
+                    statusEl.textContent='Disconnected';statusEl.classList.remove('connected');
+                    if(this.pollInterval){clearInterval(this.pollInterval);this.pollInterval=null;}
+                    if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
+                    this.resetPage();
+                }else{
+                    let portIndex=parseInt(portSelect.value);
+                    if(portSelect.value==='none'||isNaN(portIndex)){
+                        try{
+                            const p=await this.serial.requestPort();
+                            await this.serial.updatePorts();
+                            const ports=await navigator.serial.getPorts();
+                            const pi=ports.indexOf(p);
+                            portIndex=pi>=0?pi:0;
+                        }
+                        catch(err){return;}
+                    }
+                    const success=await this.serial.connect(portIndex,baudSelect.value);
+                    if(success){
+                        connectBtn.textContent='Disconnect';connectBtn.classList.add('active');
+                        statusEl.textContent='Connected';statusEl.classList.add('connected');
+                        this.onConnect();
+                    }
+                }
+            });
+            this.serial.updatePorts();
+            this.serial.onStatusChange=(connected)=>{
+                if(!connected){
+                    connectBtn.textContent='Connect';connectBtn.classList.remove('active');
+                    statusEl.textContent='Disconnected';statusEl.classList.remove('connected');
+                    if(this.pollInterval){clearInterval(this.pollInterval);this.pollInterval=null;}
+                    if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
+                    this.resetPage();
+                }
+            };
+        }
+
+        /* Called by bridge.js when the shared link drops. Reset to initial
+           state, identical to how mixer/servos handle it. */
+        resetOnDisconnect(){
+            if(this.prevConfig){
+                this.slots=JSON.parse(JSON.stringify(this.prevConfig));
+            }
+            this.isDirty=false;
+            this.needSave=false;
+            this.autoDetector.reset();
+            this.currentValues=[];
+            this.buildSlots();
+            this.renderTable();
+            if(this.pollInterval){clearInterval(this.pollInterval);this.pollInterval=null;}
+            if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
+            this.hideToolbar();
+        }
+
+        bindButtons(){
+            document.getElementById('save-btn').addEventListener('click',(e)=>{e.preventDefault();this.save();});
+            document.getElementById('revert-btn').addEventListener('click',(e)=>{e.preventDefault();this.revert();});
+        }
+
+        async onConnect(){
+            // each read is tried independently so one unsupported command never
+            // blocks the rest (RC monitor / slots / the other Current fields).
+            await this.msp.readApiVersion().catch(e=>console.warn('[cur] API_VERSION fail:',e.message));
+            await this.msp.readAdjustmentRanges().catch(e=>console.error('ADJUSTMENT_RANGES fail:',e.message));
+            await this.msp.readStatus().catch(e=>console.warn('[cur] STATUS fail:',e.message));
+            await this.msp.readPidTuning().catch(e=>console.warn('[cur] PID_TUNING fail:',e.message));
+            await this.msp.readPidProfile().catch(e=>console.warn('[cur] PID_PROFILE fail:',e.message));
+            await this.msp.readRC().catch(e=>console.warn('[rc] RC fail:',e.message));
+            this.loadFromMSP();
+            this.updateCurrentColumn();
+            this.startPolling();
+        }
+
+        loadFromMSP(){
+            const ranges=this.msp.data.ADJUSTMENT_RANGES;
+            this.slots.forEach((slot,idx)=>{
+                const ri=idx+4;   // our slots are FC slots 5..17 -> 0-based index 4..16
+                if(ri<ranges.length){
+                    const r=ranges[ri];
+                    slot.loadedFunction=r.function;   // remember what was in this FC slot
+                    slot.enabled=(r.function===slot.funcId);
+                    if(slot.enabled){
+                        // only an enabled slot whose function matches ours gets a channel from FC.
+                        // an unconfigured/foreign slot must stay AUTO (-1), NOT borrow ch 0 (AUX1).
+                        const ch=(r.enaChannel===ALWAYS_ON)?r.adjChannel:r.enaChannel;
+                        slot.enaChannel=(ch>=0&&ch<MAX_AUX)?ch:-1;
+                        slot.adjChannel=slot.enaChannel;
+                    }else{
+                        slot.enaChannel=-1;
+                        slot.adjChannel=-1;
+                    }
+                    slot.stepSize=STEP_OPTIONS.includes(r.adjStep)?r.adjStep:1;
+                    slot.dirty=false;
+                }else{
+                    slot.loadedFunction=0;
+                }
+            });
+            this.prevConfig=JSON.parse(JSON.stringify(this.slots));
+            this.renderTable();
+            this.hideToolbar();
+        }
+
+        startPolling(){
+            // 200 ms: RC monitor + AUTO detection
+            this.pollInterval=setInterval(()=>{if(this.serial.connected)this.msp.readRC().then(()=>{this.updateRCMonitor();this.runAutoDetection();}).catch(e=>console.warn('[rc] read failed:',e.message));},200);
+            // 500 ms: read-only Current column (active profile + gains + stop gains)
+            this.infoInterval=setInterval(()=>{
+                if(!this.serial.connected)return;
+                this.refreshCurrent();
+            },500);
+        }
+
+        setDirty(){if(!this.isDirty){this.isDirty=true;this.showToolbar();}}
+        showToolbar(){document.querySelector('.tab-adjustment').classList.remove('toolbar_hidden');}
+        hideToolbar(){document.querySelector('.tab-adjustment').classList.add('toolbar_hidden');}
+        resetPage(){
+            this.isDirty=false;this.needSave=false;this.prevConfig=null;
+            this.autoDetector.reset();
+            this.currentValues=[];
+            this.buildSlots();
+            this.hideToolbar();
+            this.renderTable();
+        }
+
+        async save(){
+            if(!this.serial.connected){alert('Not connected to FC');return;}
+            // AUTO-unresolved (AUX not confirmed) slots cannot be saved: block the whole save
+            const unresolved=this.slots.filter(s=>s.enabled&&s.enaChannel===-1);
+            if(unresolved.length){
+                alert('AUTO 상태(AUX 미확정) 항목이 있어 저장할 수 없습니다.\n조종기의 스위치를 움직여 AUX를 먼저 확정하세요:\n- '+unresolved.map(s=>s.funcName).join('\n- '));
+                return;
+            }
+            try{
+                let sentCount=0;
+                for(let i=0;i<this.slots.length;i++){
+                    const slot=this.slots[i];
+                    let adjRange=null;
+                    if(slot.enabled){
+                        adjRange=this.buildAdjRange(slot);
+                    }else if(slot.loadedFunction===slot.funcId&&slot.loadedFunction!==0){
+                        // deselected -> reset that slot (function = 0)
+                        adjRange=this.zeroAdjRange();
+                    }
+                    // loadedFunction was a foreign function -> leave the FC slot untouched
+                    if(!adjRange)continue;
+                    const msg=this.msp.buildSetAdjustmentRange(i+4,adjRange);   // 0-based FC index for slots 5..17
+                    await this.msp.sendCommand(msg);
+                    slot.dirty=false;sentCount++;
+                }
+                await this.msp.sendCommand(MSP.EEPROM_WRITE,[]);
+                this.slots.forEach(s=>{s.loadedFunction=s.enabled?s.funcId:0;});
+                this.isDirty=false;this.hideToolbar();
+                this.prevConfig=JSON.parse(JSON.stringify(this.slots));
+                alert('Settings saved.');
+            }catch(e){console.error('Save failed:',e);alert('Save failed: '+e.message);}
+        }
+
+        buildAdjRange(slot){
+            // save() guarantees enaChannel is a resolved AUX (0..7) here.
+            // Enable channel = value channel = the same AUX (adjtapmake.txt B.2).
+            const enaChannel=slot.enaChannel;
+            const adjChannel=slot.enaChannel;
+            if(this.isProfile(slot)){
+                // MAPPED mode (adjStep=0): full switch travel -> profile 1/2/3
+                // low = 1, mid = 2, high = 3 (linear 900..2100us -> 1..3)
+                return{
+                    function:slot.funcId,
+                    enaChannel,
+                    enaRangeStart:FULL_RANGE.start,enaRangeEnd:FULL_RANGE.end,
+                    adjChannel,
+                    adjRange1Start:-120,adjRange1End:120,   // 900..2100us
+                    adjRange2Start:0,adjRange2End:0,
+                    adjMin:1,adjMax:3,adjStep:0,
+                };
+            }
+            // STEPPED mode: low = -step per repeat (~0.2s), mid = none, high = +step
+            const isStop=(slot.funcId===ADJ_FUNC.YAW_CW||slot.funcId===ADJ_FUNC.YAW_CCW);
+            return{
+                function:slot.funcId,
+                enaChannel,
+                enaRangeStart:FULL_RANGE.start,enaRangeEnd:FULL_RANGE.end,
+                adjChannel,
+                adjRange1Start:SWITCH_RANGES.low.start,adjRange1End:SWITCH_RANGES.low.end,     // 900..1400 -> decrease
+                adjRange2Start:SWITCH_RANGES.high.start,adjRange2End:SWITCH_RANGES.high.end,   // 1600..2100 -> increase
+                adjMin:isStop?25:0,adjMax:250,adjStep:slot.stepSize,
+            };
+        }
+
+        zeroAdjRange(){
+            return{function:0,enaChannel:0,enaRangeStart:0,enaRangeEnd:0,adjChannel:0,adjRange1Start:0,adjRange1End:0,adjRange2Start:0,adjRange2End:0,adjMin:0,adjMax:0,adjStep:0};
+        }
+
+        async revert(){
+            this.slots = JSON.parse(JSON.stringify(this.prevConfig));
+            this.autoDetector.reset();
+            this.renderTable(); this.setDirty();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};});
+    </script>
+    <script src="../bridge.js"></script>
+</body>
+</html>
