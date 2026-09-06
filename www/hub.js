@@ -927,7 +927,10 @@
     function onStateChange() {
         var st = RF.state;
         if (!st.on) {
-            lastAutoOn = false;
+            if (lastAutoOn) {
+                lastAutoOn = false;
+                broadcast({ t: 'disconnect' });
+            }
             return;
         }
         if (!lastAutoOn) {

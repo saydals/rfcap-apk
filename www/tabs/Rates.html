@@ -4333,6 +4333,10 @@ async activateProfile(index) {
             window.__rfPageDisconnect = () => { try { window._ratesTab.resetOnDisconnect(); } catch(e) {} };
             window.addEventListener('message', (e) => {
                 if (!e || !e.data) return;
+                if (e.data.t === 'disconnect') {
+                    try { window._ratesTab.resetOnDisconnect(); } catch(ex) {}
+                    return;
+                }
                 if (e.data.t === 'reconnect') {
                     window._ratesTab.isDirty = false;
                     window._ratesTab.needSave = false;

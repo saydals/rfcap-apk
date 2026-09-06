@@ -3806,6 +3806,10 @@ body {
             window.__rfPageDisconnect = () => { try { window._profilesTab.resetOnDisconnect(); } catch(e) {} };
             window.addEventListener('message', (e) => {
                 if (!e || !e.data) return;
+                if (e.data.t === 'disconnect') {
+                    try { window._profilesTab.resetOnDisconnect(); } catch(ex) {}
+                    return;
+                }
                 if (e.data.t === 'reconnect') {
                     window._profilesTab.isDirty = false;
                     window._profilesTab.needSave = false;
