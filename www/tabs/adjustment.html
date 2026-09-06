@@ -242,12 +242,12 @@
     // ==================== Serial Connection ====================
     class SerialConnection {
         constructor(){this.port=null;this.reader=null;this.writer=null;this.connected=false;this.baudRate=115200;this.onData=null;this.onStatusChange=null;}
-        async requestPort(){this.port=await navigator.serial.requestPort();await this.updatePorts();return this.port;}
+        async requestPort(){console.log('[Tune] requestPort() called');try{this.port=await navigator.serial.requestPort();console.log('[Tune] requestPort() got port:',this.port?'VirtualPort':'null');await this.updatePorts();return this.port;}catch(e){console.error('[Tune] requestPort() FAILED:',e.message||e);throw e;}}
         async updatePorts(){const ports=await navigator.serial.getPorts();const sel=document.getElementById('port-select');sel.innerHTML='<option value="none">Select Port</option>';ports.forEach((port,index)=>{const opt=document.createElement('option');opt.value=index;opt.textContent=port.getInfo().usbVendorId?`USB (VID: ${port.getInfo().usbVendorId?.toString(16).padStart(4,'0')})`:`Serial ${index+1}`;sel.appendChild(opt);});}
-        async connect(portIndex,baudRate){try{const ports=await navigator.serial.getPorts();if(portIndex>=ports.length)throw new Error('Invalid port');this.port=ports[portIndex];this.baudRate=parseInt(baudRate);await this.port.open({baudRate:this.baudRate});this.connected=true;this.writer=this.port.writable.getWriter();this.reader=this.port.readable.getReader();this.onStatusChange?.(true);this.readLoop();return true;}catch(e){this.onStatusChange?.(false);return false;}}
+        async connect(portIndex,baudRate){console.log('[Tune] connect() called portIndex='+portIndex+' baudRate='+baudRate);try{const ports=await navigator.serial.getPorts();console.log('[Tune] getPorts() returned '+ports.length+' ports, portIndex='+portIndex);if(portIndex>=ports.length)throw new Error('Invalid port (index '+portIndex+' >= '+ports.length+')');this.port=ports[portIndex];this.baudRate=parseInt(baudRate);console.log('[Tune] opening port...');await this.port.open({baudRate:this.baudRate});console.log('[Tune] port opened, setting up streams...');this.connected=true;this.writer=this.port.writable.getWriter();this.reader=this.port.readable.getReader();console.log('[Tune] streams ready, firing onStatusChange(true)');this.onStatusChange?.(true);this.readLoop();console.log('[Tune] readLoop started, returning true');return true;}catch(e){console.error('[Tune] connect() FAILED:',e.message||e);this.onStatusChange?.(false);return false;}}
         async disconnect(){if(this.reader){await this.reader.cancel();this.reader.releaseLock();this.reader=null;}if(this.writer){this.writer.releaseLock();this.writer=null;}if(this.port){await this.port.close();this.port=null;}this.connected=false;this.onStatusChange?.(false);}
-        async readLoop(){try{while(this.port&&this.reader){const{value,done}=await this.reader.read();if(done)break;if(value&&this.onData)this.onData(value);}}catch(e){console.error('Read error:',e);}}
-        async send(data){if(this.writer&&this.connected)await this.writer.write(data);}
+        async readLoop(){console.log('[Tune] readLoop() started');try{while(this.port&&this.reader){const{value,done}=await this.reader.read();if(done){console.log('[Tune] readLoop: done=true (stream closed)');break;}if(value&&value.length>0){console.log('[Tune] readLoop: got '+value.length+' bytes');if(this.onData)this.onData(value);}else{console.log('[Tune] readLoop: empty chunk');}}}catch(e){console.error('[Tune] readLoop() ERROR:',e.message||e);this.connected=false;this.onStatusChange?.(false);}}
+        async send(data){if(this.writer&&this.connected){console.log('[Tune] send(): writing '+data.length+' bytes');await this.writer.write(data);}else{console.warn('[Tune] send(): writer='+(this.writer?'ok':'null')+' connected='+this.connected);}}
     }
 
     class MSPParser {
@@ -258,7 +258,7 @@
     }
 
     class RealMSP {
-        constructor(serial){this.serial=serial;this.parser=new MSPParser();this.data={apiVersion:'1.0',RC:{channels:[],active_channels:8},ADJUSTMENT_RANGES:[],status:null,PIDS:[],stopGains:null};this.serial.onData=(bytes)=>this.parser.feed(bytes);this._busy=Promise.resolve();}
+        constructor(serial){this.serial=serial;this.parser=new MSPParser();this.data={apiVersion:'1.0',RC:{channels:[],active_channels:8},ADJUSTMENT_RANGES:[],status:null,PIDS:[],stopGains:null};this.serial.onData=(bytes)=>{console.log('[Tune MSP] onData: '+bytes.length+' bytes');this.parser.feed(bytes);};this._busy=Promise.resolve();}
         async sendCommand(codeOrMsg,payload=[]){const reqCode=(codeOrMsg instanceof Uint8Array)?codeOrMsg[4]:codeOrMsg;const run=async()=>{const msg=(codeOrMsg instanceof Uint8Array)?codeOrMsg:buildMSPMessage(codeOrMsg,payload);await this.serial.send(msg);return await this.parser.waitResponse(reqCode);};const result=this._busy.then(run,run);this._busy=result.then(()=>{},()=>{});return result;}
         async readApiVersion(){const r=await this.sendCommand(MSP.API_VERSION);this.data.apiVersion=r.payload[0]+'.'+r.payload[1]+'.'+r.payload[2];}
         async readStatus(){

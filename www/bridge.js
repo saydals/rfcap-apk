@@ -135,6 +135,7 @@
     let bleNotifyCbs = [];
     function onDataChunk(b64) {
         const u8 = b64ToU8(b64);
+        console.log("[bridge] onDataChunk: " + u8.length + " bytes");
         dataSinks.forEach(fn => { try { fn(u8); } catch (e) {} });
         bleNotifyCbs.forEach(n => { try { n.cb(new DataView(u8.buffer)); } catch (e) {} });
         sharedPort._feed(u8);
@@ -270,10 +271,18 @@
             return;
         }
         /* NEW: link just came up (or tab loaded while link up) — attach this
-           page automatically so Status connection is shared by every tab */
-        if (!lastAutoOn) {
-            lastAutoOn = true;
-            setTimeout(tryAutoConnectClick, 400);
+           page automatically so Status connection is shared by every tab.
+           Call tryAutoConnectClick() whenever BR.state.on becomes true, not
+           just the first time, so tabs that load after the shell is already
+           connected also get auto-attached. */
+        if (st.on) {
+            if (!lastAutoOn) {
+                lastAutoOn = true;
+                setTimeout(tryAutoConnectClick, 400);
+            } else {
+                // Tab loaded after shell was already connected — retry now
+                tryAutoConnectClick();
+            }
         }
     }
 
