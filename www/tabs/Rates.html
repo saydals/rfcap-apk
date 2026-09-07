@@ -3338,7 +3338,7 @@ body {
                 if (cPolar) cPolar.checked = this.polarRatesEnabled;
                 if (cLevel) {
                     cLevel.value = cr.cyclic_ring;
-                    cLevel.style.color = this.cyclicRingEnabled ? '#000' : '#888';
+                    cLevel.style.color = this.cyclicRingEnabled ? 'var(--color-text)' : 'var(--color-text-disabled)';
                 }
 
                 // toggle pitch/roll columns for polar
@@ -3924,7 +3924,7 @@ async activateProfile(index) {
                      if (e.target.checked && this.currentRates.cyclic_ring === 0) {
                          level.value = 150;
                      }
-                     level.style.color = e.target.checked ? '#000' : '#888';
+                     level.style.color = e.target.checked ? 'var(--color-text)' : 'var(--color-text-disabled)';
                      this.updateRates();
                  });
                 document.getElementById('cyclic-ring-level').addEventListener('change', (e) => {
