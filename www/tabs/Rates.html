@@ -1570,6 +1570,7 @@ body {
             color: #000;
             padding: 0 4px;
             box-sizing: border-box;
+            vertical-align: middle;
         }
 
         html[data-theme="dark"] .tab-rates .field input[type="number"] {
@@ -1936,13 +1937,8 @@ body {
                                             <div class="gui_box_titlebar">Cyclic Ring</div>
                                             <div class="content">
                                                 <div class="field">
-                                                    <div>
-                                                        <input type="checkbox" id="enable-cyclic-ring" class="toggle" />
-                                                    </div>
+                                                    <div><input type="checkbox" id="enable-cyclic-ring" class="toggle" /></div>
                                                     <label for="enable-cyclic-ring">Enable Cyclic Ring</label>
-                                                </div>
-
-                                                <div class="field">
                                                     <input type="number" id="cyclic-ring-level" step="1" min="100" max="250" />
                                                     <label for="cyclic-ring-level">
                                                         <span>Cyclic Ring Level</span>
@@ -1951,9 +1947,7 @@ body {
                                                 </div>
 
                                                 <div class="field">
-                                                    <div>
-                                                        <input type="checkbox" id="enable-polar-coordinates" class="toggle" />
-                                                    </div>
+                                                    <div><input type="checkbox" id="enable-polar-coordinates" class="toggle" /></div>
                                                     <label for="enable-polar-coordinates">Enable Polar Coordinates</label>
                                                 </div>
                                             </div>
@@ -3347,8 +3341,7 @@ body {
                 if (cPolar) cPolar.checked = this.polarRatesEnabled;
                 if (cLevel) {
                     cLevel.value = cr.cyclic_ring;
-                    const field = cLevel.closest('.field');
-                    if (field) field.style.display = this.cyclicRingEnabled ? '' : 'none';
+                    cLevel.style.color = this.cyclicRingEnabled ? '#000' : '#888';
                 }
 
                 // toggle pitch/roll columns for polar
@@ -3927,16 +3920,16 @@ async activateProfile(index) {
                     el.addEventListener('change', (e) => { this.updateRates(e); });
                 });
 
-                // cyclic ring
-                document.getElementById('enable-cyclic-ring').addEventListener('change', (e) => {
-                    this.cyclicRingEnabled = e.target.checked;
-                    const level = document.getElementById('cyclic-ring-level');
-                    if (e.target.checked && this.currentRates.cyclic_ring === 0) {
-                        level.value = 150;
-                    }
-                    level.closest('.field').style.display = e.target.checked ? '' : 'none';
-                    this.updateRates();
-                });
+// cyclic ring
+                 document.getElementById('enable-cyclic-ring').addEventListener('change', (e) => {
+                     this.cyclicRingEnabled = e.target.checked;
+                     const level = document.getElementById('cyclic-ring-level');
+                     if (e.target.checked && this.currentRates.cyclic_ring === 0) {
+                         level.value = 150;
+                     }
+                     level.style.color = e.target.checked ? '#000' : '#888';
+                     this.updateRates();
+                 });
                 document.getElementById('cyclic-ring-level').addEventListener('change', (e) => {
                     this.currentRates.cyclic_ring = parseInt(e.target.value) || 0;
                     this.updateRates();
