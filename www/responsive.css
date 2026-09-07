@@ -54,11 +54,12 @@
 }
 
 /* ---------- NUMPAD (bridge.js injectKeypad) ----------
-   Mobile (<512px iframe): 70% scale (표준폰은 살짝 큼)
-   Tablet  (>=512px)     : 100% (= 기준)
-   Large   (>=744px)     : 150% scale (큰 태블릿은 큼) */
+   표준폰 (모든 방향, <=854px landscape or <512px portrait): 0.85 scale
+   (모바일 0.7 × 1.2 = 0.84, 표준폰은 살짝 큼)
+   Tablet  (>=512px)         : 1.0 (= 기준)
+   Large   (>=744px)         : 1.5 scale (큰 태블릿은 큼) */
 :root {
-  --rf-np-scale: 0.7;
+  --rf-np-scale: 0.85;
   --rf-np-btn-h: calc(46px * var(--rf-np-scale));
   --rf-np-btn-fs: calc(20px * var(--rf-np-scale));
   --rf-np-btn-min-w: calc(64px * var(--rf-np-scale));
@@ -174,6 +175,59 @@
     --rf-tb-cb-size: 24px;
     --rf-np-scale: 1.5;
     /* Phase1: max-width는 여기서도 none 유지. Phase2에서 .rf-constrain 선택 적용 */
+  }
+}
+
+/* ---------- PHONE LANDSCAPE OVERRIDE ----------
+   표준폰(<=1080px)을 가로로 돌리면 viewport width는 태블릿 기준(>=512px)을 넘어
+   위 태블릿/대형 토큰이 전부 발동 → 헤더/탭아이콘/숫자패드가 거대해짐.
+   width 512-1080px + landscape 조합은 모든 표준폰 landscape (iPhone SE 667px,
+   Pixel 824px, Galaxy S24 Ultra 960dp 등) 만 해당하고,
+   태블릿(>=1081px) 은 영향 없음.
+   해당 경우 모바일 토큰으로 강제 다운스케일. */
+@media (orientation: landscape) and (min-width: 512px) and (max-width: 1080px) {
+  :root {
+    --rf-sh-hdr-h: 30px;
+    --rf-sh-hdr-pad-x: 8px;
+    --rf-sh-logo-fs: 20px;
+    --rf-sh-ico: 20px;
+    --rf-sh-conn-fs: 13px;
+    --rf-sh-conn-dot: 9px;
+    --rf-sh-save-fs: 12px;
+    --rf-sh-save-pad: 4px 12px;
+    --rf-sh-nav-h: 54px;
+    --rf-sh-nav-ico: 22px;
+    --rf-sh-nav-fs: 10px;
+    --rf-sh-dlg-title: 14px;
+    --rf-sh-dlg-msg: 12px;
+    --rf-sh-dlg-btn: 12px;
+    --rf-sh-dlg-min-w: 336px;
+    --rf-sh-rail-w: 76px;
+    --rf-sh-ls-hdr-h: 48px;
+    --rf-sh-ls-ico: 20px;
+
+    --rf-tb-fs-body: 12px;
+    --rf-tb-fs-title: 18px;
+    --rf-tb-title-mb: 12px;
+    --rf-tb-fs-panel: 14px;
+    --rf-tb-fs-section: 13px;
+    --rf-tb-section-h: 22px;
+    --rf-tb-section-pad: 3px 14px;
+    --rf-tb-fs-label: 12px;
+    --rf-tb-fs-small: 11px;
+    --rf-tb-fs-tiny: 9px;
+    --rf-tb-fs-ctl: 12px;
+    --rf-tb-ctl-h: 28px;
+    --rf-tb-ctl-h-sm: 26px;
+    --rf-tb-tbl-ctl-h: 26px;
+    --rf-tb-tbl-num-w: 48px;
+    --rf-tb-btn-pad: 6px 14px;
+    --rf-tb-btn-pad-sm: 4px 12px;
+    --rf-tb-content-pad: 16px;
+    --rf-tb-gap: 12px;
+    --rf-tb-section-gap: 16px;
+    --rf-tb-cb-size: 16px;
+    --rf-np-scale: 0.85;
   }
 }
 
