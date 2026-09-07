@@ -82,6 +82,14 @@
         .tab-adjustment .step-select { width: auto; padding-left: 2px; padding-right: 2px; }
         .tab-adjustment table.adjTable select:disabled { opacity: .35; color: var(--color-text-disabled); cursor: not-allowed; }
         .tab-adjustment .adj-enable { width: 16px; height: 16px; cursor: pointer; }
+        html[data-theme="light"] .tab-adjustment table.adjTable tr.pitch-group,
+        html[data-theme="light"] .tab-adjustment table.adjTable tr.yaw-group {
+            background-color: var(--color-neutral-200);
+        }
+        html[data-theme="dark"] .tab-adjustment table.adjTable tr.pitch-group,
+        html[data-theme="dark"] .tab-adjustment table.adjTable tr.yaw-group {
+            background-color: var(--color-neutral-800);
+        }
         .tab-adjustment .cur-box {
             display: inline-block; width: 52px; height: 26px; line-height: 24px;
             text-align: center; font-weight: bold; font-variant-numeric: tabular-nums;
@@ -217,21 +225,25 @@
     function buildMSPMessage(code,payload=[]){const l=payload.length;const buf=new Uint8Array(6+l);buf[0]=0x24;buf[1]=0x4D;buf[2]=0x3C;buf[3]=l&0xFF;buf[4]=code&0xFF;payload.forEach((b,i)=>{buf[5+i]=b&0xFF;});buf[5+l]=mspChecksum(l,code,payload);return buf;}
 
     const MSP={API_VERSION:1,STATUS:101,RC:105,SET_ADJUSTMENT_RANGE:53,PID_TUNING:112,PID_PROFILE:94,EEPROM_WRITE:250,GET_ADJUSTMENT_RANGE:156,GET_ADJUSTMENT_FUNCTION_IDS:167};
-    const ADJ_FUNC={NONE:0,RATE_PROFILE:1,PID_PROFILE:2,PITCH_P:14,PITCH_I:15,PITCH_D:16,ROLL_P:18,ROLL_I:19,ROLL_D:20,YAW_P:22,YAW_I:23,YAW_D:24,YAW_CW:26,YAW_CCW:27};
+    const ADJ_FUNC={NONE:0,RATE_PROFILE:1,PID_PROFILE:2,PITCH_P:14,PITCH_I:15,PITCH_D:16,PITCH_F:17,ROLL_P:18,ROLL_I:19,ROLL_D:20,ROLL_F:21,YAW_P:22,YAW_I:23,YAW_D:24,YAW_CW:26,YAW_CCW:27,YAW_CYCLIC_FF:28,YAW_COLLECTIVE_FF:29};
     const SLOT_FUNC_LIST=[
         {id:ADJ_FUNC.RATE_PROFILE,name:'Rate Selection',cur:'rateProfile'},
         {id:ADJ_FUNC.PID_PROFILE,name:'Profile Selection',cur:'pidProfile'},
         {id:ADJ_FUNC.PITCH_P,name:'Pitch P gain',cur:[1,0]},
         {id:ADJ_FUNC.PITCH_I,name:'Pitch I gain',cur:[1,1]},
         {id:ADJ_FUNC.PITCH_D,name:'Pitch D gain',cur:[1,2]},
+        {id:ADJ_FUNC.PITCH_F,name:'Pitch F gain',cur:[1,3]},
         {id:ADJ_FUNC.ROLL_P,name:'Roll P gain',cur:[0,0]},
         {id:ADJ_FUNC.ROLL_I,name:'Roll I gain',cur:[0,1]},
         {id:ADJ_FUNC.ROLL_D,name:'Roll D gain',cur:[0,2]},
+        {id:ADJ_FUNC.ROLL_F,name:'Roll F gain',cur:[0,3]},
         {id:ADJ_FUNC.YAW_P,name:'Yaw P gain',cur:[2,0]},
         {id:ADJ_FUNC.YAW_I,name:'Yaw I gain',cur:[2,1]},
         {id:ADJ_FUNC.YAW_D,name:'Yaw D gain',cur:[2,2]},
         {id:ADJ_FUNC.YAW_CW,name:'Yaw CW Stop Gain',cur:'stopCW'},
         {id:ADJ_FUNC.YAW_CCW,name:'Yaw CCW Stop Gain',cur:'stopCCW'},
+        {id:ADJ_FUNC.YAW_CYCLIC_FF,name:'Yaw Cyclic FF',cur:'yawCyclicFF'},
+        {id:ADJ_FUNC.YAW_COLLECTIVE_FF,name:'Yaw Collective FF',cur:'yawCollectiveFF'},
     ];
     const STEP_OPTIONS=[1,2,3];
     const MAX_AUX=8;
@@ -418,12 +430,15 @@
             for(let a=0;a<3;a++){const row=[];for(let t=0;t<4;t++){row.push(readU16(p,(a*4+t)*2));}PIDS.push(row);}
             this.data.PIDS=PIDS;
         }
-        // active PID profile extras: yaw stop gains are u8 #21/#22 of MSP_PID_PROFILE (offsets 20/21)
+        // active PID profile extras: yaw stop gains are u8 #21/#22 of MSP_PID_PROFILE (offsets 20/21),
+        // yaw cyclic/collective FF are u8 #24/#25 (offsets 23/24)
         async readPidProfile(){
             const r=await this.sendCommand(MSP.PID_PROFILE);
             const p=r.payload;
-            if(p.length<22)throw new Error('MSP_PID_PROFILE payload '+p.length+'B < 22');
+            if(p.length<25)throw new Error('MSP_PID_PROFILE payload '+p.length+'B < 25');
             this.data.stopGains={cw:p[20],ccw:p[21]};
+            this.data.yawCyclicFF=p[23];
+            this.data.yawCollectiveFF=p[24];
         }
         async readRC(){const r=await this.sendCommand(MSP.RC);const p=r.payload;const count=Math.floor(p.length/2);const ch=[];for(let i=0;i<count;i++)ch.push(readS16(p,i*2));this.data.RC.channels=ch;this.data.RC.active_channels=Math.max(count,this.data.RC.active_channels||8);}
         async readAdjustmentFunctionIds(){const r=await this.sendCommand(MSP.GET_ADJUSTMENT_FUNCTION_IDS);const p=r.payload;this.data.GET_ADJUSTMENT_FUNCTION_IDS=[];for(let i=0;i<p.length;i++)this.data.GET_ADJUSTMENT_FUNCTION_IDS.push(p[i]);}
@@ -522,6 +537,8 @@
             this.slots.forEach((slot,idx)=>{
                 const tr=document.createElement('tr');
                 tr.dataset.slot=idx;
+                if([ADJ_FUNC.PITCH_P,ADJ_FUNC.PITCH_I,ADJ_FUNC.PITCH_D,ADJ_FUNC.PITCH_F].includes(slot.funcId))tr.classList.add('pitch-group');
+                else if([ADJ_FUNC.YAW_P,ADJ_FUNC.YAW_I,ADJ_FUNC.YAW_D].includes(slot.funcId))tr.classList.add('yaw-group');
                 tr.innerHTML=`<td><input type="checkbox" class="adj-enable" data-slot="${idx}" ${slot.enabled?'checked':''}/></td><td class="func-name">${slot.funcName}</td><td><div class="cur-box invalid" id="cur-${idx}">—</div></td><td>${this.buildAuxDropdown(idx)}</td><td>${this.buildStepDropdown(idx)}</td><td class="slot-index">#${slot.slotIndex}</td>`;
                 tbody.appendChild(tr);
             });
@@ -594,6 +611,11 @@
             if(slot.cur==='stopCW'||slot.cur==='stopCCW'){
                 if(!d.stopGains)return bad;
                 const v=(slot.cur==='stopCW')?d.stopGains.cw:d.stopGains.ccw;
+                if(!Number.isFinite(v)||v<0||v>255)return bad;
+                return{text:String(v),valid:true};
+            }
+            if(slot.cur==='yawCyclicFF'||slot.cur==='yawCollectiveFF'){
+                const v=(slot.cur==='yawCyclicFF')?d.yawCyclicFF:d.yawCollectiveFF;
                 if(!Number.isFinite(v)||v<0||v>255)return bad;
                 return{text:String(v),valid:true};
             }
