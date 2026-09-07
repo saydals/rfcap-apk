@@ -216,7 +216,7 @@
     function readS8(b){return(b<<24)>>24;}
     function buildMSPMessage(code,payload=[]){const l=payload.length;const buf=new Uint8Array(6+l);buf[0]=0x24;buf[1]=0x4D;buf[2]=0x3C;buf[3]=l&0xFF;buf[4]=code&0xFF;payload.forEach((b,i)=>{buf[5+i]=b&0xFF;});buf[5+l]=mspChecksum(l,code,payload);return buf;}
 
-    const MSP={API_VERSION:1,STATUS:101,RC:105,ADJUSTMENT_RANGES:52,SET_ADJUSTMENT_RANGE:53,PID_TUNING:112,PID_PROFILE:94,EEPROM_WRITE:250};
+    const MSP={API_VERSION:1,STATUS:101,RC:105,SET_ADJUSTMENT_RANGE:53,PID_TUNING:112,PID_PROFILE:94,EEPROM_WRITE:250,GET_ADJUSTMENT_RANGE:156,GET_ADJUSTMENT_FUNCTION_IDS:167};
     const ADJ_FUNC={NONE:0,RATE_PROFILE:1,PID_PROFILE:2,PITCH_P:14,PITCH_I:15,PITCH_D:16,ROLL_P:18,ROLL_I:19,ROLL_D:20,YAW_P:22,YAW_I:23,YAW_D:24,YAW_CW:26,YAW_CCW:27};
     const SLOT_FUNC_LIST=[
         {id:ADJ_FUNC.RATE_PROFILE,name:'Rate Selection',cur:'rateProfile'},
@@ -351,7 +351,7 @@
     }
 
     class RealMSP {
-        constructor(serial){this.serial=serial;this.parser=new MSPParser();this.data={apiVersion:'1.0',RC:{channels:[],active_channels:8},ADJUSTMENT_RANGES:[],status:null,PIDS:[],stopGains:null};this.serial.onData=(bytes)=>this.parser.feed(bytes);this._busy=Promise.resolve();this._depth=0;}
+        constructor(serial){this.serial=serial;this.parser=new MSPParser();this.data={apiVersion:'1.0',RC:{channels:[],active_channels:8},ADJUSTMENT_RANGES:[],GET_ADJUSTMENT_FUNCTION_IDS:[],status:null,PIDS:[],stopGains:null};this.serial.onData=(bytes)=>this.parser.feed(bytes);this._busy=Promise.resolve();this._depth=0;}
         /* FIX (Tune reconnect bug, merged): expose how many MSP jobs are
            queued/running so polling can stay self-paced (see startPolling). */
         queueDepth(){return this._depth;}
@@ -426,7 +426,8 @@
             this.data.stopGains={cw:p[20],ccw:p[21]};
         }
         async readRC(){const r=await this.sendCommand(MSP.RC);const p=r.payload;const count=Math.floor(p.length/2);const ch=[];for(let i=0;i<count;i++)ch.push(readS16(p,i*2));this.data.RC.channels=ch;this.data.RC.active_channels=Math.max(count,this.data.RC.active_channels||8);}
-        async readAdjustmentRanges(){const r=await this.sendCommand(MSP.ADJUSTMENT_RANGES);const p=r.payload;const count=Math.floor(p.length/14);this.data.ADJUSTMENT_RANGES=[];for(let i=0;i<count;i++){const idx=i*14;this.data.ADJUSTMENT_RANGES.push({function:p[idx],enaChannel:p[idx+1],enaRangeStart:readS8(p[idx+2]),enaRangeEnd:readS8(p[idx+3]),adjChannel:p[idx+4],adjRange1Start:readS8(p[idx+5]),adjRange1End:readS8(p[idx+6]),adjRange2Start:readS8(p[idx+7]),adjRange2End:readS8(p[idx+8]),adjMin:readS16(p,idx+9),adjMax:readS16(p,idx+11),adjStep:p[idx+13]});}}
+        async readAdjustmentFunctionIds(){const r=await this.sendCommand(MSP.GET_ADJUSTMENT_FUNCTION_IDS);const p=r.payload;this.data.GET_ADJUSTMENT_FUNCTION_IDS=[];for(let i=0;i<p.length;i++)this.data.GET_ADJUSTMENT_FUNCTION_IDS.push(p[i]);}
+        async readAdjustmentRange(index){const r=await this.sendCommand(MSP.GET_ADJUSTMENT_RANGE,[index&0xFF]);const p=r.payload;if(p.length<14)throw new Error('GET_ADJUSTMENT_RANGE payload '+p.length+'B < 14');const off=0;return{function:p[off],enaChannel:p[off+1],enaRangeStart:readS8(p[off+2]),enaRangeEnd:readS8(p[off+3]),adjChannel:p[off+4],adjRange1Start:readS8(p[off+5]),adjRange1End:readS8(p[off+6]),adjRange2Start:readS8(p[off+7]),adjRange2End:readS8(p[off+8]),adjMin:readS16(p,off+9),adjMax:readS16(p,off+11),adjStep:p[off+13]};}
         buildSetAdjustmentRange(index,adjRange){const payload=[index&0xFF,adjRange.function,adjRange.enaChannel,adjRange.enaRangeStart,adjRange.enaRangeEnd,adjRange.adjChannel,adjRange.adjRange1Start,adjRange.adjRange1End,adjRange.adjRange2Start,adjRange.adjRange2End,adjRange.adjMin&0xFF,(adjRange.adjMin>>8)&0xFF,adjRange.adjMax&0xFF,(adjRange.adjMax>>8)&0xFF,adjRange.adjStep];return buildMSPMessage(MSP.SET_ADJUSTMENT_RANGE,payload);}
     }
 
@@ -821,11 +822,31 @@
         async loadDataFromFC(){
             await this.msp.readApiVersion().catch(e=>console.warn('[cur] API_VERSION fail:',e.message));
             let adjOk=true;
-            await this.msp.readAdjustmentRanges().catch(e=>{adjOk=false;console.error('ADJUSTMENT_RANGES fail:',e.message);});
+            await this.msp.readAdjustmentFunctionIds().catch(e=>{adjOk=false;console.error('GET_ADJUSTMENT_FUNCTION_IDS fail:',e.message);});
             await this.msp.readStatus().catch(e=>console.warn('[cur] STATUS fail:',e.message));
             await this.msp.readPidTuning().catch(e=>console.warn('[cur] PID_TUNING fail:',e.message));
-            await this.msp.readPidProfile().catch(e=>console.warn('[cur] PID_PROFILE fail:',e.message));
             await this.msp.readRC().catch(e=>console.warn('[rc] RC fail:',e.message));
+            if(adjOk){
+                try{
+                    const funcIds=this.msp.data.GET_ADJUSTMENT_FUNCTION_IDS;
+                    this.msp.data.ADJUSTMENT_RANGES=[];
+                    for(let i=0;i<funcIds.length;i++){
+                        if(funcIds[i]!==0){
+                            try{
+                                this.msp.data.ADJUSTMENT_RANGES[i]=await this.msp.readAdjustmentRange(i);
+                            }catch(e){
+                                console.warn('[Tune] range '+i+' fail:',e.message);
+                                this.msp.data.ADJUSTMENT_RANGES[i]={function:0};
+                            }
+                        }else{
+                            this.msp.data.ADJUSTMENT_RANGES[i]={function:0};
+                        }
+                    }
+                }catch(e){
+                    adjOk=false;
+                    console.error('Range loading failed:',e.message);
+                }
+            }
             /* FIX (Tune reconnect bug, merged): only repaint the slots from a
                FRESH, SUCCESSFUL FC read. The previous code blanked
                ADJUSTMENT_RANGES on failure and still called loadFromMSP(),
@@ -838,7 +859,7 @@
                 this.loadFromMSP();
                 this._retryCount=0;   // FIX (merged): re-arm the inactive guard after a good load
             }else{
-                console.warn('[Tune] ADJUSTMENT_RANGES failed - keep previous table, retry scheduled');
+                console.warn('[Tune] ranges failed - keep previous table, retry scheduled');
                 this.scheduleInactiveGuard();
             }
             this.renderTable();
@@ -914,7 +935,7 @@
                 if(this._rcBusy)return;
                 this._rcBusy=true;
                 this.msp.readRC().then(()=>{this.updateRCMonitor();this.runAutoDetection();}).catch(e=>console.warn('[rc] read failed:',e.message)).finally(()=>{this._rcBusy=false;});
-            },100);
+            },200);
             this.infoInterval=setInterval(()=>{
                 if(this._saving||!this.serial.connected)return;
                 if(this._infoBusy)return;
