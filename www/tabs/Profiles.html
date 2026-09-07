@@ -3001,6 +3001,7 @@ body {
                 this.isDirty = false;
                 this.origData = null;
                 this._profileChangeToken = 0;   /* supersedes in-flight reloads */
+                this._pollBusy = false;
                 this.serial = new SerialConnection();
                 this.msp = new RealMSP(this.serial);
                 this.init();
@@ -3110,17 +3111,11 @@ body {
                 // Poll MSP_STATUS every 250ms so the UI follows the FC's
                 // active PID profile (changed via adjustment).
                 this.pollTimer = setInterval(async () => {
+                    if (this._pollBusy) return;
+                    this._pollBusy = true;
                     try {
-                        /* short timeout: the poll must never pile up on the MSP
-                           queue when the link is dead */
                         await this.msp.readStatus(undefined, 2500);
                         if (this.msp.profile !== this.currentProfile) {
-                            // Update the visible tab immediately so the user
-                            // gets instant feedback; queue the data reload
-                            // (which can take a while for 5 reads) behind
-                            // the live poll. The data load is token-checked
-                            // so a fresh profile change cancels any older
-                            // in-flight reload cleanly.
                             this.setActiveProfileTab(this.msp.profile);
                             this.savedProfile = this.msp.profile;
                             this.reloadProfileData();
@@ -3128,6 +3123,7 @@ body {
                     } catch (e) {
                         // ignore transient errors
                     }
+                    this._pollBusy = false;
                 }, 250);
             }
 

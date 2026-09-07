@@ -2972,6 +2972,7 @@ body {
                 this.isChanged = false;
                 this.isDirty = false;
                 this._rateProfileChangeToken = 0;   /* supersedes in-flight reloads */
+                this._pollBusy = false;
                 this.serial = new SerialConnection();
                 this.msp = new RealMSP(this.serial);
                 this.rateCurve = new RateCurve();
@@ -3973,7 +3974,8 @@ async activateProfile(index) {
                 // them strictly serialised on the shared link, so a slow
                 // response on one cannot make the other time out.
                 this.pollTimer = setInterval(async () => {
-                    if (!this.serial.connected) return;
+                    if (this._pollBusy || !this.serial.connected) return;
+                    this._pollBusy = true;
                     try {
                         const rc = await this.msp.readRCCommand(2000);
                         if (rc && rc.length >= 4) {
@@ -3986,11 +3988,6 @@ async activateProfile(index) {
                         }
                         await this.msp.readStatus();
                         if (this.msp.rateProfile !== this.currentRateProfile) {
-                            // Update the visible tab immediately so the user
-                            // gets instant feedback; queue the data reload
-                            // behind the live poll. The data load is
-                            // token-checked so a fresh profile change cancels
-                            // any older in-flight reload cleanly.
                             this.setActiveRateProfileTab(this.msp.rateProfile);
                             this.savedRateProfile = this.msp.rateProfile;
                             this.reloadRateProfileData();
@@ -3998,6 +3995,7 @@ async activateProfile(index) {
                     } catch (e) {
                         console.warn('Rates poll cycle failed:', e);
                     }
+                    this._pollBusy = false;
                 }, 250);
             }
 

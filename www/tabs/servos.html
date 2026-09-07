@@ -903,6 +903,7 @@
                 this.msp = new RealMSP(this.serial);
                 this.prevConfig = null;
                 this.pollInterval = null;
+                this._pollBusy = false;
                 this.init();
 
                 window.addEventListener('message', (e) => {
@@ -1066,8 +1067,14 @@
 
             startPolling() {
                 if (this.pollInterval) clearInterval(this.pollInterval);
-                this.pollInterval = setInterval(() => {
-                    if (this.serial.connected) this.msp.readServoData(undefined, 2000).then(() => this.updateServoBars()).catch(() => {});
+                this.pollInterval = setInterval(async () => {
+                    if (this._pollBusy || !this.serial.connected) return;
+                    this._pollBusy = true;
+                    try {
+                        await this.msp.readServoData(undefined, 2000);
+                        this.updateServoBars();
+                    } catch (e) {}
+                    this._pollBusy = false;
                 }, 500);
             }
 
