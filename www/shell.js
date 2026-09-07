@@ -31,7 +31,7 @@
          No  -> click the tab's Revert button (discard), then move. */
     const TAB_ROOT_SELECTOR = '.tab-mixer, .tab-servos, .tab-rates, .tab-profiles, .tab-adjustment';
     function tabIsDirty(t) {
-        if (t === 'status' || t === 'adjustment') return false;
+        if (t === 'status') return false;
         const f = frames[t];
         if (!f) return false;
         try {
