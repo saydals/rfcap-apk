@@ -560,15 +560,7 @@
                     const slotIdx=parseInt(e.target.dataset.slot);
                     const slot=this.slots[slotIdx];
                     slot.enabled=e.target.checked;
-                    if(!slot.enabled){
-                        slot.dirty=true;this.setDirty();
-                    }else{
-                        // enabling: force back to AUTO regardless of previously loaded value
-                        slot.enaChannel=-1;
-                        slot.adjChannel=-1;
-                        const aux=document.querySelector(`.aux-select[data-slot="${slotIdx}"]`);
-                        if(aux)aux.value='-1';
-                    }
+                    slot.dirty=true;this.setDirty();
                     this.autoDetector.reset();
                     this.updateRowDisabled(slotIdx);
                 });
