@@ -794,25 +794,10 @@
             if(this._connecting)return;
             this._connecting=true;
             try{
-                /* FIX (Tune reconnect bug, merged): retry the load when it
-                   fails. Right after a wireless reconnect the link is often
-                   still slow/stalling; a single failed load used to leave the
-                   table blank (or all-inactive) with no recovery. First retry
-                   after 800ms (fast perceived recovery), then 2s apart. */
-                let ok=false;
-                for(let i=0;i<4;i++){
-                    if(i>0){
-                        const d=(i===1)?800:2000;
-                        await new Promise(r=>setTimeout(r,d));
-                    }
-                    ok=await this.loadDataFromFC();
-                    if(ok)break;
-                }
-                if(!ok){
-                    /* last-resort net: scheduleInactiveGuard() keeps watching
-                       and retries up to 3 times (see loadDataFromFC) */
-                    this.scheduleInactiveGuard();
-                }
+                /* FIX (Tune reconnect bug, merged): loadDataFromFC() now
+                   handles infinite retry for Adjustment internally.
+                   Only start polling after the full load completes. */
+                await this.loadDataFromFC();
                 this.startPolling();
             }finally{
                 this._connecting=false;
@@ -821,13 +806,14 @@
 
         async loadDataFromFC(){
             await this.msp.readApiVersion().catch(e=>console.warn('[cur] API_VERSION fail:',e.message));
-            let adjOk=true;
-            await this.msp.readAdjustmentFunctionIds().catch(e=>{adjOk=false;console.error('GET_ADJUSTMENT_FUNCTION_IDS fail:',e.message);});
-            await this.msp.readStatus().catch(e=>console.warn('[cur] STATUS fail:',e.message));
-            await this.msp.readPidTuning().catch(e=>console.warn('[cur] PID_TUNING fail:',e.message));
-            await this.msp.readRC().catch(e=>console.warn('[rc] RC fail:',e.message));
-            if(adjOk){
+
+            /* ===== Phase 1: Adjustment - infinite retry until success =====
+               GET_ADJUSTMENT_FUNCTION_IDS → individual GET_ADJUSTMENT_RANGE
+               for each active slot. This is the critical path: without
+               correct slot data, the table shows all slots as INACTIVE. */
+            while(true){
                 try{
+                    await this.msp.readAdjustmentFunctionIds();
                     const funcIds=this.msp.data.GET_ADJUSTMENT_FUNCTION_IDS;
                     this.msp.data.ADJUSTMENT_RANGES=[];
                     for(let i=0;i<funcIds.length;i++){
@@ -842,47 +828,28 @@
                             this.msp.data.ADJUSTMENT_RANGES[i]={function:0};
                         }
                     }
+                    console.log('[Tune] Adjustment loaded OK: '+funcIds.length+' slots');
+                    break; // Success - exit the while loop
                 }catch(e){
-                    adjOk=false;
-                    console.error('Range loading failed:',e.message);
+                    console.error('[Tune] Adjustment load failed, retrying in 500ms...:',e.message);
+                    await new Promise(r=>setTimeout(r,500));
                 }
             }
-            /* FIX (Tune reconnect bug, merged): only repaint the slots from a
-               FRESH, SUCCESSFUL FC read. The previous code blanked
-               ADJUSTMENT_RANGES on failure and still called loadFromMSP(),
-               which mapped the empty array over every slot and rendered the
-               whole table as INACTIVE - exactly the reported reconnect
-               symptom. On failure we leave the current table as is and let
-               onConnect() retry - no stale data is ever shown, because
-               nothing is painted that was not just read. */
-            if(adjOk){
-                this.loadFromMSP();
-                this._retryCount=0;   // FIX (merged): re-arm the inactive guard after a good load
-            }else{
-                console.warn('[Tune] ranges failed - keep previous table, retry scheduled');
-                this.scheduleInactiveGuard();
-            }
+
+            /* ===== Phase 2: Receiver =====
+               RC channels for auto-detection and RC monitor. */
+            await this.msp.readRC().catch(e=>console.warn('[rc] RC fail:',e.message));
+
+            /* ===== Phase 3: Current =====
+               Status, PID tuning, and PID profile (stop gains) for Current column. */
+            await this.msp.readStatus().catch(e=>console.warn('[cur] STATUS fail:',e.message));
+            await this.msp.readPidTuning().catch(e=>console.warn('[cur] PID_TUNING fail:',e.message));
+            await this.msp.readPidProfile().catch(e=>console.warn('[cur] PID_PROFILE fail:',e.message));
+
+            this.loadFromMSP();
             this.renderTable();
             this.updateCurrentColumn();
-            return adjOk;
-        }
-
-        /* FIX (merged): safety net for slow wireless links - if the table is
-           still all-inactive after a failed load, retry the whole load a
-           bounded number of times. Only scheduled on FAILED reads, so a
-           legitimately empty FC (no active slots) never triggers it. */
-        scheduleInactiveGuard(){
-            if(this._guardTimer)clearTimeout(this._guardTimer);
-            this._guardTimer=setTimeout(()=>{
-                this._guardTimer=null;
-                if(!this.serial.connected)return;
-                const uiActive=this.slots?this.slots.filter(s=>s.enabled).length:0;
-                if(uiActive===0&&(this._retryCount||0)<3){
-                    this._retryCount=(this._retryCount||0)+1;
-                    console.warn('[Tune Guard] all inactive after failed load -> retry ('+this._retryCount+'/3)');
-                    this.onConnect();
-                }
-            },1200);
+            return true;
         }
 
         loadFromMSP(){
@@ -918,7 +885,6 @@
             if(this.pollInterval){clearInterval(this.pollInterval);this.pollInterval=null;}
             if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
             if(this.msp) this.msp._busy=Promise.resolve();
-            if(this._guardTimer){clearTimeout(this._guardTimer);this._guardTimer=null;}
         }
 
         startPolling(){
