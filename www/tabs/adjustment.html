@@ -561,6 +561,10 @@
                     const slot=this.slots[slotIdx];
                     slot.enabled=e.target.checked;
                     slot.dirty=true;this.setDirty();
+                    if(!slot.enabled){
+                        slot.enaChannel=-1;
+                        slot.adjChannel=-1;
+                    }
                     this.autoDetector.reset();
                     this.updateRowDisabled(slotIdx);
                 });
@@ -839,7 +843,6 @@
             await this.msp.readPidProfile().catch(e=>console.warn('[cur] PID_PROFILE fail:',e.message));
 
             this.loadFromMSP();
-            this.renderTable();
             this.updateCurrentColumn();
             return true;
         }

@@ -3336,10 +3336,11 @@ body {
                 const cPolar = document.getElementById('enable-polar-coordinates');
                 if (cRing) cRing.checked = this.cyclicRingEnabled;
                 if (cPolar) cPolar.checked = this.polarRatesEnabled;
-                if (cLevel) {
-                    cLevel.value = cr.cyclic_ring;
-                    cLevel.style.color = this.cyclicRingEnabled ? 'var(--color-text)' : 'var(--color-text-disabled)';
-                }
+if (cLevel) {
+                     cLevel.value = cr.cyclic_ring;
+                     cLevel.disabled = !this.cyclicRingEnabled;
+                     cLevel.style.color = this.cyclicRingEnabled ? 'var(--color-text)' : 'var(--color-text-disabled)';
+                 }
 
                 // toggle pitch/roll columns for polar
                 const rollRow = document.querySelector('.rates_setup .ROLL');
@@ -3921,16 +3922,21 @@ async activateProfile(index) {
                  document.getElementById('enable-cyclic-ring').addEventListener('change', (e) => {
                      this.cyclicRingEnabled = e.target.checked;
                      const level = document.getElementById('cyclic-ring-level');
+                     level.disabled = !e.target.checked;
                      if (e.target.checked && this.currentRates.cyclic_ring === 0) {
                          level.value = 150;
                      }
                      level.style.color = e.target.checked ? 'var(--color-text)' : 'var(--color-text-disabled)';
                      this.updateRates();
                  });
-                document.getElementById('cyclic-ring-level').addEventListener('change', (e) => {
-                    this.currentRates.cyclic_ring = parseInt(e.target.value) || 0;
-                    this.updateRates();
-                });
+                 document.getElementById('cyclic-ring-level').addEventListener('change', (e) => {
+                     this.currentRates.cyclic_ring = parseInt(e.target.value) || 0;
+                     this.updateRates();
+                 });
+                 document.getElementById('cyclic-ring-level').addEventListener('input', (e) => {
+                     this.currentRates.cyclic_ring = parseInt(e.target.value) || 0;
+                     this.updateRates();
+                 });
                 document.getElementById('enable-polar-coordinates').addEventListener('change', (e) => {
                     this.polarRatesEnabled = e.target.checked;
                     document.querySelector('.rates_setup .ROLL').style.display = e.target.checked ? 'none' : '';
