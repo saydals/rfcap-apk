@@ -921,7 +921,7 @@
             this._saving=true;
             const unresolved=this.slots.filter(s=>s.enabled&&s.enaChannel===-1);
             if(unresolved.length){
-                alert('AUTO 상태(AUX 미확정) 항목이 있어 저장할 수 없습니다.\n조종기의 스위치를 움직여 AUX를 먼저 확정하세요:\n- '+unresolved.map(s=>s.funcName).join('\n- '));
+                alert('AUTO status (AUX undetermined) items cannot be saved.\nMove the controller switch to determine AUX first:\n- '+unresolved.map(s=>s.funcName).join('\n- '));
                 this._saving=false;
                 return;
             }
