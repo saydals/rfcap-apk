@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rotorflight Configurator - Mixer</title>
+    <link rel="stylesheet" href="../responsive.css">
     <style>
         :root {
             --animation-speed: 0.2s ease;
@@ -57,7 +58,7 @@
             margin: 0;
             padding: 0;
             font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
-            font-size: 12px;
+            font-size: var(--rf-tb-fs-body);
             color: var(--color-text);
             background-color: var(--color-surface);
             transition: background-color var(--animation-speed), color var(--animation-speed);
@@ -187,7 +188,7 @@
 
         #connection-panel .panel-title {
             font-weight: bold;
-            font-size: 14px;
+            font-size: var(--rf-tb-fs-panel);
             margin-right: 12px;
         }
 
@@ -198,8 +199,8 @@
             border-radius: 4px;
             background-color: var(--color-input-bg);
             color: var(--color-text);
-            font-size: 12px;
-            height: 28px;
+            font-size: var(--rf-tb-fs-ctl);
+            height: var(--rf-tb-ctl-h);
         }
 
         #connection-panel button {
@@ -208,10 +209,10 @@
             border-radius: 4px;
             background-color: var(--color-btn-bg);
             color: var(--color-btn-fg);
-            font-size: 12px;
+            font-size: var(--rf-tb-fs-ctl);
             font-weight: bold;
             cursor: pointer;
-            height: 28px;
+            height: var(--rf-tb-ctl-h);
         }
 
         #connection-panel button:hover:not(:disabled) {
@@ -269,7 +270,7 @@
             min-height: 0;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding: 16px;
+            padding: var(--rf-tb-content-pad);
         }
 
         .tab-mixer {
@@ -278,17 +279,17 @@
         }
 
         .tab-mixer .tab_title {
-            font-size: 18px;
+            font-size: var(--rf-tb-fs-title);
             font-weight: bold;
-            margin-bottom: 12px;
+            margin-bottom: var(--rf-tb-title-mb);
             color: var(--color-text);
         }
 
         .tab-mixer .grid-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 16px;
+            gap: var(--rf-tb-gap);
+            margin-bottom: var(--rf-tb-section-gap);
         }
 
         .tab-mixer .grid-col {
@@ -321,16 +322,16 @@
         }
 
         .tab-mixer .gui_box_titlebar {
-            font-size: 13px;
+            font-size: var(--rf-tb-fs-section);
             font-weight: 700;
             margin-bottom: 0;
-            padding: 3px 14px;
+            padding: var(--rf-tb-section-pad);
             background-color: #555555;
             color: #ffffff;
             position: absolute;
             top: 0;
             left: 0;
-            height: 22px;
+            height: var(--rf-tb-section-h);
             border-radius: 5px;
             display: flex;
             align-items: center;
@@ -377,8 +378,8 @@
             border-radius: var(--radius-sm);
             background-color: var(--color-input-bg);
             color: var(--color-text);
-            font-size: 12px;
-            height: 24px;
+            font-size: var(--rf-tb-fs-ctl);
+            height: var(--rf-tb-ctl-h-sm);
         }
 
         .tab-mixer table input[type="number"]:focus,
@@ -437,7 +438,7 @@
         .tab-mixer .mixerOverrideTable td .mixerOverrideSliderLabels {
             display: flex;
             justify-content: space-between;
-            font-size: 10px;
+            font-size: var(--rf-tb-fs-tiny);
             color: var(--color-text-disabled);
             width: 220px;
         }
@@ -564,7 +565,7 @@
 
         .tab-mixer dialog .regular-button {
             display: inline-block;
-            padding: 6px 16px;
+            padding: var(--rf-tb-btn-pad);
             border: 1px solid var(--color-border);
             border-radius: 4px;
             background-color: var(--color-btn-bg);
@@ -598,6 +599,15 @@
         .tab-mixer label.param-missing span {
             color: var(--color-text-disabled) !important;
             text-decoration: line-through;
+        }
+
+        /* Consistent checkbox sizing across all tabs (matches Tune .adj-enable /
+           Rates .field checkbox). Touch-friendly on tablet via --rf-tb-cb-size. */
+        .tab-mixer input[type="checkbox"] {
+            width: var(--rf-tb-cb-size);
+            height: var(--rf-tb-cb-size);
+            cursor: pointer;
+            vertical-align: middle;
         }
 
     </style>

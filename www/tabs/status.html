@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rotorflight Configurator - Status</title>
+    <link rel="stylesheet" href="../responsive.css">
     <script type="importmap">
     {
         "imports": {
@@ -35,7 +36,7 @@
         html, body {
             height:100%; margin:0; padding:0;
             font-family:"Open Sans","Segoe UI",Tahoma,sans-serif;
-            font-size:12px;
+            font-size:var(--rf-tb-fs-body);
             color:var(--color-text);
             background-color:var(--color-bg);
             transition: background-color var(--animation-speed), color var(--animation-speed);
@@ -191,7 +192,7 @@
 
         #connection-panel .panel-title {
             font-weight: bold;
-            font-size: 14px;
+            font-size:var(--rf-tb-fs-panel);
             margin-right: 12px;
         }
 
@@ -202,8 +203,8 @@
             border-radius: 4px;
             background-color: var(--color-input-bg);
             color: var(--color-text);
-            font-size: 12px;
-            height: 28px;
+            font-size:var(--rf-tb-fs-ctl);
+            height:var(--rf-tb-ctl-h);
         }
 
         #connection-panel button {
@@ -212,10 +213,10 @@
             border-radius: 4px;
             background-color: var(--color-btn-bg);
             color: var(--color-btn-fg);
-            font-size: 12px;
+            font-size:var(--rf-tb-fs-ctl);
             font-weight: bold;
             cursor: pointer;
-            height: 28px;
+            height:var(--rf-tb-ctl-h);
         }
 
         #connection-panel button:hover:not(:disabled) {
@@ -241,7 +242,7 @@
         }
 
         #connection-status {
-            font-size: 12px;
+            font-size: var(--rf-tb-fs-label);
             font-weight: bold;
             color: var(--color-text-soft);
         }
@@ -261,7 +262,7 @@
         #tab-content-container {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding:var(--rf-tb-content-pad);
         }
 
         /* ============ STATUS TAB ============ */
@@ -273,8 +274,8 @@
         .tab-status .section-row {
             display: flex;
             flex-flow: row wrap;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap:var(--rf-tb-gap);
+            margin-bottom:var(--rf-tb-section-gap);
             align-items: flex-start;
         }
 
@@ -294,15 +295,15 @@
         }
 
         .tab-status .gui_box_titlebar {
-            font-size: 13px;
+            font-size:var(--rf-tb-fs-section);
             font-weight: 700;
-            padding: 3px 14px;
+            padding:var(--rf-tb-section-pad);
             background-color: #555555;
             color: #ffffff;
             position: absolute;
             top: 0;
             left: 0;
-            height: 22px;
+            height:var(--rf-tb-section-h);
             border-radius: 5px 0 5px 0;
             display: flex;
             align-items: center;
@@ -348,7 +349,7 @@
 
         .config-state-badge {
             display: inline-block;
-            font-size: 10px;
+            font-size:var(--rf-tb-fs-tiny);
             padding: 2px 6px;
             border-radius: 3px;
             font-weight: bold;
@@ -381,7 +382,7 @@
         }
 
         .box-arming .disarm-flags-title {
-            font-size: 11px;
+            font-size:var(--rf-tb-fs-small);
             font-weight: 700;
             color: var(--color-text-soft);
             padding: 2px 0;
@@ -424,15 +425,15 @@
             opacity: 1;                    /* on = blue */
         }
         .box-sensors .sensor-status-row .sensor-label {
-            font-size: 10px;
+            font-size:var(--rf-tb-fs-tiny);
             line-height: 1;
             color: var(--color-text, #ccc);
             text-align: center;
         }
         .box-sensors .sensor-status-row .sensor-icon {
             display: block;
-            width: 34px;
-            height: 34px;
+            width: var(--rf-sh-nav-ico);
+            height: var(--rf-sh-nav-ico);
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
@@ -449,7 +450,7 @@
         .box-sensors .sensor-gps.active   .sensor-icon { background-image: url(../icons/sensor_sat_on.png); }
 
         .disarm-flag {
-            font-size: 10px;
+            font-size: var(--rf-tb-fs-tiny);
             padding: 2px 6px;
             border-radius: 3px;
             background-color: #e53935;
@@ -470,7 +471,7 @@
 
         .arm-status-ok {
             display: inline-block;
-            font-size: 11px;
+            font-size:var(--rf-tb-fs-small);
             font-weight: 700;
             color: #2e8b2e;
             padding: 2px 8px;
@@ -555,7 +556,7 @@
             border-radius: 5px;
             padding: 6px 12px;
             color: #fff;
-            font-size: 11px;
+            font-size:var(--rf-tb-fs-small);
             backdrop-filter: blur(4px);
         }
 
@@ -585,7 +586,7 @@
             border: 1px solid #7a7a7a;
             border-radius: 4px;
             color: #fff;
-            font-size: 11px;
+            font-size:var(--rf-tb-fs-small);
             cursor: pointer;
             transition: background 0.15s;
         }
@@ -600,7 +601,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: var(--color-text-disabled);
-            font-size: 14px;
+            font-size: var(--rf-tb-fs-panel);
             text-align: center;
         }
 
@@ -623,8 +624,8 @@
         .ble-spp-row {
             display: flex;
             flex-flow: row wrap;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap:var(--rf-tb-gap);
+            margin-bottom:var(--rf-tb-section-gap);
         }
 
         .box-spp, .box-ble, .box-usb {
@@ -672,22 +673,22 @@
         .bt-device-name {
             font-weight: 600;
             color: var(--color-text);
-            font-size: 12px;
+            font-size:var(--rf-tb-fs-label);
         }
 
         .bt-device-addr {
-            font-size: 10px;
+            font-size:var(--rf-tb-fs-tiny);
             color: var(--color-text-disabled);
         }
 
         .bt-device-rssi {
-            font-size: 10px;
+            font-size:var(--rf-tb-fs-tiny);
             color: var(--color-text-soft);
         }
 
         .bt-connect-btn {
             padding: 2px 8px;
-            font-size: 12px;
+            font-size:var(--rf-tb-fs-label);
             font-weight: 600;
             border: 1px solid var(--color-border);
             border-radius: 3px;
@@ -712,7 +713,7 @@
             align-items: center;
             gap: 8px;
             padding: 6px 10px;
-            font-size: 11px;
+            font-size:var(--rf-tb-fs-small);
         }
 
         .bt-status-indicator {
@@ -751,7 +752,7 @@
         .bt-action-btn {
             flex: 1;
             padding: 5px 10px;
-            font-size: 12px;
+            font-size:var(--rf-tb-fs-label);
             font-weight: 600;
             border: 1px solid var(--color-border);
             border-radius: 4px;
@@ -782,13 +783,13 @@
             text-align: center;
             padding: 20px;
             color: var(--color-text-disabled);
-            font-size: 11px;
+            font-size:var(--rf-tb-fs-small);
         }
 
         /* BLE UUID helper */
         .bt-uuid-row {
             padding: 2px 10px 6px 10px;
-            font-size: 10px;
+            font-size:var(--rf-tb-fs-tiny);
             color: var(--color-text-disabled);
         }
 
@@ -845,7 +846,7 @@
         }
 
         /* ============ RESPONSIVE ============ */
-        @media (max-width: 800px) {
+        @media (max-width: 511px) {
             .tab-status .section-row { flex-direction: column; align-items: stretch; }
             .ble-spp-row { flex-direction: column; }
             .box-helicopter { min-width: 0; width: 100%; }

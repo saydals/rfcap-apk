@@ -855,16 +855,16 @@
         const css = document.createElement('style');
         css.textContent = [
             '#rf-numpad{position:fixed;bottom:8px;z-index:2147483647;',
-            'display:none;border:1px solid #555;border-radius:12px;padding:4px 10px 10px;',
-            'max-width:min(92vw,340px);box-shadow:0 6px 24px rgba(0,0,0,.45);touch-action:manipulation;}',
+            'display:none;border:1px solid #555;border-radius:var(--rf-np-pad-radius);padding:var(--rf-np-pad-pad);',
+            'max-width:var(--rf-np-max-w);box-shadow:0 6px 24px rgba(0,0,0,.45);touch-action:manipulation;}',
             /* thin drag bar across the top of the pad */
-            '#rf-numpad .rfnp-handle{height:18px;margin:0 -6px 4px;display:flex;align-items:center;',
+            '#rf-numpad .rfnp-handle{height:var(--rf-np-handle-h);margin:0 -6px 4px;display:flex;align-items:center;',
             'justify-content:center;cursor:grab;touch-action:none;border-radius:8px 8px 0 0;}',
-            '#rf-numpad .rfnp-handle span{width:56px;height:5px;border-radius:3px;background:rgba(128,128,128,.5);}',
+            '#rf-numpad .rfnp-handle span{width:var(--rf-np-handle-w);height:var(--rf-np-handle-thick);border-radius:3px;background:rgba(128,128,128,.5);}',
             '#rf-numpad .rfnp-handle:active{cursor:grabbing;}',
-            '#rf-numpad .rfnp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}',
-            '#rf-numpad button{min-width:64px;height:46px;font-size:20px;font-family:inherit;',
-            'border:none;border-radius:8px;background:rgba(128,128,128,.22);cursor:pointer;user-select:none;}',
+            '#rf-numpad .rfnp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--rf-np-gap);}',
+            '#rf-numpad button{min-width:var(--rf-np-btn-min-w);height:var(--rf-np-btn-h);font-size:var(--rf-np-btn-fs);font-family:inherit;',
+            'border:none;border-radius:var(--rf-np-btn-radius);background:rgba(128,128,128,.22);cursor:pointer;user-select:none;}',
             '#rf-numpad button:active{background:rgba(128,128,128,.45);}',
             '#rf-numpad button[data-k="DONE"]{grid-column:auto;color:#fff;font-weight:bold;}',
             /* field being edited by the pad - tint instead of border-width so

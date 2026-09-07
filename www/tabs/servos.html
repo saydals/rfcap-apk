@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rotorflight Configurator - Servos</title>
+    <link rel="stylesheet" href="../responsive.css">
     <style>
         :root {
             --animation-speed: 0.2s ease;
@@ -34,7 +35,7 @@
             margin: 0;
             padding: 0;
             font-family: "Open Sans", "Segoe UI", Tahoma, sans-serif;
-            font-size: 12px;
+            font-size:var(--rf-tb-fs-body);
             color: var(--color-text);
             background-color: var(--color-surface);
             transition: background-color var(--animation-speed), color var(--animation-speed);
@@ -142,15 +143,15 @@
             gap: 12px;
             flex-wrap: wrap;
         }
-        #connection-panel .panel-title { font-weight: bold; font-size: 14px; margin-right: 12px; }
+        #connection-panel .panel-title { font-weight: bold; font-size:var(--rf-tb-fs-panel); margin-right: 12px; }
         #connection-panel select, #connection-panel input[type="text"] {
             padding: 4px 8px; border: 1px solid var(--color-border); border-radius: 4px;
-            background-color: var(--color-input-bg); color: var(--color-text); font-size: 12px; height: 28px;
+            background-color: var(--color-input-bg); color: var(--color-text); font-size:var(--rf-tb-fs-ctl); height:var(--rf-tb-ctl-h)
         }
         #connection-panel button {
             padding: 4px 16px; border: 1px solid var(--color-border); border-radius: 4px;
-            background-color: var(--color-btn-bg); color: var(--color-btn-fg); font-size: 12px; font-weight: bold;
-            cursor: pointer; height: 28px;
+            background-color: var(--color-btn-bg); color: var(--color-btn-fg); font-size:var(--rf-tb-fs-ctl); font-weight: bold;
+            cursor: pointer; height:var(--rf-tb-ctl-h)
         }
         #connection-panel button:hover:not(:disabled) { background-color: var(--color-btn-bg-hover); }
         #connection-panel button:disabled { background-color: var(--color-btn-bg-disabled); color: var(--color-btn-fg-disabled); cursor: not-allowed; }
@@ -176,12 +177,12 @@
             min-height: 0;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding: 16px;
+            padding:var(--rf-tb-content-pad)
         }
         .tab-servos { width: 100%; margin: 0; }
-        .tab-servos .tab_title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: var(--color-text); }
+        .tab-servos .tab_title { font-size:var(--rf-tb-fs-title); font-weight: bold; margin-bottom:var(--rf-tb-title-mb); color: var(--color-text); }
 
-        .tab-servos .grid-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+        .tab-servos .grid-row { display: flex; flex-wrap: wrap; gap:var(--rf-tb-gap); margin-bottom:var(--rf-tb-section-gap) }
         .tab-servos .grid-col { flex: 1; min-width: 320px; }
 
         .tab-servos .gui_box {
@@ -199,16 +200,16 @@
         html[data-theme="dark"] .tab-servos .gui_box.grey { background-color: #2a2a2a; }
 
         .tab-servos .gui_box_titlebar {
-            font-size: 13px;
+            font-size:var(--rf-tb-fs-section);
             font-weight: 700;
             margin-bottom: 0;
-            padding: 3px 14px;
+            padding:var(--rf-tb-section-pad);
             background-color: #555555;
             color: #ffffff;
             position: absolute;
             top: 0;
             left: 0;
-            height: 22px;
+            height:var(--rf-tb-section-h);
             border-radius: 5px;
             display: flex;
             align-items: center;
@@ -227,8 +228,8 @@
             margin: 4px 0 8px 0;
         }
         html[data-theme="dark"] .tab-servos .servo-spacer, html[data-theme="dark"] .tab-servos .servo-override-spacer { background-color: #444444; }
-        .tab-servos .servo-spacer .spacer-title { font-weight: 700; font-size: 13px; }
-        .tab-servos .servo-spacer .spacer-description { font-size: 11px; opacity: 0.85; }
+        .tab-servos .servo-spacer .spacer-title { font-weight: 700; font-size:var(--rf-tb-fs-section); }
+        .tab-servos .servo-spacer .spacer-description { font-size:var(--rf-tb-fs-small); opacity: 0.85; }
 
         /* Servo tables */
         .tab-servos table.servoConfig, .tab-servos table.servoOverride { width: 100%; border-collapse: collapse; }
@@ -258,8 +259,8 @@
             border-radius: var(--radius-sm);
             background-color: var(--color-input-bg);
             color: var(--color-text);
-            font-size: 12px;
-            height: 24px;
+            font-size:var(--rf-tb-fs-ctl);
+            height:var(--rf-tb-ctl-h-sm)
         }
         .tab-servos table.servoConfig input[type="number"]:focus, .tab-servos table.servoOverride input[type="number"]:focus { border-color: var(--color-border-accent); }
         .tab-servos .servo-index { font-weight: bold; width: 28px; }
@@ -285,7 +286,7 @@
             width: 100%;
             text-align: center;
             line-height: 16px;
-            font-size: 10px;
+            font-size:var(--rf-tb-fs-tiny);
             color: var(--color-text);
         }
 
@@ -335,6 +336,15 @@
             background-color: #c9c9c9 !important; color: var(--color-text-disabled) !important; border-color: #999999 !important; cursor: not-allowed;
         }
         html[data-theme="dark"] .tab-servos input.param-missing, html[data-theme="dark"] .tab-servos select.param-missing { background-color: #2a2a2a !important; }
+
+        /* Consistent checkbox sizing across all tabs (matches Tune .adj-enable /
+           Mixer checkbox). Touch-friendly on tablet via --rf-tb-cb-size. */
+        .tab-servos input[type="checkbox"] {
+            width: var(--rf-tb-cb-size);
+            height: var(--rf-tb-cb-size);
+            cursor: pointer;
+            vertical-align: middle;
+        }
 
     </style>
 </head>

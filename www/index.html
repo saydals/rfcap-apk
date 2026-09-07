@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html data-shell lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>RFCap - Rotorflight Configurator</title>
+<link rel="stylesheet" href="./responsive.css">
 <script src="./hub.js?v=121"></script>
 <style>
-    :root { --hdr-h:30px; --nav-h:54px; }
+    :root { --hdr-h: var(--rf-sh-hdr-h, 30px); --nav-h: var(--rf-sh-nav-h, 54px); }
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html[data-theme="light"] {
         --bg:#e6e8ec; --surface:#f5f6f8; --text:#1a1c20; --soft:#5a6070;
@@ -25,31 +26,31 @@
     }
     /* ---------- common header ---------- */
     #app-header {
-        height:var(--hdr-h); flex:0 0 auto;
+        height:var(--rf-sh-hdr-h); flex:0 0 auto;
         display:flex; align-items:center; gap:6px;
-        padding:0 8px;
+        padding:0 var(--rf-sh-hdr-pad-x);
         background:var(--surface); border-bottom:1px solid var(--border);
         box-shadow:0 2px 6px rgba(0,0,0,.14);
         z-index:10;
     }
     @media (orientation: portrait) {
-        #app-header { height:calc(var(--hdr-h) + env(safe-area-inset-top, 24px)); }
+        #app-header { height:calc(var(--rf-sh-hdr-h) + env(safe-area-inset-top, 24px)); }
     }
-    #app-logo { font-weight:bold; font-size:20px; line-height:1; letter-spacing:.3px; color:var(--accent); white-space:nowrap; }
+    #app-logo { font-weight:bold; font-size:var(--rf-sh-logo-fs); line-height:1; letter-spacing:.3px; color:var(--accent); white-space:nowrap; }
     #conn-chip {
         display:flex; align-items:center; gap:6px;
         background:var(--chip); border:1px solid var(--border);
         border-radius:15px; padding:4px 10px; min-width:0;
     }
-    #conn-dot { width:9px; height:9px; border-radius:50%; background:#999; flex:0 0 auto; transition:background .2s; }
+    #conn-dot { width:var(--rf-sh-conn-dot); height:var(--rf-sh-conn-dot); border-radius:50%; background:#999; flex:0 0 auto; transition:background .2s; }
     #conn-dot.on-spp, #conn-dot.on-ble { background:var(--ok); box-shadow:0 0 6px var(--ok); }
-    #conn-text { font-size:13px; color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46vw; }
+    #conn-text { font-size:var(--rf-sh-conn-fs); color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46vw; }
     #exit-btn {
         margin-left:auto; background:transparent; border:none; cursor:pointer;
         padding:0; display:flex; align-items:center; justify-content:center;
     }
-    #exit-btn img { width:20px; height:20px; display:block; }
-    #theme-btn { background:transparent; border:none; font-size:20px; cursor:pointer; color:var(--text); padding:2px 6px; }
+    #exit-btn img { width:var(--rf-sh-ico); height:var(--rf-sh-ico); display:block; }
+    #theme-btn { background:transparent; border:none; font-size:var(--rf-sh-logo-fs); cursor:pointer; color:var(--text); padding:2px 6px; }
     /* ---------- tab area ---------- */
     #tab-area { flex:1 1 auto; position:relative; min-height:0; }
     /* All tabs stay mounted & sized (visibility toggle, NOT display:none)
@@ -72,11 +73,12 @@
     .tab-btn {
         flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
         gap:3px; background:none; border:none; color:var(--soft);
-        font-family:inherit; font-size:10px; cursor:pointer; user-select:none;
+        font-family:inherit; font-size:var(--rf-sh-nav-fs); cursor:pointer; user-select:none;
+        height:var(--rf-sh-nav-h);
         padding-top:6px;
     }
     .tab-btn .ico {
-        width:22px; height:22px; object-fit:contain; display:block;
+        width:var(--rf-sh-nav-ico); height:var(--rf-sh-nav-ico); object-fit:contain; display:block;
         opacity:.55; transition:.15s;
         /* source SVGs are white - recolour per theme */
         filter:invert(.72) grayscale(1);
@@ -89,13 +91,13 @@
     #header-save-btn {
         display: inline-block;
         margin-left: 4px;
-        padding: 4px 12px;
+        padding: var(--rf-sh-save-pad);
         background-color: #2e7d32;
         color: #fff;
         border: 1px solid #1b5e20;
         border-radius: 4px;
         text-decoration: none;
-        font-size: 12px;
+        font-size: var(--rf-sh-save-fs);
         cursor: pointer;
         font-family: inherit;
         line-height: 1.2;
@@ -106,20 +108,20 @@
         background-color: #1b5e20;
     }
 
-    @media (orientation: landscape) {
+    @media (orientation: landscape) and (min-width: 600px) {
         /* Grid shell: the header spans the full top row, the tab nav becomes
            a fixed left rail, and the tab area fills the remaining cell.
            Unlike the old flex-wrap approach this can never break onto extra
            lines, so there is no dead space and no squeezed header. */
         body {
             display: grid;
-            grid-template-columns: 76px 1fr;
-            grid-template-rows: 48px 1fr;
+            grid-template-columns: var(--rf-sh-rail-w) 1fr;
+            grid-template-rows: var(--rf-sh-ls-hdr-h) 1fr;
             padding-top: 0;
         }
         #app-header {
             grid-column: 1 / 3; grid-row: 1;
-            height: 48px; width: auto;
+            height: var(--rf-sh-ls-hdr-h); width: auto;
         }
         #tab-nav {
             grid-column: 1; grid-row: 2;
@@ -142,8 +144,13 @@
             gap: 2px;
         }
         .tab-btn .ico {
-            width: 20px;
-            height: 20px;
+            width: var(--rf-sh-ls-ico);
+            height: var(--rf-sh-ls-ico);
+        }
+    }
+    @media (orientation: landscape) and (max-width: 599px) {
+        #app-header {
+            height: calc(var(--rf-sh-hdr-h) + env(safe-area-inset-top, 24px));
         }
     }
     /* ---------- leave-confirmation dialog (dirty tab switch) ----------
@@ -163,19 +170,19 @@
         color: var(--text);
         padding: 14px 16px;
         box-shadow: 0 8px 30px rgba(0,0,0,.4);
-        min-width: 336px;
+        min-width: var(--rf-sh-dlg-min-w);
         max-width: 86vw;
         font-family: inherit;
         z-index: 20;
     }
     #leave-dialog::backdrop { background: rgba(0,0,0,.45); }
-    #leave-dialog h3 { margin: 0 0 8px 0; font-size: 14px; }
-    #leave-dialog .leave-msg { font-size: 12px; color: var(--soft); margin-bottom: 14px; }
+    #leave-dialog h3 { margin: 0 0 8px 0; font-size: var(--rf-sh-dlg-title); }
+    #leave-dialog .leave-msg { font-size: var(--rf-sh-dlg-msg); color: var(--soft); margin-bottom: 14px; }
     #leave-dialog .leave-row { display: flex; gap: 8px; justify-content: flex-end; }
     #leave-dialog button {
         padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
         background: var(--chip); color: var(--text);
-        font-family: inherit; font-size: 12px; cursor: pointer;
+        font-family: inherit; font-size: var(--rf-sh-dlg-btn); cursor: pointer;
     }
 
 </style>
