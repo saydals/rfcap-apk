@@ -263,7 +263,7 @@
         constructor(){this.port=null;this.reader=null;this.writer=null;this.connected=false;this.baudRate=115200;this.onData=null;this.onStatusChange=null;}
         async requestPort(){console.log('[Tune] requestPort() called');try{this.port=await navigator.serial.requestPort();console.log('[Tune] requestPort() got port:',this.port?'VirtualPort':'null');await this.updatePorts();return this.port;}catch(e){console.error('[Tune] requestPort() FAILED:',e.message||e);throw e;}}
         async updatePorts(){const ports=await navigator.serial.getPorts();const sel=document.getElementById('port-select');sel.innerHTML='<option value="none">Select Port</option>';ports.forEach((port,index)=>{const opt=document.createElement('option');opt.value=index;opt.textContent=port.getInfo().usbVendorId?`USB (VID: ${port.getInfo().usbVendorId?.toString(16).padStart(4,'0')})`:`Serial ${index+1}`;sel.appendChild(opt);});}
-        async connect(portIndex,baudRate){console.log('[Tune] connect() called portIndex='+portIndex+' baudRate='+baudRate);try{const ports=await navigator.serial.getPorts();console.log('[Tune] getPorts() returned '+ports.length+' ports, portIndex='+portIndex);if(portIndex>=ports.length)throw new Error('Invalid port (index '+portIndex+' >= '+ports.length+')');this.port=ports[portIndex];this.baudRate=parseInt(baudRate);console.log('[Tune] opening port...');await this.port.open({baudRate:this.baudRate});console.log('[Tune] port opened, setting up streams...');this.connected=true;this.writer=this.port.writable.getWriter();this.reader=this.port.readable.getReader();console.log('[Tune] streams ready, firing onStatusChange(true)');this.onStatusChange?.(true);this.readLoop();console.log('[Tune] readLoop started, returning true');return true;}catch(e){console.error('[Tune] connect() FAILED:',e.message||e);this.onStatusChange?.(false);return false;}}
+        async connect(portIndex,baudRate){if(this._opening){console.warn('[Tune] connect() skipped: already opening');return false;}this._opening=true;try{console.log('[Tune] connect() called portIndex='+portIndex+' baudRate='+baudRate);const ports=await navigator.serial.getPorts();console.log('[Tune] getPorts() returned '+ports.length+' ports, portIndex='+portIndex);if(portIndex>=ports.length)throw new Error('Invalid port (index '+portIndex+' >= '+ports.length+')');this.port=ports[portIndex];this.baudRate=parseInt(baudRate);console.log('[Tune] opening port...');await this.port.open({baudRate:this.baudRate});console.log('[Tune] port opened, setting up streams...');this.connected=true;this.writer=this.port.writable.getWriter();this.reader=this.port.readable.getReader();console.log('[Tune] streams ready, firing onStatusChange(true)');this.onStatusChange?.(true);this.readLoop();console.log('[Tune] readLoop started, returning true');return true;}catch(e){console.error('[Tune] connect() FAILED:',e.message||e);this.onStatusChange?.(false);return false;}finally{this._opening=false;}}
         async disconnect(){if(this.reader){await this.reader.cancel();this.reader.releaseLock();this.reader=null;}if(this.writer){this.writer.releaseLock();this.writer=null;}if(this.port){await this.port.close();this.port=null;}this.connected=false;this.onStatusChange?.(false);}
         async readLoop(){console.log('[Tune] readLoop() started');try{while(this.port&&this.reader){const{value,done}=await this.reader.read();if(done){console.log('[Tune] readLoop: done=true (stream closed)');break;}if(value&&value.length>0){console.log('[Tune] readLoop: got '+value.length+' bytes');if(this.onData)this.onData(value);}else{console.log('[Tune] readLoop: empty chunk');}}}catch(e){console.error('[Tune] readLoop() ERROR:',e.message||e);this.connected=false;this.onStatusChange?.(false);}}
         async send(data){if(this.writer&&this.connected){console.log('[Tune] send(): writing '+data.length+' bytes');await this.writer.write(data);}else{console.warn('[Tune] send(): writer='+(this.writer?'ok':'null')+' connected='+this.connected);}}
@@ -351,7 +351,10 @@
     }
 
     class RealMSP {
-        constructor(serial){this.serial=serial;this.parser=new MSPParser();this.data={apiVersion:'1.0',RC:{channels:[],active_channels:8},ADJUSTMENT_RANGES:[],status:null,PIDS:[],stopGains:null};this.serial.onData=(bytes)=>this.parser.feed(bytes);this._busy=Promise.resolve();}
+        constructor(serial){this.serial=serial;this.parser=new MSPParser();this.data={apiVersion:'1.0',RC:{channels:[],active_channels:8},ADJUSTMENT_RANGES:[],status:null,PIDS:[],stopGains:null};this.serial.onData=(bytes)=>this.parser.feed(bytes);this._busy=Promise.resolve();this._depth=0;}
+        /* FIX (Tune reconnect bug, merged): expose how many MSP jobs are
+           queued/running so polling can stay self-paced (see startPolling). */
+        queueDepth(){return this._depth;}
         async sendCommand(codeOrMsg, payload = [], timeout = 20000) {
             const run = async () => {
                 const RETRY_INTERVAL = 2000;  // 2초 간격 재시도 (원래 configurator의 bleRetryInterval)
@@ -378,8 +381,11 @@
                 }
                 throw lastErr;
             };
+            /* FIX (merged): track queue depth for self-paced polling */
+            this._depth++;
             const result = this._busy.then(run, run);
             this._busy = result.then(() => {}, () => {});
+            result.then(() => { this._depth--; }, () => { this._depth--; });
             return result;
         }
         async readApiVersion(){const r=await this.sendCommand(MSP.API_VERSION);this.data.apiVersion=r.payload[0]+'.'+r.payload[1]+'.'+r.payload[2];}
@@ -713,6 +719,12 @@
                     if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
                     this.resetPage();
                 }else{
+                    /* FIX (attach-salvation, follow-up to tune_fix_merged): do NOT
+                       swallow connect clicks while a background load retry storm is
+                       in progress (_connecting true). The in-flight load only
+                       succeeds once this click attaches the stream - its next 2s
+                       retry picks up the new writer. Double-open is prevented by
+                       SerialConnection._opening. */
                     let portIndex=parseInt(portSelect.value);
                     if(portSelect.value==='none'||isNaN(portIndex)){
                         try{
@@ -741,6 +753,10 @@
                     if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
                     this.resetPage();
                 }else{
+                    /* FIX (merged): on reconnect make sure button/status UI is
+                       synced to Connected even if the click path was skipped */
+                    connectBtn.textContent='Disconnect';connectBtn.classList.add('active');
+                    statusEl.textContent='Connected';statusEl.classList.add('connected');
                     this.onConnect();
                 }
             };
@@ -777,7 +793,25 @@
             if(this._connecting)return;
             this._connecting=true;
             try{
-                await this.loadDataFromFC();
+                /* FIX (Tune reconnect bug, merged): retry the load when it
+                   fails. Right after a wireless reconnect the link is often
+                   still slow/stalling; a single failed load used to leave the
+                   table blank (or all-inactive) with no recovery. First retry
+                   after 800ms (fast perceived recovery), then 2s apart. */
+                let ok=false;
+                for(let i=0;i<4;i++){
+                    if(i>0){
+                        const d=(i===1)?800:2000;
+                        await new Promise(r=>setTimeout(r,d));
+                    }
+                    ok=await this.loadDataFromFC();
+                    if(ok)break;
+                }
+                if(!ok){
+                    /* last-resort net: scheduleInactiveGuard() keeps watching
+                       and retries up to 3 times (see loadDataFromFC) */
+                    this.scheduleInactiveGuard();
+                }
                 this.startPolling();
             }finally{
                 this._connecting=false;
@@ -788,19 +822,46 @@
             await this.msp.readApiVersion().catch(e=>console.warn('[cur] API_VERSION fail:',e.message));
             let adjOk=true;
             await this.msp.readAdjustmentRanges().catch(e=>{adjOk=false;console.error('ADJUSTMENT_RANGES fail:',e.message);});
-            /* Never render ranges left over from an earlier read: if the fresh
-               FC read failed, blank them so the UI shows "unknown" (and Save
-               stays a safe no-op) instead of possibly stale checkbox state.
-               The FC may have been reconfigured elsewhere while the link was
-               down, so ONLY data read from the FC right now may be displayed. */
-            if(!adjOk)this.msp.data.ADJUSTMENT_RANGES=[];
             await this.msp.readStatus().catch(e=>console.warn('[cur] STATUS fail:',e.message));
             await this.msp.readPidTuning().catch(e=>console.warn('[cur] PID_TUNING fail:',e.message));
             await this.msp.readPidProfile().catch(e=>console.warn('[cur] PID_PROFILE fail:',e.message));
             await this.msp.readRC().catch(e=>console.warn('[rc] RC fail:',e.message));
-            this.loadFromMSP();
+            /* FIX (Tune reconnect bug, merged): only repaint the slots from a
+               FRESH, SUCCESSFUL FC read. The previous code blanked
+               ADJUSTMENT_RANGES on failure and still called loadFromMSP(),
+               which mapped the empty array over every slot and rendered the
+               whole table as INACTIVE - exactly the reported reconnect
+               symptom. On failure we leave the current table as is and let
+               onConnect() retry - no stale data is ever shown, because
+               nothing is painted that was not just read. */
+            if(adjOk){
+                this.loadFromMSP();
+                this._retryCount=0;   // FIX (merged): re-arm the inactive guard after a good load
+            }else{
+                console.warn('[Tune] ADJUSTMENT_RANGES failed - keep previous table, retry scheduled');
+                this.scheduleInactiveGuard();
+            }
             this.renderTable();
             this.updateCurrentColumn();
+            return adjOk;
+        }
+
+        /* FIX (merged): safety net for slow wireless links - if the table is
+           still all-inactive after a failed load, retry the whole load a
+           bounded number of times. Only scheduled on FAILED reads, so a
+           legitimately empty FC (no active slots) never triggers it. */
+        scheduleInactiveGuard(){
+            if(this._guardTimer)clearTimeout(this._guardTimer);
+            this._guardTimer=setTimeout(()=>{
+                this._guardTimer=null;
+                if(!this.serial.connected)return;
+                const uiActive=this.slots?this.slots.filter(s=>s.enabled).length:0;
+                if(uiActive===0&&(this._retryCount||0)<3){
+                    this._retryCount=(this._retryCount||0)+1;
+                    console.warn('[Tune Guard] all inactive after failed load -> retry ('+this._retryCount+'/3)');
+                    this.onConnect();
+                }
+            },1200);
         }
 
         loadFromMSP(){
@@ -836,18 +897,29 @@
             if(this.pollInterval){clearInterval(this.pollInterval);this.pollInterval=null;}
             if(this.infoInterval){clearInterval(this.infoInterval);this.infoInterval=null;}
             if(this.msp) this.msp._busy=Promise.resolve();
+            if(this._guardTimer){clearTimeout(this._guardTimer);this._guardTimer=null;}
         }
 
         startPolling(){
-            /* idempotent: never stack duplicate intervals across reconnects */
+            /* idempotent: never stack duplicate intervals across reconnects.
+               FIX (Tune reconnect bug, merged): both timers are SELF-PACED via
+               a busy latch - the next cycle starts only after the previous
+               one finished. On a slow link the old fire-every-100ms pattern
+               enqueued a new MSP command every 100/500ms while each took
+               seconds, so the serialized _busy queue grew without bound and
+               any pending reload never got to run. */
             if(this.pollInterval||this.infoInterval)return;
             this.pollInterval=setInterval(()=>{
                 if(this._saving||!this.serial.connected)return;
-                this.msp.readRC().then(()=>{this.updateRCMonitor();this.runAutoDetection();}).catch(e=>console.warn('[rc] read failed:',e.message));
+                if(this._rcBusy)return;
+                this._rcBusy=true;
+                this.msp.readRC().then(()=>{this.updateRCMonitor();this.runAutoDetection();}).catch(e=>console.warn('[rc] read failed:',e.message)).finally(()=>{this._rcBusy=false;});
             },100);
             this.infoInterval=setInterval(()=>{
                 if(this._saving||!this.serial.connected)return;
-                this.refreshCurrent();
+                if(this._infoBusy)return;
+                this._infoBusy=true;
+                this.refreshCurrent().finally(()=>{this._infoBusy=false;});
             },500);
         }
 
@@ -953,7 +1025,7 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};window.addEventListener('message',(e)=>{if(!e||!e.data)return;if(e.data.t==='disconnect'){try{window._adjustmentTab.resetOnDisconnect();}catch(ex){}return;}if(e.data.t==='reconnect'){window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.onConnect();return;}if(e.data.t!=='activeTab')return;if(e.data.v!=='adjustment')return;window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.loadDataFromFC();});});
+    document.addEventListener('DOMContentLoaded',()=>{window._adjustmentTab=new AdjustmentTab();const tt=document.getElementById('theme-toggle-btn');if(tt)tt.addEventListener('click',window.toggleTheme);window.__rfPageDisconnect=()=>{try{window._adjustmentTab.resetOnDisconnect();}catch(e){}};window.addEventListener('message',(e)=>{if(!e||!e.data)return;if(e.data.t==='disconnect'){try{window._adjustmentTab.resetOnDisconnect();}catch(ex){}return;}if(e.data.t==='reconnect'){window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();window._adjustmentTab.onConnect();return;}if(e.data.t!=='activeTab')return;if(e.data.v!=='adjustment')return;window._adjustmentTab.isDirty=false;window._adjustmentTab.needSave=false;window._adjustmentTab.hideToolbar();/* FIX (Tune reconnect bug, merged): go through onConnect() so the _connecting single-flight guard also covers this path - a direct loadDataFromFC() here could run concurrently with the 'reconnect'-triggered load (duplicated starved MSP traffic, nondeterministic final render). startPolling() inside onConnect() is idempotent. */window._adjustmentTab.onConnect();});});
     </script>
     <dialog class="dialogSaving">
         <h3>Saving...</h3>

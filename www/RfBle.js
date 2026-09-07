@@ -42,13 +42,20 @@ class RfBle extends EventTarget {
         plugin.addListener("rfData", (event) => {
             const data = base64ToUint8Array(event?.data);
             this.bytesReceived += data.byteLength;
-            this.dispatchEvent(new CustomEvent("receive", { detail: data }));
+            /* FIX (merged): pass the native base64 through - the hub already
+               prefers ev.b64 over re-encoding the bytes, saving a full
+               encode/decode roundtrip on slow old phones. */
+            const ev = new CustomEvent("receive", { detail: data });
+            ev.b64 = event?.data;
+            this.dispatchEvent(ev);
         });
 
         plugin.addListener("disconnect", () => {
             this.connected = false;
             this.connectionId = null;
             this.connectionType = null;
+            this.bytesSent = 0;
+            this.bytesReceived = 0;
             this.dispatchEvent(new CustomEvent("disconnect", { detail: true }));
         });
     }

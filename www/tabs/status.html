@@ -2045,6 +2045,13 @@ class StatusTab {
         if (this.pollInterval) return;
         this.pollInterval = setInterval(async () => {
             if (!this.serial.connected) { this.stopPolling(); return; }
+            /* FIX (Tune reconnect bug, merged): self-paced like the Tune tab -
+               the old fire-every-100ms pattern enqueued a 3-command batch
+               faster than a slow wireless link could drain it, saturating
+               this page's MSP queue AND hogging the shared radio (the FC
+               answers every request), which starved background tabs' loads. */
+            if (this._pollBusy) return;
+            this._pollBusy = true;
             /* Batched poll (P0): ATTITUDE + ANALOG + STATUS in one write
                (1 round trip instead of 3). Short timeout so a dead link
                cannot pile up jobs on the MSP queue. */
@@ -2058,6 +2065,7 @@ class StatusTab {
                 try { await this.msp.readAnalog(rs[1]); } catch(e) {}
                 try { await this.msp.readStatus(rs[2]); } catch(e) {}
             } catch(e) {}
+            this._pollBusy = false;
             this.updateInfoBox();
             this.updateArmingBox();
             this.updateAttitude();

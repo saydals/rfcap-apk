@@ -98,6 +98,11 @@
         async open(opts) {
             const self = this;
             self._open = true;
+            /* FIX (Tune reconnect bug, merged): tell the hub this page can
+               consume MSP data now, so 'd' chunks are fanned out to us even
+               when another tab is active. Without this a background Tune tab
+               starves mid-load (all responses routed to the active tab). */
+            try { post({ t: 'wantsData', on: true }); } catch (e) {}
             self._readable = new ReadableStream({
                 start(controller) {
                     self._ctrl = controller;
@@ -115,13 +120,26 @@
         }
         async close() {
             this._open = false;
+            try { post({ t: 'wantsData', on: false }); } catch (e) {}
+            /* FIX (merged): drop bytes buffered from the PREVIOUS session so
+               the next open() cannot replay stale data into a fresh stream. */
+            this._backlog.length = 0;
             try { this._ctrl && this._ctrl.close(); } catch (e) {}
             try { this._writable && this._writable.abort && this._writable.abort(); } catch (e) {}
             this._ctrl = null; this._readable = null; this._writable = null;
         }
         _feed(u8) {
-            if (!this._open || !this._ctrl) return; /* drop when nobody reads */
-            try { this._ctrl.enqueue(u8.slice()); } catch (e) { /* stream closing */ }
+            /* FIX (merged): buffer (max 32 chunks) instead of dropping bytes
+               that arrive BEFORE open() - right after a wireless reconnect
+               the FC can answer before the tab has re-opened its stream.
+               The existing drain in open() flushes this backlog. */
+            if (!this._open || !this._ctrl) {
+                if (this._backlog.length < 32) this._backlog.push(u8.slice());
+                return;
+            }
+            try { this._ctrl.enqueue(u8.slice()); } catch (e) {
+                if (this._backlog.length < 32) this._backlog.push(u8.slice());
+            }
         }
     }
     const sharedPort = new VirtualPort();

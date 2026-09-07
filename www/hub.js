@@ -677,12 +677,22 @@
         return null;
     }
     function broadcastData(msg) {
+        /* FIX (Tune reconnect bug, merged): data previously went ONLY to the
+           active tab, so a background tab that had started an MSP load (e.g.
+           the Tune tab right after the 'reconnect' broadcast) starved: every
+           response was routed to the active tab and dropped there, each
+           command burned its full 20s deadline, readAdjustmentRanges()
+           failed and loadFromMSP() painted ALL SLOTS DISABLED.
+           Now the active tab (as before) PLUS any tab whose Web-Serial shim
+           stream is open (it announced itself via 'wantsData') receives the
+           data. Extra frames are harmlessly ignored by parsers with no
+           waiter for that code. */
         var sent = false;
-        if (RF.activeTab) {
-            RF.children.forEach(function(href, port) {
-                if (tabNameFromHref(href) === RF.activeTab) { safePost(port, msg); sent = true; }
-            });
-        }
+        RF.children.forEach(function(child, port) {
+            if (tabNameFromHref(child.href) === RF.activeTab || child.wantsData) {
+                safePost(port, msg); sent = true;
+            }
+        });
         if (!sent) broadcast(msg);   /* fallback: unmatched tabs still get data */
     }
 
@@ -857,7 +867,7 @@
         var chPort = ev.ports && ev.ports[0];
         if (!chPort) return;
 
-        RF.children.set(chPort, data.href || '?');
+        RF.children.set(chPort, { href: data.href || '?', wantsData: false });
         var pending = new Map();
         var reqId = 1;
 
@@ -885,6 +895,16 @@
             if (!m || !m.t) return;
             if (m.t === 'res') {
                 handle(m);
+                return;
+            }
+            /* FIX (Tune reconnect bug, merged): must be handled HERE, before
+               the H[m.t] API dispatch - handle() is only invoked for 'res',
+               so a wantsData branch placed inside handle() would NEVER run.
+               The child announces whether its MSP data consumer (open
+               sharedPort stream) is live; see broadcastData(). */
+            if (m.t === 'wantsData') {
+                var child = RF.children.get(chPort);
+                if (child) child.wantsData = !!m.on;
                 return;
             }
             var h = H[m.t];
@@ -959,7 +979,16 @@
             sel.value = '0';
         }
         var btn = document.getElementById('connect-btn');
-        if (btn && !btn.classList.contains('active')) { try { btn.click(); } catch (e) {} }
+        if (btn && !btn.classList.contains('active')) {
+            /* FIX (merged): 1s debounce - dedupe auto-click vs user click so a
+               duplicate click cannot trigger disconnect+resetPage. Note: a
+               second retry timer (900ms) would be swallowed by this debounce,
+               and if allowed through it could re-click while the first
+               connect is still in flight - so we keep ONE auto-click. */
+            if (btn._lastAutoClick && (Date.now() - btn._lastAutoClick) < 1000) return;
+            btn._lastAutoClick = Date.now();
+            try { btn.click(); } catch (e) {}
+        }
     }
 
     function onActiveTab(name) {
