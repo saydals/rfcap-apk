@@ -1,0 +1,245 @@
+/* ============================================================
+   RFCap Responsive Dimension System v2
+   - CSS px == Android dp (WebView width=device-width)
+   - Shell: 600 / 840  (window 기준)
+   - Tab  : 512 / 744  (iframe 기준, 600-88, 840-96 보정)
+   - Mobile 값 == 기존 고정값 (폰 무변경)
+   - Phase1: content-max = none (960px 공통 제한 보류)
+   ============================================================ */
+
+:root {
+  /* ---------- SHELL Mobile (현재값) ---------- */
+  --rf-sh-hdr-h: 30px;
+  --rf-sh-hdr-pad-x: 8px;
+  --rf-sh-logo-fs: 20px;
+  --rf-sh-ico: 20px;
+  --rf-sh-conn-fs: 13px;
+  --rf-sh-conn-dot: 9px;
+  --rf-sh-save-fs: 12px;
+  --rf-sh-save-pad: 4px 12px;
+  --rf-sh-nav-h: 54px;
+  --rf-sh-nav-ico: 22px;
+  --rf-sh-nav-fs: 10px;
+  --rf-sh-dlg-title: 14px;
+  --rf-sh-dlg-msg: 12px;
+  --rf-sh-dlg-btn: 12px;
+  --rf-sh-dlg-min-w: 336px;
+  --rf-sh-rail-w: 76px;      /* landscape 기본 */
+  --rf-sh-ls-hdr-h: 48px;
+  --rf-sh-ls-ico: 20px;
+
+  /* ---------- TAB Mobile (현재값) ---------- */
+  --rf-tb-fs-body: 12px;
+  --rf-tb-fs-title: 18px;
+  --rf-tb-title-mb: 12px;
+  --rf-tb-fs-panel: 14px;
+  --rf-tb-fs-section: 13px;
+  --rf-tb-section-h: 22px;
+  --rf-tb-section-pad: 3px 14px;
+  --rf-tb-fs-label: 12px;
+  --rf-tb-fs-small: 11px;
+  --rf-tb-fs-tiny: 9px;      /* RC 모니터 8-9px 계열 - 가독성 위해 9px로 상향이 Mobile 최소 */
+  --rf-tb-fs-ctl: 12px;
+  --rf-tb-ctl-h: 28px;
+  --rf-tb-ctl-h-sm: 26px;    /* Rates number input 등 */
+  --rf-tb-tbl-ctl-h: 26px;
+  --rf-tb-tbl-num-w: 48px;
+  --rf-tb-btn-pad: 6px 14px;
+  --rf-tb-btn-pad-sm: 4px 12px;
+  --rf-tb-content-pad: 16px;
+  --rf-tb-content-max: none; /* v2: Phase1 보류, Phase2에서 선택 적용 */
+  --rf-tb-gap: 12px;
+  --rf-tb-section-gap: 16px;
+  --rf-tb-cb-size: 16px;     /* checkbox 터치 영역 */
+  --rf-tb-sensor-ico: 44px;  /* status 센서 아이콘 - Mobile에서 기존 22px(--rf-sh-nav-ico)의 2배 (LM-V409N 360dp 휴대폰 가독성) */
+}
+
+/* ---------- NUMPAD (bridge.js injectKeypad) ----------
+   표준폰 (모든 방향, <=854px landscape or <512px portrait): 0.85 scale
+   (모바일 0.7 × 1.2 = 0.84, 표준폰은 살짝 큼)
+   Tablet  (>=512px)         : 1.0 (= 기준)
+   Large   (>=744px)         : 1.5 scale (큰 태블릿은 큼) */
+:root {
+  --rf-np-scale: 0.85;
+  --rf-np-btn-h: calc(46px * var(--rf-np-scale));
+  --rf-np-btn-fs: calc(20px * var(--rf-np-scale));
+  --rf-np-btn-min-w: calc(64px * var(--rf-np-scale));
+  --rf-np-btn-radius: calc(8px * var(--rf-np-scale));
+  --rf-np-pad-pad: calc(4px * var(--rf-np-scale)) calc(10px * var(--rf-np-scale)) calc(10px * var(--rf-np-scale));
+  --rf-np-pad-radius: calc(12px * var(--rf-np-scale));
+  --rf-np-max-w: min(92vw, calc(340px * var(--rf-np-scale)));
+  --rf-np-gap: calc(8px * var(--rf-np-scale));
+  --rf-np-handle-h: calc(18px * var(--rf-np-scale));
+  --rf-np-handle-w: calc(56px * var(--rf-np-scale));
+  --rf-np-handle-thick: calc(5px * var(--rf-np-scale));
+}
+
+/* ---------- SHELL Tablet: >=600px ---------- */
+@media (min-width: 600px) {
+  :root {
+    --rf-sh-hdr-h: 60px;
+    --rf-sh-hdr-pad-x: 12px;
+    --rf-sh-logo-fs: 38px;
+    --rf-sh-ico: 40px;
+    --rf-sh-conn-fs: 18px;
+    --rf-sh-conn-dot: 14px;
+    --rf-sh-save-fs: 18px;
+    --rf-sh-save-pad: 8px 20px;
+    --rf-sh-nav-h: 100px;
+    --rf-sh-nav-ico: 44px;
+    --rf-sh-nav-fs: 14px;
+    --rf-sh-dlg-title: 16px;
+    --rf-sh-dlg-msg: 14px;
+    --rf-sh-dlg-btn: 14px;
+    --rf-sh-dlg-min-w: 400px;
+    --rf-sh-rail-w: 88px;
+    --rf-sh-ls-hdr-h: 84px;
+    --rf-sh-ls-ico: 40px;
+  }
+}
+
+/* ---------- SHELL Large: >=840px ---------- */
+@media (min-width: 840px) {
+  :root {
+    --rf-sh-hdr-h: 72px;
+    --rf-sh-hdr-pad-x: 16px;
+    --rf-sh-logo-fs: 45px;
+    --rf-sh-ico: 48px;
+    --rf-sh-conn-fs: 20px;
+    --rf-sh-conn-dot: 16px;
+    --rf-sh-save-fs: 20px;
+    --rf-sh-save-pad: 10px 24px;
+    --rf-sh-nav-h: 120px;
+    --rf-sh-nav-ico: 56px;
+    --rf-sh-nav-fs: 16px;
+    --rf-sh-dlg-title: 18px;
+    --rf-sh-dlg-msg: 16px;
+    --rf-sh-dlg-btn: 16px;
+    --rf-sh-dlg-min-w: 480px;
+    --rf-sh-rail-w: 96px;
+    --rf-sh-ls-hdr-h: 96px;
+    --rf-sh-ls-ico: 48px;
+  }
+}
+
+/* ---------- TAB Tablet: >=512px (600-88 보정) ---------- */
+@media (min-width: 512px) {
+  :root {
+    --rf-tb-fs-body: 14px;
+    --rf-tb-fs-title: 22px;
+    --rf-tb-title-mb: 16px;
+    --rf-tb-fs-panel: 16px;
+    --rf-tb-fs-section: 15px;
+    --rf-tb-section-h: 28px;
+    --rf-tb-section-pad: 4px 16px;
+    --rf-tb-fs-label: 14px;
+    --rf-tb-fs-small: 12px;
+    --rf-tb-fs-tiny: 11px;
+    --rf-tb-fs-ctl: 14px;
+    --rf-tb-ctl-h: 36px;       /* 48dp 터치 영역 근접: 36px + 셀 패딩 */
+    --rf-tb-ctl-h-sm: 32px;
+    --rf-tb-tbl-ctl-h: 32px;
+    --rf-tb-tbl-num-w: 56px;
+    --rf-tb-btn-pad: 8px 18px;
+    --rf-tb-btn-pad-sm: 6px 14px;
+    --rf-tb-content-pad: 20px;
+    --rf-tb-gap: 16px;
+    --rf-tb-section-gap: 20px;
+    --rf-tb-cb-size: 20px;     /* 터치 좋은 체크박스 */
+    --rf-tb-sensor-ico: 44px;  /* status 센서 아이콘 - Mobile과 동일 크기 유지 (Mobile 2배값) */
+    --rf-np-scale: 1.0;
+  }
+}
+
+/* ---------- TAB Large: >=744px (840-96 보정) ---------- */
+@media (min-width: 744px) {
+  :root {
+    --rf-tb-fs-body: 16px;
+    --rf-tb-fs-title: 26px;
+    --rf-tb-title-mb: 20px;
+    --rf-tb-fs-panel: 18px;
+    --rf-tb-fs-section: 17px;
+    --rf-tb-section-h: 32px;
+    --rf-tb-section-pad: 6px 18px;
+    --rf-tb-fs-label: 16px;
+    --rf-tb-fs-small: 13px;
+    --rf-tb-fs-tiny: 12px;
+    --rf-tb-fs-ctl: 16px;
+    --rf-tb-ctl-h: 40px;       /* Large에서 40px */
+    --rf-tb-ctl-h-sm: 36px;
+    --rf-tb-tbl-ctl-h: 36px;
+    --rf-tb-tbl-num-w: 64px;
+    --rf-tb-btn-pad: 10px 20px;
+    --rf-tb-btn-pad-sm: 8px 16px;
+    --rf-tb-content-pad: 24px;
+    --rf-tb-gap: 20px;
+    --rf-tb-section-gap: 24px;
+    --rf-tb-cb-size: 24px;
+    --rf-tb-sensor-ico: 56px;  /* status 센서 아이콘 - Large는 기존 56px 유지 */
+    --rf-np-scale: 1.5;
+    /* Phase1: max-width는 여기서도 none 유지. Phase2에서 .rf-constrain 선택 적용 */
+  }
+}
+
+/* ---------- PHONE LANDSCAPE OVERRIDE ----------
+   표준폰(<=1080px)을 가로로 돌리면 viewport width는 태블릿 기준(>=512px)을 넘어
+   위 태블릿/대형 토큰이 전부 발동 → 헤더/탭아이콘/숫자패드가 거대해짐.
+   width 512-1080px + landscape 조합은 모든 표준폰 landscape (iPhone SE 667px,
+   Pixel 824px, Galaxy S24 Ultra 960dp 등) 만 해당하고,
+   태블릿(>=1081px) 은 영향 없음.
+   해당 경우 모바일 토큰으로 강제 다운스케일. */
+@media (orientation: landscape) and (min-width: 512px) and (max-width: 1080px) {
+  :root {
+    --rf-sh-hdr-h: 30px;
+    --rf-sh-hdr-pad-x: 8px;
+    --rf-sh-logo-fs: 20px;
+    --rf-sh-ico: 20px;
+    --rf-sh-conn-fs: 13px;
+    --rf-sh-conn-dot: 9px;
+    --rf-sh-save-fs: 12px;
+    --rf-sh-save-pad: 4px 12px;
+    --rf-sh-nav-h: 54px;
+    --rf-sh-nav-ico: 22px;
+    --rf-sh-nav-fs: 10px;
+    --rf-sh-dlg-title: 14px;
+    --rf-sh-dlg-msg: 12px;
+    --rf-sh-dlg-btn: 12px;
+    --rf-sh-dlg-min-w: 336px;
+    --rf-sh-rail-w: 76px;
+    --rf-sh-ls-hdr-h: 48px;     /* 폰 가로보기 헤더 = 세로 헤더(30+safe-top≈48dp/9mm)와 동일 높이로 맞춤 */
+    --rf-sh-ls-ico: 20px;
+
+    --rf-tb-fs-body: 12px;
+    --rf-tb-fs-title: 18px;
+    --rf-tb-title-mb: 12px;
+    --rf-tb-fs-panel: 14px;
+    --rf-tb-fs-section: 13px;
+    --rf-tb-section-h: 22px;
+    --rf-tb-section-pad: 3px 14px;
+    --rf-tb-fs-label: 12px;
+    --rf-tb-fs-small: 11px;
+    --rf-tb-fs-tiny: 9px;
+    --rf-tb-fs-ctl: 12px;
+    --rf-tb-ctl-h: 28px;
+    --rf-tb-ctl-h-sm: 26px;
+    --rf-tb-tbl-ctl-h: 26px;
+    --rf-tb-tbl-num-w: 48px;
+    --rf-tb-btn-pad: 6px 14px;
+    --rf-tb-btn-pad-sm: 4px 12px;
+    --rf-tb-content-pad: 16px;
+    --rf-tb-gap: 12px;
+    --rf-tb-section-gap: 16px;
+    --rf-tb-cb-size: 16px;
+    --rf-tb-sensor-ico: 44px;  /* status 센서 아이콘 - 폰 가로보기에서도 Mobile 2배값 유지 */
+    --rf-np-scale: 0.85;
+  }
+}
+
+/* ---------- Content max 선택 적용용 유틸리티 (Phase2) ---------- */
+.rf-constrain {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+/* 사용 예: <div class="rf-constrain">를 Status, Tune처럼 텍스트 중심 탭에만 Phase2에서 추가.
+   Rates/Mixer/Servos/Adjustment/Profiles 표 기반 탭에는 적용하지 않는다. */

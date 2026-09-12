@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html data-shell lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>RFCap - Rotorflight Configurator</title>
+<link rel="stylesheet" href="./responsive.css">
+<script src="./hub.js?v=121"></script>
+<style>
+    :root { --hdr-h: var(--rf-sh-hdr-h, 30px); --nav-h: var(--rf-sh-nav-h, 54px); }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html[data-theme="light"] {
+        --bg:#e6e8ec; --surface:#f5f6f8; --text:#1a1c20; --soft:#5a6070;
+        --border:#c9ccd4; --accent:hsl(202,100%,45%); --ok:#2e8b2e; --chip:#ffffff;
+    }
+    html[data-theme="dark"] {
+        --bg:#121417; --surface:#1d2025; --text:#e8eaee; --soft:#9aa0ad;
+        --border:#33373f; --accent:hsl(202,100%,55%); --ok:#5dcf5d; --chip:#24272d;
+    }
+    html,body { height:100%; overflow:hidden; }
+    body {
+        font-family:"Open Sans","Segoe UI",Tahoma,sans-serif; font-size:13px;
+        background:var(--bg); color:var(--text);
+        display:flex; flex-direction:column;
+        padding-top:env(safe-area-inset-top);
+    }
+    /* ---------- common header ---------- */
+    #app-header {
+        height:var(--rf-sh-hdr-h); flex:0 0 auto;
+        display:flex; align-items:center; gap:6px;
+        padding:0 var(--rf-sh-hdr-pad-x);
+        background:var(--surface); border-bottom:1px solid var(--border);
+        box-shadow:0 2px 6px rgba(0,0,0,.14);
+        z-index:10;
+    }
+    @media (orientation: portrait) {
+        #app-header { height:calc(var(--rf-sh-hdr-h) + env(safe-area-inset-top, 24px)); }
+    }
+    #app-logo { font-weight:bold; font-size:var(--rf-sh-logo-fs); line-height:1; letter-spacing:.3px; color:var(--accent); white-space:nowrap; }
+    #conn-chip {
+        display:flex; align-items:center; gap:6px;
+        background:var(--chip); border:1px solid var(--border);
+        border-radius:15px; padding:4px 10px; min-width:0;
+    }
+    #conn-dot { width:var(--rf-sh-conn-dot); height:var(--rf-sh-conn-dot); border-radius:50%; background:#999; flex:0 0 auto; transition:background .2s; }
+    #conn-dot.on-spp, #conn-dot.on-ble { background:var(--ok); box-shadow:0 0 6px var(--ok); }
+    #conn-text { font-size:var(--rf-sh-conn-fs); color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46vw; }
+    #exit-btn {
+        margin-left:auto; background:transparent; border:none; cursor:pointer;
+        padding:0; display:flex; align-items:center; justify-content:center;
+    }
+    #exit-btn img { width:var(--rf-sh-ico); height:var(--rf-sh-ico); display:block; }
+    #theme-btn { background:transparent; border:none; font-size:var(--rf-sh-logo-fs); cursor:pointer; color:var(--text); padding:2px 6px; }
+    /* ---------- tab area ---------- */
+    #tab-area { flex:1 1 auto; position:relative; min-height:0; }
+    /* All tabs stay mounted & sized (visibility toggle, NOT display:none)
+       so canvases (three.js heli) survive tab switches. */
+    #tab-area iframe {
+        position:absolute; inset:0; width:100%; height:100%;
+        border:none; background:var(--bg);
+        /* keep every tab PAINTING (opacity, not display/visibility) so the
+           three.js rAF loop never stalls and WebGL state is never lost */
+        opacity:0; pointer-events:none;
+    }
+    #tab-area iframe.active { opacity:1; pointer-events:auto; z-index:2; }
+    /* ---------- bottom nav ---------- */
+    #tab-nav {
+        height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+        flex:0 0 auto; display:flex;
+        background:var(--surface); border-top:1px solid var(--border);
+        padding-bottom:env(safe-area-inset-bottom);
+    }
+    .tab-btn {
+        flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+        gap:3px; background:none; border:none; color:var(--soft);
+        font-family:inherit; font-size:var(--rf-sh-nav-fs); cursor:pointer; user-select:none;
+        height:var(--rf-sh-nav-h);
+        padding-top:6px;
+    }
+    .tab-btn .ico {
+        width:var(--rf-sh-nav-ico); height:var(--rf-sh-nav-ico); object-fit:contain; display:block;
+        opacity:.55; transition:.15s;
+        /* source SVGs are white - recolour per theme */
+        filter:invert(.72) grayscale(1);
+    }
+    html[data-theme="dark"] .tab-btn .ico { opacity:.5; filter:none; }
+    .tab-btn.active { color:var(--accent); }
+    html[data-theme="light"] .tab-btn.active .ico { opacity:1; filter:invert(.78) sepia(1) saturate(28) hue-rotate(172deg) brightness(.9); transform:scale(1.08); }
+    html[data-theme="dark"]  .tab-btn.active .ico { opacity:1; filter:none; transform:scale(1.08); }
+
+    #header-save-btn {
+        display: inline-block;
+        margin-left: 4px;
+        padding: var(--rf-sh-save-pad);
+        background-color: #2e7d32;
+        color: #fff;
+        border: 1px solid #1b5e20;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: var(--rf-sh-save-fs);
+        cursor: pointer;
+        font-family: inherit;
+        line-height: 1.2;
+    }
+    /* the status tab has nothing to save - shell.js hides the button there */
+    #header-save-btn[data-hidden="1"] { display: none; }
+    #header-save-btn:hover {
+        background-color: #1b5e20;
+    }
+    /* dirty state - red save button */
+    #header-save-btn.dirty {
+        background-color: #c62828;
+        border-color: #880e4f;
+    }
+    #header-save-btn.dirty:hover {
+        background-color: #b71c1c;
+    }
+
+    @media (orientation: landscape) and (min-width: 1081px) {
+        /* Grid shell: the header spans the full top row, the tab nav becomes
+           a fixed left rail, and the tab area fills the remaining cell.
+           Unlike the old flex-wrap approach this can never break onto extra
+           lines, so there is no dead space and no squeezed header.
+           min-width 855px: 표준폰 landscape(<=854dp) 는 큰 폰·태블릿이 아니라
+           컴팩트 폰 가로보기이므로 모바일 레이아웃(상단 헤더 + 하단 탭바) 유지. */
+        body {
+            display: grid;
+            grid-template-columns: var(--rf-sh-rail-w) 1fr;
+            grid-template-rows: var(--rf-sh-ls-hdr-h) 1fr;
+            padding-top: 0;
+        }
+        #app-header {
+            grid-column: 1 / 3; grid-row: 1;
+            height: var(--rf-sh-ls-hdr-h); width: auto;
+        }
+        #tab-nav {
+            grid-column: 1; grid-row: 2;
+            flex-direction: column;
+            height: auto;
+            border-top: none;
+            border-right: 1px solid var(--border);
+            padding-bottom: 0;
+            padding-right: env(safe-area-inset-right, 0px);
+            padding-left: env(safe-area-inset-left, 0px);
+        }
+        #tab-area {
+            grid-column: 2; grid-row: 2;
+            min-width: 0; min-height: 0;
+        }
+        .tab-btn {
+            flex-direction: column;
+            justify-content: center;
+            padding: 4px 6px;
+            gap: 2px;
+        }
+        .tab-btn .ico {
+            width: var(--rf-sh-ls-ico);
+            height: var(--rf-sh-ls-ico);
+        }
+    }
+    @media (orientation: landscape) and (max-width: 599px) {
+        #app-header {
+            height: calc(var(--rf-sh-hdr-h) + env(safe-area-inset-top, 24px));
+        }
+    }
+    /* 표준폰 가로보기 (600~1080dp) 에서는 위 landscape 그리드를 무력화
+       하고 모바일 사이즈의 좌측 레일(세로 1열 탭바) 사용.
+       레이아웃은 세로 1열 유지하되 모든 사이즈는 모바일 토큰.
+       헤더 높이는 세로보기 safe-area 합산 결과(~48dp, 9mm)와 맞추기 위해
+       --rf-sh-ls-hdr-h(phone-landscape 오버라이드에서 48px 확정)를 사용. */
+    @media (orientation: landscape) and (min-width: 600px) and (max-width: 1080px) {
+        body {
+            display: grid;
+            grid-template-columns: var(--rf-sh-rail-w) 1fr;
+            grid-template-rows: var(--rf-sh-ls-hdr-h) 1fr;
+            padding-top: 0;
+        }
+        #app-header {
+            grid-column: 1 / 3; grid-row: 1;
+            height: var(--rf-sh-ls-hdr-h);
+            width: auto;
+        }
+        #tab-nav {
+            grid-column: 1; grid-row: 2;
+            flex-direction: column;
+            height: auto;
+            width: var(--rf-sh-rail-w);
+            border-top: none;
+            border-right: 1px solid var(--border);
+            padding-bottom: 0;
+            padding-right: env(safe-area-inset-right, 0px);
+            padding-left: env(safe-area-inset-left, 0px);
+        }
+        #tab-area {
+            grid-column: 2; grid-row: 2;
+            min-width: 0; min-height: 0;
+        }
+        .tab-btn {
+            flex-direction: column;
+            justify-content: center;
+            padding: 4px 6px;
+            gap: 2px;
+            height: auto;
+        }
+        .tab-btn .ico {
+            width: var(--rf-sh-nav-ico);
+            height: var(--rf-sh-nav-ico);
+        }
+    }
+    /* ---------- leave-confirmation dialog (dirty tab switch) ----------
+       Unified with the tabs' own "Save changes?" dialogs: same title,
+       wording and style, with EXPLICIT fixed centering so it stays in the
+       middle of the screen even on WebViews whose UA modal positioning
+       is unreliable (no more top-of-screen appearance). */
+    #leave-dialog {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        padding: 14px 16px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.4);
+        min-width: var(--rf-sh-dlg-min-w);
+        max-width: 86vw;
+        font-family: inherit;
+        z-index: 20;
+    }
+    #leave-dialog::backdrop { background: rgba(0,0,0,.45); }
+    #leave-dialog h3 { margin: 0 0 8px 0; font-size: var(--rf-sh-dlg-title); }
+    #leave-dialog .leave-msg { font-size: var(--rf-sh-dlg-msg); color: var(--soft); margin-bottom: 14px; }
+    #leave-dialog .leave-row { display: flex; gap: 8px; justify-content: flex-end; }
+    #leave-dialog button {
+        padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+        background: var(--chip); color: var(--text);
+        font-family: inherit; font-size: var(--rf-sh-dlg-btn); cursor: pointer;
+    }
+
+</style>
+</head>
+<body>
+    <header id="app-header">
+        <span id="app-logo">RFCap</span>
+        <div id="conn-chip" title="Connection state (shared across all tabs)">
+            <span id="conn-dot"></span>
+            <span id="conn-text">Disconnected</span>
+        </div>
+        <a id="header-save-btn" href="#" title="Save the active tab (same as the tab's own Save button)">Save</a>
+        <button id="exit-btn" title="Exit"><img src="./icons/exit.svg" alt="Exit"></button>
+        <button id="theme-btn" title="Toggle theme">&#127769;</button>
+    </header>
+
+    <main id="tab-area">
+        <iframe id="tab-status"     src="./tabs/status.html?v=121"     class="active" title="Status"></iframe>
+        <iframe id="tab-mixer"      src="./tabs/mixer.html?v=121"      title="Mixer"></iframe>
+        <iframe id="tab-servos"     src="./tabs/servos.html?v=125"     title="Servos"></iframe>
+        <iframe id="tab-rates"      src="./tabs/Rates.html?v=123"      title="Rates"></iframe>
+        <iframe id="tab-profiles"   src="./tabs/Profiles.html?v=123"   title="Profiles"></iframe>
+        <iframe id="tab-adjustment" src="./tabs/adjustment.html?v=123" title="Tune"></iframe>
+    </main>
+
+    <nav id="tab-nav">
+        <button class="tab-btn active" data-tab="status"><img class="ico" src="./icons/cf_icon_data_white.svg" alt="">Status</button>
+        <button class="tab-btn" data-tab="mixer"><img class="ico" src="./icons/cf_icon_mixer.svg" alt="">Mixer</button>
+        <button class="tab-btn" data-tab="servos"><img class="ico" src="./icons/cf_icon_servo_white.svg" alt="">Servos</button>
+        <button class="tab-btn" data-tab="rates"><img class="ico" src="./icons/cf_icon_pid_white.svg" alt="">Rates</button>
+        <button class="tab-btn" data-tab="profiles"><img class="ico" src="./icons/cf_icon_settings_white.svg" alt="">Profiles</button>
+        <button class="tab-btn" data-tab="adjustment"><img class="ico" src="./icons/cf_icon_adjust_white.svg" alt="">Tune</button>
+    </nav>
+
+    <dialog id="leave-dialog">
+        <h3>Save changes?</h3>
+        <p class="leave-msg">Do you want to save changes before leaving?</p>
+        <div class="leave-row">
+            <button type="button" id="leave-save">Yes</button>
+            <button type="button" id="leave-discard">No</button>
+        </div>
+    </dialog>
+
+<script src="./shell.js?v=119"></script>
+</body>
+</html>

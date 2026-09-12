@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RFCap</string>
+    <string name="title_activity_main">RFCap</string>
+    <string name="package_name">org.rfcap.tabs</string>
+    <string name="custom_url_scheme">org.rfcap.tabs</string>
+</resources>
