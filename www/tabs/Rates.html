@@ -3246,6 +3246,7 @@ body {
                 this.initRatesSystem();
                 this.updateRates();
                 this.origRCTuning = JSON.parse(JSON.stringify(this.msp.data.RC_TUNING));
+                this._resetDirtyTracking();
             }
 
             changeRatesLogo() {
@@ -3454,6 +3455,7 @@ if (cLevel) {
                                redraws the curve (initRatesSystem ends with
                                updateRates()). */
                             this.initRatesSystem();
+                            this._resetDirtyTracking();
                             this.setChanged();
                         } catch (err) {
                             console.error('Rates type change failed:', err);
@@ -3849,7 +3851,7 @@ if (cLevel) {
                 this.isChanged = false;
                 this.isDirty = false;
                 document.querySelector('.tab-rates').classList.add('toolbar_hidden');
-                this.clearDirtyCells();
+                this._resetDirtyTracking();
                 this.startPolling();
             }
 
@@ -3863,8 +3865,9 @@ if (cLevel) {
                 } else {
                     await this.loadDataFromFC();
                     this.isDirty = false;
+                    this.isChanged = false;
                     this.hideToolbar();
-                    this.clearDirtyCells();
+                    this._resetDirtyTracking();
                 }
             }
 
@@ -3880,7 +3883,7 @@ async activateProfile(index) {
                     this.isChanged = false;
                     this.isDirty = false;
                     document.querySelector('.tab-rates').classList.add('toolbar_hidden');
-                    this.clearDirtyCells();
+                    this._resetDirtyTracking();
                 } catch (e) {
                     console.error('Profile switch failed:', e);
                     alert('Failed to switch profile: ' + e.message);
@@ -3971,7 +3974,18 @@ async activateProfile(index) {
 
             bindInputs() {
                 const tabArea = document.querySelector('.tab-area');
-                tabArea.addEventListener('change', () => { this.setChanged(); });
+                tabArea.addEventListener('change', (e) => {
+                    if (e.target.matches('input[type="number"]')) {
+                        const original = e.target.dataset.dirtyOriginal;
+                        const current = e.target.value;
+                        const origNum = parseFloat(original);
+                        const currNum = parseFloat(current);
+                        const origValid = !isNaN(origNum);
+                        const currValid = !isNaN(currNum);
+                        if ((origValid && currValid && origNum === currNum) || (!origValid && !currValid)) return;
+                    }
+                    this.setChanged();
+                });
 
                 document.querySelectorAll('.rates_change').forEach(el => {
                     el.addEventListener('input', (e) => { this.updateRates(e); });
@@ -4016,11 +4030,23 @@ async activateProfile(index) {
                     });
                 });
 
-                // Dirty cell highlighting - event delegation
+                // Dirty cell highlighting - compare against loaded snapshot
                 document.querySelector('.tab-rates').addEventListener('input', (e) => {
                     if (e.target.matches('input[type="number"]')) {
-                        e.target.classList.add('rf-dirty-cell');
-                        this.setChanged();
+                        const original = e.target.dataset.dirtyOriginal;
+                        const current = e.target.value;
+                        const origNum = parseFloat(original);
+                        const currNum = parseFloat(current);
+                        const origValid = !isNaN(origNum);
+                        const currValid = !isNaN(currNum);
+                        if (origValid && currValid && origNum === currNum) {
+                            e.target.classList.remove('rf-dirty-cell');
+                        } else if (!origValid && !currValid) {
+                            e.target.classList.remove('rf-dirty-cell');
+                        } else {
+                            e.target.classList.add('rf-dirty-cell');
+                            try { this.setChanged(); } catch (err) { console.error('[Rates] setChanged failed:', err); }
+                        }
                     }
                 });
             }
@@ -4029,13 +4055,15 @@ async activateProfile(index) {
                 if (!this.isChanged) {
                     this.isDirty = true;
                     this.isChanged = true;
-                    document.querySelector('.tab-rates').classList.remove('toolbar_hidden');
+                    const root = document.querySelector('.tab-rates');
+                    if (root) root.classList.remove('toolbar_hidden');
                 }
             }
 
-            clearDirtyCells() {
+            _resetDirtyTracking() {
                 document.querySelectorAll('.tab-rates input[type="number"]').forEach(el => {
                     el.classList.remove('rf-dirty-cell');
+                    el.dataset.dirtyOriginal = el.value;
                 });
             }
 
@@ -4405,7 +4433,7 @@ async activateProfile(index) {
                     window._ratesTab.isDirty = false;
                     window._ratesTab.needSave = false;
                     window._ratesTab.hideToolbar();
-                    window._ratesTab.clearDirtyCells();
+                    window._ratesTab._resetDirtyTracking();
                     window._ratesTab.loadDataFromFC();
                     return;
                 }
@@ -4414,7 +4442,7 @@ async activateProfile(index) {
                 window._ratesTab.isDirty = false;
                 window._ratesTab.needSave = false;
                 window._ratesTab.hideToolbar();
-                window._ratesTab.clearDirtyCells();
+                window._ratesTab._resetDirtyTracking();
                 window._ratesTab.loadDataFromFC();
             });
         });

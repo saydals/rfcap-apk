@@ -275,7 +275,7 @@
            Table B (index+Hz/Source..Signal) stacked vertically. Both split
            tables keep the servo index column. */
         .tab-servos table.servoConfig.servo-config-split { display: none; }
-        @media (max-width: 511px) {
+        @media (orientation: portrait) {
             .tab-servos table.servoConfig.servo-config-main { display: none; }
             .tab-servos table.servoConfig.servo-config-split { display: table; }
             .tab-servos table.servoConfig.servo-config-a { margin-bottom: 14px; }
@@ -484,7 +484,7 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
         html[data-theme="dark"] .tab-servos input.param-missing, html[data-theme="dark"] .tab-servos select.param-missing { background-color: #2a2a2a !important; }
 
         /* Mini Mixer Override: narrow screens keep the 5-column grid, tighter cells */
-        @media (max-width: 511px) {
+        @media (orientation: portrait) {
             .tab-servos table.mixerOverrideMini th,
             .tab-servos table.mixerOverrideMini td {
                 padding: 3px 1px;
@@ -1203,21 +1203,23 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
                 });
             }
 
-            init() {
-                this.bindConnection();
-                this.bindButtons();
-                this.bindInputs();
-                this._setupDirtyCellDelegation();
-                this.bindMixerMini();
-            }
+             init() {
+                 this.bindConnection();
+                 this.bindButtons();
+                 this.bindInputs();
+                 this.bindMixerMini();
+             }
 
             /* Reset page content to initial state when the shared
                link drops. Called by bridge.js via window.__rfPageDisconnect. */
             resetOnDisconnect() {
                 /* Reset to the pristine first-launch data (empty servo tables),
-                   NOT this.prevConfig (the last FC snapshot). */
+                   NOT this.prevConfig (the last FC snapshot). Write it into
+                   msp.data and re-alias (this.data === this.msp.data) so the
+                   FC cache is cleared too and later code never diverges. */
                 if (this._pristineData) {
-                    this.data = JSON.parse(JSON.stringify(this._pristineData));
+                    this.msp.data = JSON.parse(JSON.stringify(this._pristineData));
+                    this.data = this.msp.data;
                 } else {
                     if (this.data.SERVO_OVERRIDE) {
                         this.data.SERVO_OVERRIDE.forEach((_, i) => {
@@ -1365,7 +1367,7 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
                 }
 
                 this.hideToolbar();
-                this.clearDirtyCells();
+                this._resetDirtyTracking();
                 this.startPolling();
             }
 
@@ -1467,12 +1469,28 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
 
                 const self = this;
                 const onServoValueChanged = (ev) => {
-                    self.updateServoConfig(index, ev && ev.target);
+                    const srcEl = ev && ev.target;
+                    self.updateServoConfig(index, srcEl);
                     self.processWarnings();
-                    self.setDirty();
                     self.updateServoBars();
-                    // Send to FC RAM immediately (no save needed) so the servo
-                    // reacts live as the value is edited.
+                    if (srcEl && srcEl.matches('input[type="checkbox"]')) {
+                        // dirty.md §1-5: 체크박스는 하이라이트 없이 페이지 더티만.
+                        self.setDirty();
+                    } else if (srcEl && srcEl.matches('input[type="number"]')) {
+                        const original = srcEl.dataset.dirtyOriginal;
+                        const current = srcEl.value;
+                        const origNum = parseFloat(original);
+                        const currNum = parseFloat(current);
+                        const origValid = !isNaN(origNum);
+                        const currValid = !isNaN(currNum);
+                        const changed = !((origValid && currValid && origNum === currNum) || (!origValid && !currValid));
+                        if (changed) {
+                            self.setDirty();
+                            srcEl.classList.add('rf-dirty-cell');
+                        } else {
+                            srcEl.classList.remove('rf-dirty-cell');
+                        }
+                    }
                     self.msp.sendCommand(self.msp.buildSetServoConfig(index));
                 };
                 // 'input' = real-time as the user types/spins; 'change' = on commit.
@@ -1481,17 +1499,6 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
                     inp.addEventListener('change', onServoValueChanged);
                 });
                 return tr;
-            }
-
-            // Dirty cell highlighting - event delegation
-            // Exclude servo override angle inputs (RAM-only, reset on reboot)
-            _setupDirtyCellDelegation() {
-                document.querySelector('.tab-servos').addEventListener('input', (e) => {
-                    if (e.target.matches('input[type="number"]') && !e.target.classList.contains('angle')) {
-                        e.target.classList.add('rf-dirty-cell');
-                        this.setChanged();
-                    }
-                });
             }
 
             updateServoConfig(index, srcEl) {
@@ -1553,7 +1560,11 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
                     }
                     const setVal = (sel, v) => {
                         const el = tr.querySelector(sel);
-                        if (el && document.activeElement !== el) el.value = v;
+                        if (el) {
+                            if (document.activeElement !== el) {
+                                el.value = v;
+                            }
+                        }
                     };
                     setVal('.mid', mid); setVal('.min', min); setVal('.max', max);
                     setVal('.rneg', c.rneg); setVal('.rpos', c.rpos); setVal('.speed', c.speed);
@@ -1859,9 +1870,11 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
             setDirty() {
                 if (!this.isDirty) { this.isDirty = true; this.showToolbar(); }
             }
-            clearDirtyCells() {
+            _resetDirtyTracking() {
                 document.querySelectorAll('.tab-servos input[type="number"]').forEach(el => {
+                    if (el.classList.contains('angle')) return;
                     el.classList.remove('rf-dirty-cell');
+                    el.dataset.dirtyOriginal = el.value;
                 });
             }
             showToolbar() { document.querySelector('.tab-servos').classList.remove('toolbar_hidden'); }
@@ -1876,7 +1889,7 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
                     await this.msp.sendCommand(MSP.EEPROM_WRITE, []);
                     this.isDirty = false;
                     this.hideToolbar();
-                    this.clearDirtyCells();
+                    this._resetDirtyTracking();
                 } catch (e) {
                     console.error('Save failed:', e);
                     savingDialog.close();
@@ -1906,9 +1919,10 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
                     }
                     this.renderOverrideRows();
                     this.updateOverrideVisibility();
+                    this.renderMixerMini();
                     this.isDirty = false;
                     this.hideToolbar();
-                    this.clearDirtyCells();
+                    this._resetDirtyTracking();
                 } catch (e) {
                     console.error('Revert failed:', e);
                 }
@@ -1928,7 +1942,10 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
                     this.data.SERVO_CONFIG[i].mid = mid;
                     document.querySelectorAll(`.tab-servos .servoConfig${i}`).forEach((tr) => {
                         const midInput = tr.querySelector('.mid');
-                        if (midInput) midInput.value = mid;
+                        if (midInput) {
+                            midInput.value = mid;
+                            midInput.dataset.dirtyOriginal = midInput.value;
+                        }
                     });
                     const m = this.msp.buildSetServoConfig(i);
                     if (m) this.serial.send(m);
@@ -1945,7 +1962,10 @@ html[data-theme="dark"] .tab-servos .copy-center-section {
                     this.data.SERVO_CONFIG[i].mid = origMid;
                     document.querySelectorAll(`.tab-servos .servoConfig${i}`).forEach((tr) => {
                         const midInput = tr.querySelector('.mid');
-                        if (midInput) midInput.value = origMid;
+                        if (midInput) {
+                            midInput.value = origMid;
+                            midInput.dataset.dirtyOriginal = midInput.value;
+                        }
                     });
                     const m = this.msp.buildSetServoConfig(i);
                     if (m) this.serial.send(m);

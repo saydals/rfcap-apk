@@ -597,10 +597,18 @@
                     const slotIdx=parseInt(e.target.dataset.slot);
                     const slot=this.slots[slotIdx];
                     slot.enabled=e.target.checked;
-                    slot.dirty=true;this.setDirty();
                     if(!slot.enabled){
+                        // Unchecking → always dirty
+                        slot.dirty=true;this.setDirty();
                         slot.enaChannel=-1;
                         slot.adjChannel=-1;
+                    } else {
+                        // Checking → dirty only if already has a saved Aux value
+                        if(slot.enaChannel >= 0){
+                            slot.dirty=true;this.setDirty();
+                        }
+                        // If enaChannel is -1, not dirty yet
+                        // Will become dirty when Aux selected or auto-detected
                     }
                     this.autoDetector.reset();
                     this.updateRowDisabled(slotIdx);

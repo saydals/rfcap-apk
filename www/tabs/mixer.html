@@ -1707,7 +1707,7 @@
                     this.isDirty = false;
                     this.needSave = false;
                     this.hideToolbar();
-                    this.clearDirtyCells();
+                    this._resetDirtyTracking();
                     this.loadDataFromFC();
                 });
             }
@@ -1734,9 +1734,9 @@
                 this.customConfig = false;
                 this.customRules = false;
                 this.hideToolbar();
-                this.clearDirtyCells();
                 this.populateForm();
                 this.renderOverrideRows();
+                this._resetDirtyTracking();
                 const btn = document.getElementById('connect-btn');
                 if (btn) { btn.textContent = 'Connect'; btn.classList.remove('active'); }
                 const statusEl = document.getElementById('connection-status');
@@ -1845,7 +1845,7 @@
                 this.greyMissingParams();
 
                 this.hideToolbar();
-                this.clearDirtyCells();
+                this._resetDirtyTracking();
             }
 
             populateSwashTypes() {
@@ -2227,13 +2227,44 @@
                     });
                 });
 
-                // Dirty cell highlighting - event delegation on .tab-mixer
+                // Dirty cell highlighting - compare against loaded snapshot
                 // Exclude mixerOverrideValue inputs (RAM-only, must not contribute to dirty state)
                 document.querySelector('.tab-mixer').addEventListener('input', (e) => {
                     if (e.target.matches('input[type="number"]') && !e.target.classList.contains('mixerOverrideValue')) {
-                        e.target.classList.add('rf-dirty-cell');
-                        this.setChanged();
+                        const original = e.target.dataset.dirtyOriginal;
+                        const current = e.target.value;
+                        const origNum = parseFloat(original);
+                        const currNum = parseFloat(current);
+                        const origValid = !isNaN(origNum);
+                        const currValid = !isNaN(currNum);
+                        if (origValid && currValid && origNum === currNum) {
+                            e.target.classList.remove('rf-dirty-cell');
+                        } else if (!origValid && !currValid) {
+                            e.target.classList.remove('rf-dirty-cell');
+                        } else {
+                            e.target.classList.add('rf-dirty-cell');
+                            this.setDirty();
+                        }
                     }
+                });
+
+                // dirty.md §2(b): Rates식 공용 change 리스너. 숫자=비교 후 dirty,
+                // 셀렉트=비교 후 dirty(하이라이트 없음). override 계열 제외.
+                document.querySelector('.tab-mixer').addEventListener('change', (e) => {
+                    const t = e.target;
+                    if (t.classList && (t.classList.contains('mixerOverrideValue') ||
+                        t.classList.contains('mixerOverrideEnable') ||
+                        t.classList.contains('mixerPassthroughEnable') ||
+                        t.id === 'mixerOverrideEnableSwitch' ||
+                        t.id === 'mixerPassthroughEnableSwitch')) return;
+                    if (t.matches && t.matches('input[type="number"]')) {
+                        if (!this._numChanged(t)) return;
+                    } else if (t.matches && t.matches('select')) {
+                        if (String(t.value) === String(t.dataset.dirtyOriginal ?? t.value)) return;
+                    } else {
+                        return;
+                    }
+                    this.setDirty();
                 });
             }
 
@@ -2243,6 +2274,30 @@
                 let v = parseFloat(el.value) * scale;
                 if (isNaN(v)) v = 0;
                 return Math.round(v);
+            }
+
+            /* dirty.md §2 확정 메커니즘: 스냅샷(dataset.dirtyOriginal)과 숫자 비교.
+               숫자키패드 DONE은 값이 같아도 input+change를 발사하므로,
+               무조건 setDirty() 하면 터치만으로 더티가 된다(M1). 비교 후 다를 때만 dirty. */
+            _numChanged(el) {
+                if (!el) return false;
+                const origNum = parseFloat(el.dataset.dirtyOriginal);
+                const currNum = parseFloat(el.value);
+                const origValid = !isNaN(origNum);
+                const currValid = !isNaN(currNum);
+                return !((origValid && currValid && origNum === currNum) || (!origValid && !currValid));
+            }
+            _fieldChanged(id) {
+                return this._numChanged(document.getElementById(id));
+            }
+            _selChanged(id) {
+                const el = document.getElementById(id);
+                if (!el) return false;
+                return String(el.value) !== String(el.dataset.dirtyOriginal ?? el.value);
+            }
+            _anyChanged(ids, selIds) {
+                return (ids || []).some(id => this._fieldChanged(id)) ||
+                    (selIds || []).some(id => this._selChanged(id));
             }
 
             getFloat(id) {
@@ -2270,8 +2325,15 @@
                     c.coll_tilt_correction_pos = this.getInt('mixerCollectiveTiltCorrectionPos');
                     c.coll_tilt_correction_neg = this.getInt('mixerCollectiveTiltCorrectionNeg');
                 }
-                this.needSave = true;
-                this.setDirty();
+                if (this._anyChanged(['mixerSwashPhase', 'mixerTotalPitchLimit',
+                        'mixerSwashRollTrim', 'mixerSwashPitchTrim', 'mixerSwashCollectiveTrim',
+                        'mixerCollectiveGeoCorrection', 'mixerTailMotorIdle',
+                        'mixerTailMotorCenterTrim', 'mixerTailRotorCenterTrim',
+                        'mixerCollectiveTiltCorrectionPos', 'mixerCollectiveTiltCorrectionNeg'],
+                        ['mixerMainRotorDirection'])) {
+                    this.needSave = true;
+                    this.setDirty();
+                }
                 this.msp.sendCommand(this.msp.buildSetMixerConfig());
             }
 
@@ -2284,8 +2346,11 @@
                 inputs[1].rate = rate * dir;
                 inputs[1].min = -max;
                 inputs[1].max = max;
-                this.needSave = true;
-                this.setDirty();
+                if (this._anyChanged(['mixerCyclicCalibration', 'mixerCyclicLimit'],
+                        ['mixerAileronDirection'])) {
+                    this.needSave = true;
+                    this.setDirty();
+                }
                 const msg = this.msp.buildSetMixerInput(1);
                 if (msg) this.msp.sendCommand(msg);
             }
@@ -2299,8 +2364,11 @@
                 inputs[2].rate = rate * dir;
                 inputs[2].min = -max;
                 inputs[2].max = max;
-                this.needSave = true;
-                this.setDirty();
+                if (this._anyChanged(['mixerCyclicCalibration', 'mixerCyclicLimit'],
+                        ['mixerElevatorDirection'])) {
+                    this.needSave = true;
+                    this.setDirty();
+                }
                 const msg = this.msp.buildSetMixerInput(2);
                 if (msg) this.msp.sendCommand(msg);
             }
@@ -2323,8 +2391,13 @@
                 inputs[3].min = yawMin;
                 inputs[3].max = yawMax;
                 this.updateYawCalibrationNote();
-                this.needSave = true;
-                this.setDirty();
+                if (this._anyChanged(['mixerTailRotorCalibration',
+                        'mixerTailMotorMinYaw', 'mixerTailMotorMaxYaw',
+                        'mixerTailRotorMinYaw', 'mixerTailRotorMaxYaw'],
+                        ['mixerTailRotorDirection'])) {
+                    this.needSave = true;
+                    this.setDirty();
+                }
                 const msg = this.msp.buildSetMixerInput(3);
                 if (msg) this.msp.sendCommand(msg);
             }
@@ -2338,8 +2411,11 @@
                 inputs[4].rate = rate * dir;
                 inputs[4].min = -max;
                 inputs[4].max = max;
-                this.needSave = true;
-                this.setDirty();
+                if (this._anyChanged(['mixerCollectiveCalibration', 'mixerCollectiveLimit'],
+                        ['mixerCollectiveDirection'])) {
+                    this.needSave = true;
+                    this.setDirty();
+                }
                 const msg = this.msp.buildSetMixerInput(4);
                 if (msg) this.msp.sendCommand(msg);
             }
@@ -2358,9 +2434,14 @@
                 }
             }
 
-            clearDirtyCells() {
+            _resetDirtyTracking() {
                 document.querySelectorAll('.tab-mixer input[type="number"]').forEach(el => {
+                    if (el.classList.contains('mixerOverrideValue')) return;
                     el.classList.remove('rf-dirty-cell');
+                    el.dataset.dirtyOriginal = el.value;
+                });
+                document.querySelectorAll('.tab-mixer select').forEach(el => {
+                    el.dataset.dirtyOriginal = el.value;
                 });
             }
 
@@ -2416,6 +2497,7 @@
                     this.isDirty = false;
                     this.needSave = false;
                     this.hideToolbar();
+                    this._resetDirtyTracking();
                 } catch (e) {
                     console.error('Save failed:', e);
                     savingDialog.close();
@@ -2450,7 +2532,7 @@
                 } catch (e) {
                     console.error('Revert failed:', e);
                 }
-                this.clearDirtyCells();
+                this._resetDirtyTracking();
             }
 
             async resetMixer() {
@@ -2470,7 +2552,7 @@
                 } catch (e) {
                     console.error('Reset failed:', e);
                 }
-                this.clearDirtyCells();
+                this._resetDirtyTracking();
             }
         }
 

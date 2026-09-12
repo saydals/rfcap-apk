@@ -3389,6 +3389,7 @@ body {
 
                 this.savedProfile = this.currentProfile;
                 this.origData = JSON.parse(JSON.stringify(this.msp.data));
+                this._resetDirtyTracking();
             }
 
             fieldToDomId(name) {
@@ -3460,7 +3461,7 @@ body {
                                         this.isChanged = false;
                                         this.isDirty = false;
                                         this.hideToolbar();
-                                        this.clearDirtyCells();
+                                        this._resetDirtyTracking();
                                         await this.activateProfile(index);
                                     };
                                 } else {
@@ -3484,7 +3485,7 @@ body {
                     this.isChanged = false;
                     this.isDirty = false;
                     document.querySelector('.tab-profiles').classList.add('toolbar_hidden');
-                    this.clearDirtyCells();
+                    this._resetDirtyTracking();
                 } catch (e) {
                     console.error('Profile switch failed:', e);
                 } finally {
@@ -3537,15 +3538,36 @@ body {
 
             bindInputs() {
                 const tabArea = document.querySelector('.tab-area');
-                tabArea.addEventListener('change', () => {
+                tabArea.addEventListener('change', (e) => {
+                    if (e.target.matches('input[type="number"]')) {
+                        const original = e.target.dataset.dirtyOriginal;
+                        const current = e.target.value;
+                        const origNum = parseFloat(original);
+                        const currNum = parseFloat(current);
+                        const origValid = !isNaN(origNum);
+                        const currValid = !isNaN(currNum);
+                        if ((origValid && currValid && origNum === currNum) || (!origValid && !currValid)) return;
+                    }
                     this.setChanged();
                 });
 
-                // Dirty cell highlighting - event delegation
+                // Dirty cell highlighting - compare against loaded snapshot
                 document.querySelector('.tab-profiles').addEventListener('input', (e) => {
                     if (e.target.matches('input[type="number"]')) {
-                        e.target.classList.add('rf-dirty-cell');
-                        this.setChanged();
+                        const original = e.target.dataset.dirtyOriginal;
+                        const current = e.target.value;
+                        const origNum = parseFloat(original);
+                        const currNum = parseFloat(current);
+                        const origValid = !isNaN(origNum);
+                        const currValid = !isNaN(currNum);
+                        if (origValid && currValid && origNum === currNum) {
+                            e.target.classList.remove('rf-dirty-cell');
+                        } else if (!origValid && !currValid) {
+                            e.target.classList.remove('rf-dirty-cell');
+                        } else {
+                            e.target.classList.add('rf-dirty-cell');
+                            try { this.setChanged(); } catch (err) { console.error('[Profiles] setChanged failed:', err); }
+                        }
                     }
                 });
 
@@ -3673,13 +3695,15 @@ body {
                 if (!this.isChanged) {
                     this.isDirty = true;
                     this.isChanged = true;
-                    document.querySelector('.tab-profiles').classList.remove('toolbar_hidden');
+                    const root = document.querySelector('.tab-profiles');
+                    if (root) root.classList.remove('toolbar_hidden');
                 }
             }
 
-            clearDirtyCells() {
+            _resetDirtyTracking() {
                 document.querySelectorAll('.tab-profiles input[type="number"]').forEach(el => {
                     el.classList.remove('rf-dirty-cell');
+                    el.dataset.dirtyOriginal = el.value;
                 });
             }
 
@@ -3693,8 +3717,9 @@ body {
                 } else {
                     await this.loadDataFromFC();
                     this.isDirty = false;
+                    this.isChanged = false;
                     this.hideToolbar();
-                    this.clearDirtyCells();
+                    this._resetDirtyTracking();
                 }
             }
 
@@ -3731,7 +3756,7 @@ body {
                 this.isChanged = false;
                 this.isDirty = false;
                 document.querySelector('.tab-profiles').classList.add('toolbar_hidden');
-                this.clearDirtyCells();
+                this._resetDirtyTracking();
             }
 
             readFormData() {
@@ -3871,7 +3896,7 @@ body {
                     window._profilesTab.isDirty = false;
                     window._profilesTab.needSave = false;
                     window._profilesTab.hideToolbar();
-                    window._profilesTab.clearDirtyCells();
+                    window._profilesTab._resetDirtyTracking();
                     window._profilesTab.loadDataFromFC();
                     return;
                 }
@@ -3880,7 +3905,7 @@ body {
                 window._profilesTab.isDirty = false;
                 window._profilesTab.needSave = false;
                 window._profilesTab.hideToolbar();
-                window._profilesTab.clearDirtyCells();
+                window._profilesTab._resetDirtyTracking();
                 window._profilesTab.loadDataFromFC();
             });
         });
