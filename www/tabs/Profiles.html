@@ -2726,6 +2726,15 @@ body {
                             obj[f.key] = (payload[idx + 1] << 8) | payload[idx];
                         }
                         idx += 2;
+                    } else if (f.type === 'i8') {
+                        if (idx >= payload.length) {
+                            this.missingParams.add(f.key);
+                            obj[f.key] = 0;
+                        } else {
+                            const raw = payload[idx];
+                            obj[f.key] = raw > 127 ? raw - 256 : raw;
+                        }
+                        idx += 1;
                     } else {
                         if (idx >= payload.length) {
                             this.missingParams.add(f.key);
@@ -2767,8 +2776,10 @@ body {
                     { key: 'yawPrecompCutoff', type: 'u8' },
                     { key: 'yawFFCyclicGain', type: 'u8' },
                     { key: 'yawFFCollectiveGain', type: 'u8' },
-                    { key: 'yawFFImpulseGain', type: 'u8' },
-                    { key: 'yawFFImpulseDecay', type: 'u8' },
+                    // Legacy dummy slots (always 0 on current FW). Real impulse
+                    // values now live in the 2 tail bytes appended after inertia.
+                    { key: 'yawFFImpulseGain_legacy', type: 'u8' },
+                    { key: 'yawFFImpulseDecay_legacy', type: 'u8' },
                     { key: 'pitchFFCollectiveGain', type: 'u8' },
                     { key: 'levelAngleStrength', type: 'u8' },
                     { key: 'levelAngleLimit', type: 'u8' },
@@ -2784,7 +2795,9 @@ body {
                     { key: 'btermCutoffPitch', type: 'u8' },
                     { key: 'btermCutoffYaw', type: 'u8' },
                     { key: 'yaw_inertia_precomp_gain', type: 'u8' },
-                    { key: 'yaw_inertia_precomp_cutoff', type: 'u8' }
+                    { key: 'yaw_inertia_precomp_cutoff', type: 'u8' },
+                    { key: 'yawFFImpulseGain', type: 'i8' },
+                    { key: 'yawFFImpulseDecay', type: 'u8' }
                 ];
                 this.data.PID_PROFILE = this._rd(resp.payload, fields);
                 return this.data.PID_PROFILE;
@@ -2855,6 +2868,7 @@ body {
 
             buildSetPIDProfile() {
                 const p = this.data.PID_PROFILE;
+                const toU8 = (v) => ((Math.round(v) % 256) + 256) % 256;
                 const payload = [
                     p.pid_mode,
                     p.error_decay_time_ground,
@@ -2881,8 +2895,9 @@ body {
                     p.yawPrecompCutoff,
                     p.yawFFCyclicGain,
                     p.yawFFCollectiveGain,
-                    p.yawFFImpulseGain,
-                    p.yawFFImpulseDecay,
+                    // Legacy dummy slots: must stay 0 for compat
+                    0,
+                    0,
                     p.pitchFFCollectiveGain,
                     p.levelAngleStrength,
                     p.levelAngleLimit,
@@ -2898,9 +2913,12 @@ body {
                     p.btermCutoffPitch,
                     p.btermCutoffYaw,
                     p.yaw_inertia_precomp_gain,
-                    p.yaw_inertia_precomp_cutoff
+                    p.yaw_inertia_precomp_cutoff,
+                    toU8(p.yawFFImpulseGain),
+                    p.yawFFImpulseDecay
                 ];
-                return buildMSPMessage(95, payload);
+                // Mask every byte (signed gain above is wrapped to 2's complement)
+                return buildMSPMessage(95, payload.map(v => v & 0xFF));
             }
 
             buildSetPIDTuning() {
