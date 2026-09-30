@@ -1104,7 +1104,7 @@
                 <div class="gui_box box-auto-connect">
                     <div class="gui_box_titlebar">Options</div>
                     <div class="auto-connect-setting">
-                        <label for="ble-auto-connect-toggle">Auto Connect at Start</label>
+                        <label for="ble-auto-connect-toggle">Auto Connect</label>
                         <label class="toggle-switch">
                             <input type="checkbox" id="ble-auto-connect-toggle">
                             <span class="toggle-slider"></span>
@@ -1597,6 +1597,7 @@ class StatusTab {
         this.bleRefreshList = null;
         this.usbRefreshList = null;
         this.lastConn = this._loadLastConn();
+        this._autoReconnectTimer = null;
 
         this.init();
     }
@@ -1713,6 +1714,7 @@ class StatusTab {
     /* Master connect: adopts an already-live shared link, redials the last
        transport picked from a box, or falls back to Web Serial. */
     async connectFromTopPanel() {
+        this._stopAutoReconnect && this._stopAutoReconnect();
         const br = window.__RF_BRIDGE__;
         /* B-parity: hub state is the ONLY truth. A local flag saying
            "connected" with br.state.on===false is exactly the ghost-Connected
@@ -1763,6 +1765,7 @@ class StatusTab {
 
     /* Mark a box as owning an already-live shared link without re-dialling. */
     async adoptLink(type, device) {
+        this._stopAutoReconnect && this._stopAutoReconnect();
         if (device) {
             if (type === 'spp') { this.sppDevice = device; this.sppConnected = true; }
             else if (type === 'ble') { this.bleDevice = device; this.bleConnected = true; }
@@ -1872,6 +1875,7 @@ class StatusTab {
     }
 
     async onConnect() {
+        this._stopAutoReconnect && this._stopAutoReconnect();
         /* Batched tab loading (P0): all init reads go out in ONE combined
            MSP write instead of 8 sequential round trips - the same
            batchCodes() pattern the original configurator uses. If the batch
@@ -1923,6 +1927,7 @@ class StatusTab {
         this.resetArmingBox();
         this.resetSensors();
         this.clearLiveMspData();
+        this._startAutoReconnect && this._startAutoReconnect();
     }
 
     /* ---- INFO BOX ---- */
@@ -2023,6 +2028,29 @@ class StatusTab {
                 } catch(e) {}
             });
         } catch(e) {}
+
+        const _self = this;
+        this._stopAutoReconnect = function() {
+            if (_self._autoReconnectTimer) {
+                clearInterval(_self._autoReconnectTimer);
+                _self._autoReconnectTimer = null;
+            }
+        };
+        this._startAutoReconnect = function() {
+            if (_self._autoReconnectTimer) return;
+            const last = _self.lastConn;
+            if (!last || !last.device) return;
+            _self._autoReconnectTimer = setInterval(() => {
+                if (!_self._autoReconnectEnabled()) return;
+                if (_self.isAnyTransportConnected()) { _self._stopAutoReconnect(); return; }
+                if (last.type === 'spp') _self.sppConnect(last.device, _self.sppSetStatus, null, (ok) => _self.onSppConnectResult(last.device, ok));
+                else if (last.type === 'ble') _self.bleConnect(last.device, BLE_PROFILES, _self.bleSetStatus, null).then((ok) => _self.onBleConnectResult(last.device, ok));
+                else if (last.type === 'usb') _self.usbConnect(last.device, _self.usbSetStatus, null, (ok) => _self.onUsbConnectResult(last.device, ok));
+            }, 10000);
+        };
+        this._autoReconnectEnabled = function() {
+            try { return localStorage.getItem('rfcap_ble_auto_connect') !== '0'; } catch(e) { return false; }
+        };
     }
 
     updateArmingBox() {
@@ -2435,6 +2463,7 @@ class StatusTab {
 
         scanBtn.addEventListener('click', async () => {
             if (sppScanning) return;
+            this._stopAutoReconnect && this._stopAutoReconnect();
             sppScanning = true;
             scanBtn.classList.add('scan-active');
             scanBtn.textContent = '⏳ Scanning...';
@@ -2488,6 +2517,7 @@ class StatusTab {
             this.lastConn = { type: 'spp', device: dev };
             this._bumpConnCount(dev);
             this._saveLastConn('spp', dev);
+            this._stopAutoReconnect && this._stopAutoReconnect();
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.sppConnected = false;
@@ -2661,6 +2691,7 @@ class StatusTab {
         this.usbRefreshList = () => refreshUsbList(currentDevices);
 
         scanBtn.addEventListener('click', async () => {
+            this._stopAutoReconnect && this._stopAutoReconnect();
             scanBtn.classList.add('scan-active');
             scanBtn.textContent = '⏳ Scanning...';
             this.usbSetStatus('scanning', 'Scanning USB serial devices...');
@@ -2707,6 +2738,7 @@ class StatusTab {
             this.usbUnsub = window.UsbSerial.subscribeRawData((data) => {
                 if (this.msp && this.msp.parser) this.msp.parser.feed(new Uint8Array(data));
             });
+            this._stopAutoReconnect && this._stopAutoReconnect();
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.usbConnected = false;
@@ -2818,6 +2850,7 @@ class StatusTab {
                 return;
             }
 
+            this._stopAutoReconnect && this._stopAutoReconnect();
             bleScanning = true;
             bleDevices = [];
             scanBtn.classList.add('scan-active');
@@ -2916,6 +2949,7 @@ class StatusTab {
             this.lastConn = { type: 'ble', device: dev };
             this._bumpConnCount(dev);
             this._saveLastConn('ble', dev);
+            this._stopAutoReconnect && this._stopAutoReconnect();
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.bleConnected = false;
