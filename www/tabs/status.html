@@ -1915,15 +1915,14 @@ class StatusTab {
 
     onDisconnect() {
         this.stopPolling();
-        /* B-parity: drop the local transport flags here too — the top panel
-           reset is not enough. Any box that still thinks its transport is up
-           after the hub said down repaints "Connected" on the next refresh. */
+        this.serial.connected = false;
         this.sppConnected = false; this.sppDevice = null;
         this.bleConnected = false; this.bleDevice = null;
         this.usbConnected = false; this.usbDevice = null;
         this.resetInfoBox();
         this.resetArmingBox();
         this.resetSensors();
+        this.clearLiveMspData();
     }
 
     /* ---- INFO BOX ---- */
@@ -1943,7 +1942,17 @@ class StatusTab {
 
     resetInfoBox() {
         ['info-craft-name','info-target-name','info-board-name','info-fc-version',
-         'info-api-version','info-battery','info-current','info-charge'].forEach(id => setText(id, '—'));
+         'info-api-version','info-flight-count','info-flight-time',
+         'info-battery','info-current','info-charge','info-config-state'].forEach(id => setText(id, '—'));
+    }
+
+    clearLiveMspData() {
+        const d = this.msp && this.msp.data;
+        if (!d) return;
+        d.ANALOG = { voltage: null, amperage: null, chargeLevel: null, mahDrawn: 0, rssi: 0 };
+        d.STATUS = { statusReceived: false, isArmed: false, armingDisableFlags: 0, armingDisableCount: 0, activeSensors: 0 };
+        if (d.SENSOR_DATA) d.SENSOR_DATA.kinematics = [0, 0, 0];
+        if (d.CONFIG) { d.CONFIG.name = ''; d.CONFIG.targetName = ''; d.CONFIG.boardName = ''; d.CONFIG.flightControllerVersion = ''; d.CONFIG.apiVersion = ''; }
     }
 
     /* Sensors (detection bar + attitude readouts) start in the OFF state and
