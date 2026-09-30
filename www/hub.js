@@ -29,6 +29,15 @@
 
     /* ---------- RfBle class (Betaflight-derived) ---------- */
     const pluginBle = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.RfBle) || null;
+    /* rfconfigurator parity: SPP/BLE must be *verified* (MSP handshake),
+       not just socket-open. State order: idle -> connecting -> verifying ->
+       connected. `on:true` is broadcast ONLY after verify. */
+    const MSP_PROBE_API_VERSION = 1;    // MSP_API_VERSION
+    const VERIFY_TIMEOUT_MS = 3500;     // must see one MSP frame within this
+    const CONNECT_TIMEOUT_BLE_MS = 20000;
+    const CONNECT_TIMEOUT_SPP_MS = 12000;
+    const KEEPALIVE_MS = 3000;          // rfconfigurator _KEEPALIVE_INTERVAL_MS
+    const LINK_LOST_MS = 6000;          // no-RX this long -> drop link
 
     function base64ToUint8Array(b64) {
         if (!b64) return new Uint8Array(0);
@@ -55,23 +64,38 @@
             this.bytesReceived = 0;
             this.connectionType = null;
             this.deviceName = null;   /* friendly name resolved on connect */
+            /* B-parity guards */
+            this._connecting = false;     /* single-flight connect lock */
+            this._manualDisc = false;     /* true while user asked to drop */
+            this._lastRx = 0;             /* Date.now() of last inbound byte */
 
             if (pluginBle) {
-                pluginBle.addListener('dataReceived', (event) => {
+                const onNativeData = (event) => {
                     const data = base64ToUint8Array(event && event.data);
+                    if (!data || !data.length) return;
                     this.bytesReceived += data.length;
+                    this._lastRx = Date.now();
                     const ev = new CustomEvent('receive', { detail: data });
                     /* P3: carry the raw native base64 so the fan-out can pass it
                        to the iframes unchanged (no decode -> re-encode cycle) */
                     ev.b64 = event && event.data;
                     this.dispatchEvent(ev);
-                });
-                pluginBle.addListener('disconnected', () => {
+                };
+                const onNativeDisc = () => {
+                    const wasManual = this._manualDisc;
                     this.connected = false;
                     this.connectionId = null;
                     this.deviceName = null;
-                    this.dispatchEvent(new CustomEvent('disconnect', { detail: true }));
-                });
+                    this.dispatchEvent(new CustomEvent('disconnect', { detail: wasManual ? 'manual' : true }));
+                };
+                /* current native names … */
+                pluginBle.addListener('dataReceived', onNativeData);
+                pluginBle.addListener('disconnected', onNativeDisc);
+                /* … plus legacy names emitted by older plugin builds / RfBle.js
+                   contract ('rfData' / 'disconnect'). Listening to both makes
+                   the hub work no matter which native build is installed. */
+                try { pluginBle.addListener('rfData', onNativeData); } catch (e) {}
+                try { pluginBle.addListener('disconnect', onNativeDisc); } catch (e) {}
             }
         }
 
@@ -137,12 +161,20 @@
 
         async connect(path, options) {
             if (!pluginBle) return false;
+            /* B-parity: single-flight. A second tap while connecting must NOT
+               open a second socket (that is how "looks connected but dead"
+               zombie links were born). */
+            if (this._connecting) {
+                console.warn('[RfBLE] connect already in progress - ignoring duplicate');
+                return false;
+            }
 
             if (path && path.startsWith('spp:')) {
                 return await this.connectSPP(path.substring(4));
             }
 
             this.deviceName = null;   /* stale name from a previous session */
+            this._manualDisc = false;
 
             if (!this.devices.length) await this.getDevices();
 
@@ -153,18 +185,33 @@
                 return false;
             }
 
+            this._connecting = true;
+            /* B-parity: connect timeout (rfconfigurator: 10s + failure cb). */
+            let timer = null;
+            const timeoutMs = CONNECT_TIMEOUT_BLE_MS;
+            const timeoutP = new Promise(function(_, reject) {
+                timer = setTimeout(function() { reject(new Error('BLE connect timeout')); }, timeoutMs);
+            });
             try {
-                const result = await pluginBle.connect({
-                    address: device.address,
-                    serviceUuid: device.serviceUuid,
-                    writeCharacteristic: device.writeCharacteristic,
-                    notifyCharacteristic: device.notifyCharacteristic
-                });
+                const result = await Promise.race([
+                    pluginBle.connect({
+                        address: device.address,
+                        serviceUuid: device.serviceUuid,
+                        writeCharacteristic: device.writeCharacteristic,
+                        notifyCharacteristic: device.notifyCharacteristic
+                    }),
+                    timeoutP
+                ]);
+                if (timer) clearTimeout(timer);
                 const success = !!(result && result.success);
+                /* NOTE: socket-open only. RF.state goes on:true ONLY after the
+                   MSP handshake in H.bleConnect (rfconfigurator parity) — this
+                   flag drives TX gating, not the UI. */
                 this.connected = success;
                 this.connectionId = success ? device.path : null;
                 this.bytesSent = 0;
                 this.bytesReceived = 0;
+                this._lastRx = success ? Date.now() : 0;
                 this.bitrate = (options && options.baudRate) || 115200;
                 if (success) {
                     /* Native connect() returns the cached remote name (see
@@ -175,31 +222,38 @@
                 this.dispatchEvent(new CustomEvent('connect', { detail: success }));
                 return success;
             } catch (error) {
+                if (timer) clearTimeout(timer);
                 console.error('[RfBLE] Failed to connect', error);
+                try { await pluginBle.disconnect().catch(function() {}); } catch (e) {}
                 this.connected = false;
                 this.connectionId = null;
                 this.dispatchEvent(new CustomEvent('connect', { detail: false }));
                 return false;
+            } finally {
+                this._connecting = false;
             }
         }
 
         async disconnect() {
             if (!pluginBle) return false;
+            this._manualDisc = true;   /* suppress the link-lost watchdog */
             if (!this.connected) return true;
             try {
                 const result = await pluginBle.disconnect();
                 this.connected = false;
                 this.connectionId = null;
                 this.deviceName = null;
-                this.dispatchEvent(new CustomEvent('disconnect', { detail: !!(result && result.success) }));
+                this.dispatchEvent(new CustomEvent('disconnect', { detail: 'manual' }));
                 return true;
             } catch (error) {
                 console.error('[RfBLE] Failed to disconnect', error);
                 this.connected = false;
                 this.connectionId = null;
                 this.deviceName = null;
-                this.dispatchEvent(new CustomEvent('disconnect', { detail: false }));
+                this.dispatchEvent(new CustomEvent('disconnect', { detail: 'manual' }));
                 return false;
+            } finally {
+                this._manualDisc = false;
             }
         }
 
@@ -220,40 +274,67 @@
 
         async connectSPP(address) {
             if (!pluginBle) return false;
+            if (this._connecting) {
+                console.warn('[RfBLE] SPP connect already in progress - ignoring duplicate');
+                return false;
+            }
             this.deviceName = null;   /* stale name from a previous session */
+            this._manualDisc = false;
+            this._connecting = true;
+            let timer = null;
+            const timeoutP = new Promise(function(_, reject) {
+                timer = setTimeout(function() { reject(new Error('SPP connect timeout')); }, CONNECT_TIMEOUT_SPP_MS);
+            });
             try {
-                const result = await pluginBle.sppConnect({ address: address });
+                const result = await Promise.race([
+                    pluginBle.sppConnect({ address: address }),
+                    timeoutP
+                ]);
+                if (timer) clearTimeout(timer);
                 const success = !!(result && result.success);
                 if (success) {
                     this.connected = true;
                     this.connectionId = address;
                     this.connectionType = 'spp';
                     this.deviceName = (result && result.name) || null;
+                    this._lastRx = Date.now();
+                } else {
+                    this.connected = false;
+                    this.connectionId = null;
                 }
                 return success;
             } catch (error) {
+                if (timer) clearTimeout(timer);
                 console.error('[RfBLE] SPP connect failed', error);
+                try { await pluginBle.sppDisconnect().catch(function() {}); } catch (e) {}
+                this.connected = false;
+                this.connectionId = null;
                 return false;
+            } finally {
+                this._connecting = false;
             }
         }
 
         async disconnectSPP() {
             if (!pluginBle) return false;
+            this._manualDisc = true;
             try {
                 const result = await pluginBle.sppDisconnect();
                 this.connected = false;
                 this.connectionId = null;
                 this.connectionType = null;
                 this.deviceName = null;
-                this.dispatchEvent(new CustomEvent('disconnect', { detail: !!(result && result.success) }));
+                this.dispatchEvent(new CustomEvent('disconnect', { detail: 'manual' }));
                 return true;
             } catch (error) {
                 console.error('[RfBLE] SPP disconnect failed', error);
                 this.connected = false;
                 this.connectionId = null;
                 this.deviceName = null;
-                this.dispatchEvent(new CustomEvent('disconnect', { detail: false }));
+                this.dispatchEvent(new CustomEvent('disconnect', { detail: 'manual' }));
                 return false;
+            } finally {
+                this._manualDisc = false;
             }
         }
 
@@ -606,17 +687,32 @@
         };
     }
 
-    /* ---------- BLE/SPU data events from RfBle ---------- */
+    /* ---------- BLE/SPP data events from RfBle ---------- */
     if (rfBle) {
         rfBle.addEventListener('receive', function(ev) {
             var u8 = ev.detail;
             bumpLinkActivity();
+            if (rfBle) rfBle._lastRx = Date.now();
+            if (verifyWait) {
+                /* MSP handshake in progress: feed the probe parser only. */
+                try { verifyOnBytes(u8); } catch (e) {}
+            }
             /* P3: forward the native base64 as-is when available - the old path
                decoded it to bytes just to re-encode it again for the iframes */
             broadcastData({ t: 'd', b64: ev.b64 || uint8ArrayToBase64(u8) });
         });
-        rfBle.addEventListener('disconnect', function() {
-            setState({ on: false, kind: null, name: null, detail: 'link lost' });
+        rfBle.addEventListener('disconnect', function(ev) {
+            var manual = (ev && (ev.detail === 'manual')) || dropInFlight;
+            if (typeof verifyWait !== 'undefined' && verifyWait && verifyWait.finish) {
+                try { verifyWait.finish(false); } catch (e) {}
+            }
+            if (!manual && RF.state && RF.state.on &&
+                (RF.state.kind === 'ble' || RF.state.kind === 'spp')) {
+                /* rfconfigurator parity: unexpected native loss -> mark lost. */
+                setState({ on: false, kind: null, name: null, detail: 'link lost' });
+            } else if (manual && !(RF.state && RF.state.on)) {
+                setState({ on: false, kind: null, name: null, detail: null });
+            }
             if (_bleOnDisconnect) { try { _bleOnDisconnect(); } catch(e){} }
             _bleOnDisconnect = null;
         });
@@ -638,19 +734,90 @@
            list is populated via usbList polling instead. */
     }
 
-    /* ---------- BLE keepalive (P4) ----------
-       Many FC-side BLE modules drop the link after long silence. The original
-       configurator pokes the link with an MSP_STATUS request every ~15s of
-       idle time (_startBleKeepalive). Track link activity (any MSP write or
-       received byte) and send a tiny STATUS probe when idle for too long. */
+    /* ---------- BLE keepalive + link-lost watchdog (B-parity) ----------
+       rfconfigurator serial.js: _startBleKeepalive() pings the link every 3s
+       and tears it down after ~10s of silence (callback_disconnect + GUI
+       timeout -> onClosed). Same two jobs here:
+         1. keepalive: STATUS probe if no MSP traffic for KEEPALIVE_MS
+            (replaces the old 15s idle poke — 15s is longer than the FC-side
+            supervision timeout on several BT modules, so links died first).
+         2. watchdog: if RF.state says connected but nothing arrived for
+            LINK_LOST_MS, the link is dead even without a native event —
+            drop RF.state so status/header stop lying.
+       Manual disconnects (dropInFlight) suppress the watchdog. While a tab
+       owns an open MSP stream (wantsData) we must NOT declare loss — same
+       reason the fan-out prefers children with wantsData. */
     var _lastLinkActivity = Date.now();
     var _keepaliveBusy = false;
+    var dropInFlight = false;   /* true while bt/bleDisconnect runs */
+    var verifyWait = null;      /* { resolve } while MSP handshake runs */
+    var verifyOnBytes = null;   /* fed by the receive handler above */
     function bumpLinkActivity() { _lastLinkActivity = Date.now(); }
-    /* $M< len=0 code=101(MSP_STATUS) crc=101 */
+    /* $M< len=0 code=101(MSP_STATUS) crc=101 — any valid MSP frame proves the FC. */
     var MSP_STATUS_PROBE = new Uint8Array([0x24, 0x4D, 0x3C, 0x00, 101, 101]);
+    /* Minimal MSP-API_VERSION probe: $M< 0x00 0x01 0x01 */
+    var MSP_API_PROBE = new Uint8Array([0x24, 0x4D, 0x3C, 0x00, MSP_PROBE_API_VERSION, MSP_PROBE_API_VERSION]);
+    /* Any MSP frame start answers the probe ($M> reply or $M! error). */
+    function looksLikeMsp(buf, startIdx) {
+        for (var i = startIdx; i + 2 < buf.length; i++) {
+            if (buf[i] === 0x24 && buf[i + 1] === 0x4D &&
+                (buf[i + 2] === 0x3E || buf[i + 2] === 0x21 || buf[i + 2] === 0x3C)) return true;
+        }
+        return false;
+    }
+    /* Wait for one MSP frame after socket-open (rfconfigurator: success
+       callback only fires after MSP_API_VERSION + FC_VARIANT round-trip).
+       Resolves true on verify, false on timeout / disconnect. */
+    function verifyLink(kind, sendFn) {
+        return new Promise(function(resolve) {
+            var done = false;
+            var seen = [];
+            verifyOnBytes = function(u8) {
+                for (var i = 0; i < u8.length; i++) seen.push(u8[i]);
+                if (seen.length > 512) seen.splice(0, seen.length - 512);
+                if (looksLikeMsp(seen, 0)) finish(true);
+            };
+            var timer = setTimeout(function() { finish(false); }, VERIFY_TIMEOUT_MS);
+            function finish(ok) {
+                if (done) return;
+                done = true;
+                try { clearTimeout(timer); } catch (e) {}
+                verifyWait = null;
+                verifyOnBytes = null;
+                resolve(ok);
+            }
+            /* NOTE: native 'disconnect' during verify also fails the handshake —
+               handled by the rfBle 'disconnect' listener above, which calls
+               verifyWait.finish(false). */
+            verifyWait = { finish: finish };
+            try {
+                Promise.resolve()
+                    .then(function() { return sendFn(MSP_API_PROBE); })
+                    .catch(function() { finish(false); });
+            } catch (e) { finish(false); }
+        });
+    }
     setInterval(function() {
-        if (!RF.state.on || RF.state.kind !== 'ble' || _keepaliveBusy) return;
-        if (Date.now() - _lastLinkActivity < 15000) return;
+        if (!(RF.state && RF.state.on)) return;
+        var kind = RF.state.kind;
+        var idle = Date.now() - _lastLinkActivity;
+        if ((kind === 'ble' || kind === 'spp') && !dropInFlight) {
+            var anyWants = false;
+            try {
+                RF.children.forEach(function(c) { if (c && c.wantsData) anyWants = true; });
+            } catch (e) {}
+            if (idle >= LINK_LOST_MS && !anyWants && !verifyWait) {
+                console.warn('[hub] link watchdog: no RX for ' + idle + 'ms — marking lost');
+                try {
+                    if (kind === 'spp') { try { rfBle.disconnectSPP(); } catch (e) {} }
+                    else { try { rfBle.disconnect(); } catch (e) {} }
+                } catch (e) {}
+                setState({ on: false, kind: null, name: null, detail: 'link lost (timeout)' });
+                return;
+            }
+        }
+        if (kind !== 'ble' || _keepaliveBusy || verifyWait) return;
+        if (idle < KEEPALIVE_MS) return;
         _keepaliveBusy = true;
         bumpLinkActivity();   /* do not re-poke every tick while in flight */
         try {
@@ -754,21 +921,46 @@
         },
 
         async btList() {
+            if (!rfBle) return { devices: [] };
             var devs = await rfBle.getBondedDevices();
+            /* rfconfigurator parity (spp_central: permission-gated list with
+               error surfacing): never resolve an empty list as success when
+               the plugin call itself failed — throw so the status tab shows
+               the real reason instead of "no devices". */
+            if (!devs) throw new Error('SPP list failed');
             return { devices: devs.filter(function(d) { return d && d.name; }) };
         },
 
         async btConnect(msg) {
-            var r = await rfBle.connectSPP(msg.address);
-            if (!r) throw new Error('SPP connect failed');
+            if (!rfBle) throw new Error('RfBle not available');
+            if (rfBle._connecting || verifyWait) throw new Error('connect already in progress');
+            if (RF.state && RF.state.on) throw new Error('already connected');
+            setState({ on: false, kind: null, name: null, detail: null });
+            var okSocket = await rfBle.connectSPP(msg.address);
+            if (!okSocket) throw new Error('SPP connect failed');
+            /* rfconfigurator parity: SPP socket-open is NOT connected — the
+               FC must answer an MSP probe first. On failure the socket is
+               torn down so no zombie link stays open behind a green dot. */
+            bumpLinkActivity();
+            var okMsp = await verifyLink('spp', function(probe) { return rfBle.sendSPP(probe); });
+            if (!okMsp) {
+                try { await rfBle.disconnectSPP(); } catch (e) {}
+                setState({ on: false, kind: null, name: null, detail: 'SPP verify failed (no MSP reply)' });
+                throw new Error('SPP verify failed (no MSP reply)');
+            }
             var nm = (rfBle.deviceName || msg.name || msg.address);
             setState({ on: true, kind: 'spp', name: nm, detail: msg.address });
             try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'spp', address: msg.address, name: nm })); } catch (e) {}
-            return r;
+            return { name: nm };
         },
 
         async btDisconnect() {
-            if (RF.state.kind === 'spp') { try { await rfBle.disconnectSPP(); } catch (e) {} }
+            dropInFlight = true;
+            try {
+                if (RF.state.kind === 'spp') { try { await rfBle.disconnectSPP(); } catch (e) {} }
+            } finally {
+                dropInFlight = false;
+            }
             setState({ on: false, kind: null, name: null, detail: null });
             return {};
         },
@@ -801,19 +993,35 @@
 
         async bleConnect(msg) {
             if (!rfBle) throw new Error('RfBle not available');
+            if (rfBle._connecting || verifyWait) throw new Error('connect already in progress');
+            if (RF.state && RF.state.on) throw new Error('already connected');
+            setState({ on: false, kind: null, name: null, detail: null });
             var device = { path: 'bluetooth-' + msg.deviceId, address: msg.deviceId };
-            var r = await rfBle.connect(device.path, { baudRate: 115200 });
-            if (r) {
-                var nm = (rfBle.deviceName || msg.name || msg.deviceId);
-                setState({ on: true, kind: 'ble', name: nm, detail: msg.deviceId });
-                try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'ble', address: msg.deviceId, name: nm })); } catch (e) {}
-                return { name: nm };
+            var okSocket = await rfBle.connect(device.path, { baudRate: 115200 });
+            if (!okSocket) throw new Error('BLE connect failed');
+            /* rfconfigurator parity (serial.js connectBLE: success callback
+               only fires after API_VERSION + FC_VARIANT + version check).
+               Here: one MSP frame after GATT-ready == verified link. */
+            bumpLinkActivity();
+            var okMsp = await verifyLink('ble', function(probe) { return rfBle.send(probe); });
+            if (!okMsp) {
+                try { await rfBle.disconnect(); } catch (e) {}
+                setState({ on: false, kind: null, name: null, detail: 'BLE verify failed (no MSP reply)' });
+                throw new Error('BLE verify failed (no MSP reply)');
             }
-            return {};
+            var nm = (rfBle.deviceName || msg.name || msg.deviceId);
+            setState({ on: true, kind: 'ble', name: nm, detail: msg.deviceId });
+            try { localStorage.setItem('rf-last-conn', JSON.stringify({ kind: 'ble', address: msg.deviceId, name: nm })); } catch (e) {}
+            return { name: nm };
         },
 
         async bleDisconnect() {
-            if (RF.state.kind === 'ble') { try { await rfBle.disconnect(); } catch (e) {} }
+            dropInFlight = true;
+            try {
+                if (RF.state.kind === 'ble') { try { await rfBle.disconnect(); } catch (e) {} }
+            } finally {
+                dropInFlight = false;
+            }
             setState({ on: false, kind: null, name: null, detail: null });
             return {};
         },

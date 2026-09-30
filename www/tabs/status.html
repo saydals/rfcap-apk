@@ -1713,10 +1713,22 @@ class StatusTab {
     /* Master connect: adopts an already-live shared link, redials the last
        transport picked from a box, or falls back to Web Serial. */
     async connectFromTopPanel() {
+        const br = window.__RF_BRIDGE__;
+        /* B-parity: hub state is the ONLY truth. A local flag saying
+           "connected" with br.state.on===false is exactly the ghost-Connected
+           bug — heal it FIRST, before isAnyTransportConnected() can
+           short-circuit on the stale flag and do nothing. */
+        const linkUp = !!(br && br.state && br.state.on);
+        if (!linkUp && (this.sppConnected || this.bleConnected || this.usbConnected || this.serial.connected)) {
+            this.sppConnected = false; this.sppDevice = null;
+            this.bleConnected = false; this.bleDevice = null;
+            this.usbConnected = false; this.usbDevice = null;
+            this.serial.connected = false;
+            this.setTopPanelState(false);
+            this.refreshTransportBoxes();
+        }
         if (this.isAnyTransportConnected()) return;
 
-        const br = window.__RF_BRIDGE__;
-        const linkUp = !!(br && br.state && br.state.on);
         const last = this.lastConn;
 
         if (linkUp && last && (!br.state.kind || br.state.kind === last.type)) {
@@ -1837,10 +1849,14 @@ class StatusTab {
     refreshTransportBoxes() {
         const br = window.__RF_BRIDGE__;
         const st = (br && br.state) || {};
-        const kind = this.sppConnected ? 'spp'
-                   : this.bleConnected ? 'ble'
-                   : this.usbConnected ? 'usb'
-                   : (st.on ? st.kind : null);
+        /* B-parity: hub truth wins. Local flags are demoted to a hint that
+           only counts while the hub also says the link is up — otherwise a
+           stale flag keeps painting "Connected" after a silent drop. */
+        const linkUp = !!st.on;
+        const kind = (linkUp && this.sppConnected) ? 'spp'
+                   : (linkUp && this.bleConnected) ? 'ble'
+                   : (linkUp && this.usbConnected) ? 'usb'
+                   : (linkUp ? st.kind : null);
 
         if (kind === 'spp' && this.sppSetStatus) {
             this.sppSetStatus('connected', `Connected: ${st.name || (this.sppDevice && this.sppDevice.name) || 'SPP'}`);
@@ -1899,6 +1915,12 @@ class StatusTab {
 
     onDisconnect() {
         this.stopPolling();
+        /* B-parity: drop the local transport flags here too — the top panel
+           reset is not enough. Any box that still thinks its transport is up
+           after the hub said down repaints "Connected" on the next refresh. */
+        this.sppConnected = false; this.sppDevice = null;
+        this.bleConnected = false; this.bleDevice = null;
+        this.usbConnected = false; this.usbDevice = null;
         this.resetInfoBox();
         this.resetArmingBox();
         this.resetSensors();
@@ -2481,9 +2503,36 @@ class StatusTab {
 
             connect({
                 success: () => {
-                    setSppStatus('connected', `Connected: ${device.address}`);
-                    if (disconnectBtn) disconnectBtn.disabled = false;
-                    onResult(true);
+                    /* B-parity / rfconfigurator serial.js parity: an SPP
+                       socket-up callback is NOT proof of an FC. The hub runs
+                       its own MSP handshake before broadcasting st{on:true},
+                       but this legacy direct path has no hub — so verify with
+                       one MSP_API_VERSION round-trip here as well. On silence
+                       the socket is torn down and the box keeps showing the
+                       failure instead of a fake "Connected". */
+                    const probeOk = () => new Promise((res) => {
+                        let done = false;
+                        const finish = (ok) => {
+                            if (done) return;
+                            done = true;
+                            try { clearTimeout(timer); } catch (e) {}
+                            try { window.removeEventListener('__rfMspFrame', onFrame); } catch (e2) {}
+                            res(ok);
+                        };
+                        const onFrame = () => finish(true);
+                        try { window.addEventListener('__rfMspFrame', onFrame); } catch (e) {}
+                        const timer = setTimeout(() => finish(false), 3500);
+                        try {
+                            const apiProbe = new Uint8Array([0x24, 0x4D, 0x3C, 0x00, 0x01, 0x01]);
+                            if (window.BluetoothSerial && window.BluetoothSerial.write) {
+                                window.BluetoothSerial.write(apiProbe.buffer, () => {}, () => finish(false));
+                            } else if (window.cordova?.plugins?.bluetoothSerial?.write) {
+                                window.cordova.plugins.bluetoothSerial.write(apiProbe.buffer, () => {}, () => finish(false));
+                            } else {
+                                finish(false);
+                            }
+                        } catch (e) { finish(false); }
+                    });
                     // Subscribe to incoming data
                     const subscribe = window.BluetoothSerial || window.cordova?.plugins?.bluetoothSerial;
                     if (subscribe) {
@@ -2491,13 +2540,39 @@ class StatusTab {
                             (data) => {
                                 if (this.msp && this.msp.parser) {
                                     const bytes = new Uint8Array(data);
+                                    /* B-parity: verify gate must see a real MSP
+                                       frame start ($M + direction), not just any
+                                       bytes — a silent link can still dribble
+                                       noise. */
+                                    for (let i = 0; i + 2 < bytes.length; i++) {
+                                        if (bytes[i] === 0x24 && bytes[i + 1] === 0x4D &&
+                                            (bytes[i + 2] === 0x3E || bytes[i + 2] === 0x21 || bytes[i + 2] === 0x3C)) {
+                                            try { window.dispatchEvent(new CustomEvent('__rfMspFrame')); } catch (e) {}
+                                            break;
+                                        }
+                                    }
                                     this.msp.parser.feed(bytes);
                                 }
                             },
                             (err) => console.warn('SPP subscribe error:', err)
                         );
                     }
-                    resolve(true);
+                    probeOk().then((verified) => {
+                        if (verified) {
+                            setSppStatus('connected', `Connected: ${device.address}`);
+                            if (disconnectBtn) disconnectBtn.disabled = false;
+                            onResult(true);
+                            resolve(true);
+                        } else {
+                            try {
+                                const plugin = window.BluetoothSerial || window.cordova?.plugins?.bluetoothSerial;
+                                if (plugin && plugin.disconnect) plugin.disconnect(() => {}, () => {});
+                            } catch (e) {}
+                            setSppStatus('', '연결 실패: FC 무응답 (MSP verify 실패)');
+                            onResult(false);
+                            resolve(false);
+                        }
+                    });
                 },
                 fail: (err) => {
                     setSppStatus('', 'Connection failed: ' + (err || 'Unknown error'));
@@ -2862,6 +2937,14 @@ class StatusTab {
                     });
                     await BleClient.startNotifications(dev.deviceId, profile.service, profile.notify, (value) => {
                         const bytes = new Uint8Array(value.buffer || value);
+                        /* verify gate: only a real MSP frame start counts */
+                        for (let i = 0; i + 2 < bytes.length; i++) {
+                            if (bytes[i] === 0x24 && bytes[i + 1] === 0x4D &&
+                                (bytes[i + 2] === 0x3E || bytes[i + 2] === 0x21 || bytes[i + 2] === 0x3C)) {
+                                try { window.dispatchEvent(new CustomEvent('__rfMspFrame')); } catch (e) {}
+                                break;
+                            }
+                        }
                         if (this.msp?.parser) this.msp.parser.feed(bytes);
                     });
 
@@ -2872,6 +2955,34 @@ class StatusTab {
                             await BleClient.write(dev.deviceId, profile.service, profile.write, data);
                         } catch(e) { console.warn('BLE write error:', e); }
                     };
+
+                    /* B-parity: GATT-ready is NOT proof of an FC (same ghost
+                       rule as SPP). One MSP_API_VERSION round-trip must answer
+                       before the box may show Connected; on silence tear the
+                       GATT link down and report the failure. */
+                    const verified = await new Promise((res) => {
+                        let done = false;
+                        const finish = (ok) => {
+                            if (done) return;
+                            done = true;
+                            try { clearTimeout(timer); } catch (e) {}
+                            try { window.removeEventListener('__rfMspFrame', onFrame); } catch (e2) {}
+                            res(ok);
+                        };
+                        const onFrame = () => finish(true);
+                        try { window.addEventListener('__rfMspFrame', onFrame); } catch (e) {}
+                        const timer = setTimeout(() => finish(false), 3500);
+                        try {
+                            const apiProbe = new Uint8Array([0x24, 0x4D, 0x3C, 0x00, 0x01, 0x01]);
+                            BleClient.write(dev.deviceId, profile.service, profile.write, apiProbe)
+                                .then(() => {}).catch(() => finish(false));
+                        } catch (e) { finish(false); }
+                    });
+                    if (!verified) {
+                        try { await BleClient.disconnect(dev.deviceId); } catch (e) {}
+                        lastError = new Error('FC 무응답 (MSP verify 실패)');
+                        continue;
+                    }
 
                     setStatus('connected', `Connected: ${dev.name || dev.deviceId} (${profile.name})`);
                     if (disconnectBtn) disconnectBtn.disabled = false;
