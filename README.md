@@ -23,7 +23,7 @@ This simplified feature occupies **Adjustment slots 5–17**; slots 1–4 remain
 
 ## Download APK
 
-[Download rfcap-release.apk](https://github.com/saydals/rfcap-apk/raw/main/rfcap-release.apk)
+APK releases are available at [Releases](https://github.com/saydals/rfcap-apk/releases).
 
 ## Screenshots
 

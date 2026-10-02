@@ -15,3 +15,4 @@ android/capacitor-cordova-android-plugins/build/
 local.properties
 *.keystore
 capacitor.config.json.tmp*
+rfcap-release.apk
