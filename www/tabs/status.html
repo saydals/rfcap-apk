@@ -394,6 +394,7 @@
             display: flex;
             flex-flow: row wrap;
             gap: 4px;
+            font-size: 1.3em;
         }
 
         /* ============ SENSORS BOX ============ */
@@ -1110,6 +1111,24 @@
                     </div>
                 </div>
 
+
+                <!-- SENSOR STATUS BOX -->
+                <div class="gui_box box-sensors">
+                    <div class="gui_box_titlebar">Sensors</div>
+                    <ul id="sensor-status" class="sensor-status-row">
+                        <li class="sensor-gyro"  title="Gyro"><span class="sensor-icon"></span><span class="sensor-label">Gyro</span></li>
+                        <li class="sensor-acc"   title="Accelerometer"><span class="sensor-icon"></span><span class="sensor-label">Accel</span></li>
+                        <li class="sensor-mag"   title="Magnetometer"><span class="sensor-icon"></span><span class="sensor-label">Mag</span></li>
+                        <li class="sensor-baro"  title="Barometer"><span class="sensor-icon"></span><span class="sensor-label">Baro</span></li>
+                        <li class="sensor-gps"   title="GPS"><span class="sensor-icon"></span><span class="sensor-label">GPS</span></li>
+                    </ul>
+                </div>
+
+            </div><!-- /section-row -->
+
+            <!-- ROW 3: Sensors + Auto Connect -->
+            <div class="section-row">
+
                 <!-- INFO BOX -->
                 <div class="gui_box box-info">
                     <div class="gui_box_titlebar">Info</div>
@@ -1155,22 +1174,7 @@
                     </table>
                 </div>
 
-            </div><!-- /section-row -->
 
-            <!-- ROW 3: Sensors + Auto Connect -->
-            <div class="section-row">
-
-                <!-- SENSOR STATUS BOX -->
-                <div class="gui_box box-sensors">
-                    <div class="gui_box_titlebar">Sensors</div>
-                    <ul id="sensor-status" class="sensor-status-row">
-                        <li class="sensor-gyro"  title="Gyro"><span class="sensor-icon"></span><span class="sensor-label">Gyro</span></li>
-                        <li class="sensor-acc"   title="Accelerometer"><span class="sensor-icon"></span><span class="sensor-label">Accel</span></li>
-                        <li class="sensor-mag"   title="Magnetometer"><span class="sensor-icon"></span><span class="sensor-label">Mag</span></li>
-                        <li class="sensor-baro"  title="Barometer"><span class="sensor-icon"></span><span class="sensor-label">Baro</span></li>
-                        <li class="sensor-gps"   title="GPS"><span class="sensor-icon"></span><span class="sensor-label">GPS</span></li>
-                    </ul>
-                </div>
 
             </div><!-- /section-row -->
 
@@ -1703,7 +1707,6 @@ class StatusTab {
         this.serial.onStatusChange = (connected) => {
             this.setTopPanelState(connected);
             if (connected) {
-                this.closeAllBtPanels();
                 this.onConnect();
             } else {
                 this.onDisconnect();
@@ -2189,8 +2192,7 @@ class StatusTab {
                 if (wrap) wrap.hidden = true;
             } else {
                 summary.className = 'arm-summary blocked';
-                const open = wrap && !wrap.hidden;
-                summary.textContent = `⛔ ${active} flag${active > 1 ? 's' : ''} ${open ? '▴' : '▾'}`;
+                summary.textContent = `${active} flag${active > 1 ? 's' : ''}`;
             }
         }
     }
