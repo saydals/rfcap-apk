@@ -773,6 +773,30 @@
             border-color: #e0931a;
         }
 
+        /* Colored scan buttons per transport */
+        #spp-scan-btn { background: #1976d2; color: #fff; border-color: #1565c0; }
+        #spp-scan-btn:hover { background: #1565c0; }
+        #ble-scan-btn { background: #7b1fa2; color: #fff; border-color: #6a1b9a; }
+        #ble-scan-btn:hover { background: #6a1b9a; }
+        #usb-scan-btn { background: #00796b; color: #fff; border-color: #00695c; }
+        #usb-scan-btn:hover { background: #00695c; }
+
+        /* Status dot color per transport (lighter when idle, full when connected) */
+        #spp-status-dot { background-color: #90caf9; }
+        #spp-status-dot.scanning { background-color: #f5a834; }
+        #spp-status-dot.connected { background-color: #1976d2; }
+        #ble-status-dot { background-color: #ce93d8; }
+        #ble-status-dot.scanning { background-color: #f5a834; }
+        #ble-status-dot.connected { background-color: #7b1fa2; }
+        #usb-status-dot { background-color: #80cbc4; }
+        #usb-status-dot.scanning { background-color: #f5a834; }
+        #usb-status-dot.connected { background-color: #00796b; }
+
+        /* Cell border tint when connected */
+        #spp-cell:has(#spp-status-dot.connected) { border-color: #1976d2; background: rgba(25,118,210,0.12); }
+        #ble-cell:has(#ble-status-dot.connected) { border-color: #7b1fa2; background: rgba(123,31,162,0.12); }
+        #usb-cell:has(#usb-status-dot.connected) { border-color: #00796b; background: rgba(0,121,107,0.12); }
+
         .bt-action-btn.danger {
             background: #e53935;
             color: #fff;
