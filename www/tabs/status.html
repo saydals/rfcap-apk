@@ -980,6 +980,36 @@
             <!-- ROW 2: 3D Model + Info + Arming -->
             <div class="section-row">
 
+                <!-- ARMING BOX -->
+                <div class="gui_box box-arming">
+                    <div class="gui_box_titlebar">Arming</div>
+
+                    <div class="arm-danger-row" style="display:none; padding: 6px 10px;">
+                        <div class="note" style="margin:0; background:#fff3cd; border-color:#ffc107; color:#856404;">
+                            <p style="margin:0; font-size:11px;">⚠ Arming is enabled — motors will spin when throttle is raised.</p>
+                        </div>
+                    </div>
+
+                    <div class="arm-enable-row">
+                        <label for="arming-enable-toggle">Enable Arming</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="arming-enable-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span id="arm-overall-status" class="arm-status-ok" style="display:none">ARMED</span>
+                    </div>
+
+                    <hr class="bt-divider">
+
+                    <div class="disarm-flags-container">
+                        <div class="disarm-flags-title">Arming Disable Flags</div>
+                        <div class="disarm-flags" id="disarm-flags-container">
+                            <!-- populated by JS -->
+                            <span style="color:var(--color-text-disabled);font-size:11px;">Disconnected</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- HELICOPTER 3D BOX -->
                 <div class="gui_box box-helicopter">
                     <div class="gui_box_titlebar">3D Model</div>
@@ -1051,36 +1081,6 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
-
-                <!-- ARMING BOX -->
-                <div class="gui_box box-arming">
-                    <div class="gui_box_titlebar">Arming</div>
-
-                    <div class="arm-danger-row" style="display:none; padding: 6px 10px;">
-                        <div class="note" style="margin:0; background:#fff3cd; border-color:#ffc107; color:#856404;">
-                            <p style="margin:0; font-size:11px;">⚠ Arming is enabled — motors will spin when throttle is raised.</p>
-                        </div>
-                    </div>
-
-                    <div class="arm-enable-row">
-                        <label for="arming-enable-toggle">Enable Arming</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="arming-enable-toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                        <span id="arm-overall-status" class="arm-status-ok" style="display:none">ARMED</span>
-                    </div>
-
-                    <hr class="bt-divider">
-
-                    <div class="disarm-flags-container">
-                        <div class="disarm-flags-title">Arming Disable Flags</div>
-                        <div class="disarm-flags" id="disarm-flags-container">
-                            <!-- populated by JS -->
-                            <span style="color:var(--color-text-disabled);font-size:11px;">Disconnected</span>
-                        </div>
-                    </div>
                 </div>
 
             </div><!-- /section-row -->
