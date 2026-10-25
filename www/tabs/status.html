@@ -1210,17 +1210,6 @@
     </div><!-- /tab-content-container -->
 </div><!-- /main-wrapper -->
 
-<dialog class="dialogConfirmArming">
-    <h3>Enable Arming</h3>
-    <div class="content">
-        <div style="margin-top: 10px">Arming will enable the motors. Make sure the helicopter is secure and the area is clear.</div>
-    </div>
-    <div class="buttons">
-        <a href="#" class="dialog-confirm-arm-btn">Confirm</a>
-        <a href="#" class="dialog-cancel-arm-btn">Cancel</a>
-    </div>
-</dialog>
-
 <script>
 /* ============================================================
    SERIAL CONNECTION (Web Serial API)
@@ -2009,8 +1998,14 @@ class StatusTab {
         this.updateSensorStatus();
         this.startPolling();
 
-        this.msp.data.CONFIG.armingDisabled = true;
-        try { await this.msp.send(99, [1]); } catch(e) {}
+        // User choice wins: push the locally stored arming state to the FC
+        // right after connect (FC stored value is ignored, never read back).
+        // ON  -> send 99,[0] (enable) ; OFF/missing -> send 99,[1] (disable).
+        try {
+            const wantEnabled = localStorage.getItem('rfcap_arming_enabled') === '1';
+            this.msp.data.CONFIG.armingDisabled = !wantEnabled;
+            try { await this.msp.send(99, [wantEnabled ? 0 : 1]); } catch(e) {}
+        } catch (e2) {}
     }
 
     onDisconnect() {
@@ -2096,7 +2091,6 @@ class StatusTab {
     /* ---- ARMING BOX ---- */
     bindArming() {
         const toggle = document.getElementById('arming-enable-toggle');
-        const dialog = document.querySelector('.dialogConfirmArming');
         const dangerRow = document.querySelector('.arm-danger-row');
 
         const sum = document.getElementById('disarm-flags-summary');
@@ -2108,11 +2102,12 @@ class StatusTab {
         });
 
         const updateArming = async (enable) => {
-            if (!this.serial.connected) return;
+            // User choice wins over FC: persist locally first, then push
+            // to FC when a link is up. Works offline (pre-connect) too.
+            try { localStorage.setItem('rfcap_arming_enabled', enable ? '1' : '0'); } catch (e) {}
             const wantDisabled = !enable;
-            if (this.msp.data.CONFIG.armingDisabled === wantDisabled) return;
-
             this.msp.data.CONFIG.armingDisabled = wantDisabled;
+            if (!this.serial.connected) return;
             try {
                 await this.msp.send(99, [wantDisabled ? 1 : 0]);
             } catch (e) {
@@ -2121,28 +2116,15 @@ class StatusTab {
             }
         };
 
+        // Restore the user's last choice on page start (kept across
+        // disconnects and app restarts; FC value is NOT read back).
+        try {
+            toggle.checked = localStorage.getItem('rfcap_arming_enabled') === '1';
+        } catch (e) {}
+
         toggle.addEventListener('change', async (e) => {
-            if (!this.serial.connected) {
-                toggle.checked = false;
-                return;
-            }
-            if (toggle.checked) {
-                dialog.showModal();
-            } else {
-                await updateArming(false);
-            }
-        });
-
-        dialog.querySelector('.dialog-confirm-arm-btn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            dialog.close();
-            await updateArming(true);
-        });
-
-        dialog.querySelector('.dialog-cancel-arm-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            dialog.close();
-            toggle.checked = false;
+            // No confirm dialog: apply immediately (ON and OFF).
+            await updateArming(toggle.checked);
         });
     }
 
@@ -2228,9 +2210,15 @@ class StatusTab {
     }
 
     resetArmingBox() {
-        this.msp.data.CONFIG.armingDisabled = false;
+        // Keep local armingDisabled in sync with the persisted user choice
+        // (FC value ignored) so a stale in-memory value can't leak in.
+        try {
+            this.msp.data.CONFIG.armingDisabled =
+                localStorage.getItem('rfcap_arming_enabled') !== '1';
+        } catch (e) { this.msp.data.CONFIG.armingDisabled = false; }
         this.msp.data.STATUS.statusReceived = false;
-        document.getElementById('arming-enable-toggle').checked = false;
+        // Arming toggle keeps the user's last choice across disconnects
+        // (FC value ignored) — do NOT uncheck here. Other boxes reset.
         const dangerRow = document.querySelector('.arm-danger-row');
         if (dangerRow) dangerRow.style.display = 'none';
         const statusEl = document.getElementById('arm-overall-status');
