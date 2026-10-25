@@ -54,6 +54,11 @@
                    data (loadDataFromFC) when it becomes the active tab. */
                 window.postMessage(m, '*');
                 break;
+            case 'rf-heli-change':
+                /* Live 3D-selection sync: re-dispatch inside the tab so the
+                   Rates preview can catch up while Status is being edited. */
+                try { window.dispatchEvent(new CustomEvent('rf-heli-change', { detail: m.v })); } catch (e) {}
+                break;
             case 'reconnect':
             case 'disconnect':
                 window.postMessage(m, '*');

@@ -5,16 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rotorflight Configurator - Status</title>
     <link rel="stylesheet" href="../responsive.css">
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.0/examples/jsm/"
-        }
-    }
-    </script>
     <script src="../vendor/three.min.js"></script>
     <script src="../vendor/GLTFLoader.js"></script>
+    <script src="../vendor/DRACOLoader.js"></script>
+    <script src="../vendor/heli-viewer.js"></script>
     <style>
         :root {
             --animation-speed: 0.2s ease;
@@ -994,6 +988,37 @@
         .tab-status .box-helicopter { padding: 0; }
         .tab-status .box-helicopter .gui_box_titlebar { display: none; }
         .heli-canvas-wrapper { height: clamp(208px, 40vh, 336px); border-radius: 5px; }
+            /* ---- RFCap 3D model/skin addon (phone-first, 420px-safe) ----
+               Compact corner cluster, bottom-right. Model button shows name,
+               gear button opens the skin picker. */
+        .heli-model-btn, .heli-skin-btn {
+            position: absolute; bottom: 9px; z-index: 3;
+            height: 30px; min-width: 30px; padding: 5px 12px;
+            background: rgba(0,0,0,0.55); color: #fff;
+            border: 1px solid rgba(255,255,255,0.25); border-radius: 6px;
+            font-size: 16px; font-weight: 700; cursor: pointer;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .heli-model-btn { right: 63px; max-width: 210px; line-height: 1; }
+        .heli-skin-btn { right: 9px; width: 45px; font-size: 21px; line-height: 1; padding: 5px 0; text-align: center; }
+        @media (max-width: 480px) {
+            .heli-model-btn { font-size: 15px; max-width: 168px; padding: 5px 9px; }
+        }
+        .heli-pop {
+            position: absolute; right: 9px; bottom: 48px; z-index: 4;
+            max-width: calc(100% - 16px); max-height: 60%; overflow-y: auto;
+            background: rgba(20,20,28,0.96); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px; padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        }
+        .heli-pop button {
+            display: block; width: 100%; text-align: left;
+            min-height: 44px; padding: 8px 12px; margin: 2px 0;
+            background: transparent; color: #fff; border: 0; border-radius: 6px;
+            font-size: 14px; cursor: pointer;
+        }
+        .heli-pop button.sel { background: rgba(90,160,255,0.35); }
+        .heli-pop button:active { background: rgba(90,160,255,0.5); }
+
     </style>
 </head>
 <body>
@@ -1108,6 +1133,9 @@
                             </dl>
                         </div>
                         <button class="heli-reset-btn" id="heli-reset-yaw">Reset Yaw</button>
+                        <button class="heli-model-btn" id="heli-model-btn" title="3D model"></button>
+                        <button class="heli-skin-btn" id="heli-skin-btn" title="Skin (color scheme)">⚙</button>
+                        <div class="heli-pop" id="heli-pop" style="display:none"></div>
                     </div>
                 </div>
 
@@ -1647,6 +1675,8 @@ class StatusTab {
         this.camTheta = 0.5;
         this.camPhi = 0.4;
         this.camRadius = 5;
+        this.heliGltf = null;
+        this.heliVariants = [];
 
         this.sppConnected = false;
         this.bleConnected = false;
@@ -2330,26 +2360,27 @@ class StatusTab {
             let THREE = window.THREE;
             let GLTFLoader = window.THREE?.GLTFLoader;
 
+            // Offline-first: vendor libs only (no CDN fallback).
             if (!THREE || !GLTFLoader) {
-                try {
-                    THREE = await import('three');
-                    const gltfMod = await import('three/addons/loaders/GLTFLoader.js');
-                    GLTFLoader = gltfMod.GLTFLoader;
-                } catch(importErr) {
-                    const tMod = await import('https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js');
-                    THREE = tMod;
-                    const gMod = await import('https://cdn.jsdelivr.net/npm/three@0.166.0/examples/jsm/loaders/GLTFLoader.js');
-                    GLTFLoader = gMod.GLTFLoader;
-                }
+                loadingEl.innerHTML = '⚠ 3D engine missing (offline vendor)';
+                return;
             }
 
-            // Setup renderer
-            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            // Model reload: reuse renderer/scene — only swap the model group.
+            // (Disposing + forceContextLoss + new renderer on the SAME canvas
+            //  leaves Android WebView with a dead context = white screen.)
+            const wantNew = !this.renderer;
+            // NOTE: do NOT cancel the RAF here — the loop is persistent and
+            // paints the newly swapped model. Cancelling without restart
+            // freezes the last frame (old model stays visible).
+            const renderer = this.renderer || new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true;
             this.renderer = renderer;
 
-            const scene = new THREE.Scene();
+            let scene, camera, modelWrapper;
+            if (wantNew) {
+            scene = new THREE.Scene();
             this.heliScene = scene;
 
             // Background color
@@ -2358,11 +2389,11 @@ class StatusTab {
 
             // Camera setup - straight-on "due north" view, matching the original
             // configurator (camera sits on +Z looking at the origin, no oblique angle).
-            this.camRadius = 4.2;
+            this.camRadius = (window.HeliViewer ? window.HeliViewer.getZoom() : 4.2);
             this.camTheta = 0;
             this.camPhi = 0;
 
-            const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
+            camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
             this.heliCamera = camera;
             this.updateCameraPosition(camera);
 
@@ -2377,31 +2408,65 @@ class StatusTab {
             backLight.position.set(-5, -2, -5);
             scene.add(backLight);
 
-            // Ground grid - theme-aware contrast so the reference axes stay readable
-            // in the light theme (dark grid lines on the light background).
+            // Ground grid only (no RGB axis indicator).
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             const grid = new THREE.GridHelper(6, 12, isDark ? 0x888888 : 0x555555, isDark ? 0x3a3a3a : 0xb5b5b5);
             grid.position.y = -0.8;
             scene.add(grid);
 
-            // Explicit X/Y/Z axis indicator. The Z (blue) axis is the heading /
-            // roll reference and is now clearly visible in both themes, fixing the
-            // "hard to see in light theme" problem.
-            scene.add(new THREE.AxesHelper(2.5));
-
             // Model wrapper holds the dynamic yaw (heading). No constant offset - the
             // heli's base orientation comes from the model itself, matching the original.
-            const modelWrapper = new THREE.Object3D();
+            modelWrapper = new THREE.Object3D();
             modelWrapper.rotation.y = 0;
             scene.add(modelWrapper);
             this.heliWrapper = modelWrapper;
+            } else {
+                scene = this.heliScene;
+                camera = this.heliCamera;
+                modelWrapper = this.heliWrapper;
+                while (modelWrapper.children.length) modelWrapper.remove(modelWrapper.children[0]);
+                this.heliModel = null;
+                this.heliGltf = null;
+                this.heliVariants = [];
+                this.heliVariantGroups = [];
+                loadingEl.style.display = '';
+                renderer.setClearColor(this.getBgColors().bg, 1);
+            }
 
-            // Load GLB from embedded base64
+            // Load GLB
             const glbDataUri = window.__HELI_GLB_DATA_URI__;
             if (glbDataUri) {
-                const loader = new GLTFLoader();
+                const loader = (window.HeliViewer ? window.HeliViewer.makeLoader() : new GLTFLoader());
                 loader.load(glbDataUri, (gltf) => {
                     const model = gltf.scene;
+                    this.heliGltf = gltf;
+                    if (window.HeliViewer) {
+                        this.heliVariants = window.HeliViewer.collectVariants(gltf);
+                        this.heliVariantGroups = window.HeliViewer.collectVariantGroups
+                            ? window.HeliViewer.collectVariantGroups(gltf) : [];
+                        const map = window.HeliViewer.savedSkinMap
+                            ? window.HeliViewer.savedSkinMap() : {};
+                        // apply only names that exist in the new model (keep last skins)
+                        const applyOne = (n) => (n && this.heliVariants.indexOf(n) >= 0)
+                            ? window.HeliViewer.applySkin(gltf, n) : Promise.resolve(false);
+                        const names = [];
+                        Object.keys(map).forEach((k) => {
+                            if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]);
+                        });
+                        if (!names.length) {
+                            const single = window.HeliViewer.savedSkin ? window.HeliViewer.savedSkin() : null;
+                            if (single) names.push(single);
+                        }
+                        let chain = Promise.resolve(false);
+                        names.forEach((n) => { chain = chain.then(() => applyOne(n)); });
+                        chain.then(() => this.updateAttitude(), () => this.updateAttitude());
+                        this.refreshHeliModelBtn();
+                        // Make sure the new model is centred for the CURRENT camera distance
+                        // (zoom is shared/persisted — don't reset this.camRadius here).
+                        if (this.heliCamera && this.updateCameraPosition) {
+                            try { this.updateCameraPosition(this.heliCamera); } catch (e) {}
+                        }
+                    }
 
                     // Center model and scale
                     const box = new THREE.Box3().setFromObject(model);
@@ -2446,10 +2511,8 @@ class StatusTab {
                 loadingEl.style.display = 'none';
             }
 
-            // Resize handling. Observe the wrapper (not the canvas) so changing the
-            // drawing buffer never feeds back into layout, and also react to
-            // orientation / visualViewport changes - this keeps the canvas full width
-            // after portrait -> landscape -> portrait on phones.
+            // Resize handling (first setup only — reuse keeps existing listeners).
+            if (wantNew) {
             const wrapperEl = canvas.parentElement;
             const resizeRenderer = () => {
                 const w = wrapperEl.clientWidth || canvas.clientWidth;
@@ -2460,19 +2523,62 @@ class StatusTab {
                 camera.updateProjectionMatrix();
             };
             const resizeObserver = new ResizeObserver(resizeRenderer);
+            this._heliRO = resizeObserver;
             resizeObserver.observe(wrapperEl);
+            this._heliResizeFns = this._heliResizeFns || [];
+            this._heliResizeFns.push(resizeRenderer);
             window.addEventListener('resize', resizeRenderer);
             window.addEventListener('orientationchange', () => setTimeout(resizeRenderer, 60));
-            if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeRenderer);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', resizeRenderer);
+                this._heliResizeFns.push(resizeRenderer);
+            }
             resizeRenderer();
 
-            /* Camera is intentionally FIXED (original configurator behaviour):
-               no drag / touch / zoom handlers - the view never changes. */
             const applyFixedCamera = () => { this.updateCameraPosition(camera); resizeRenderer(); };
+            this._heliApplyCam = applyFixedCamera;
             window.addEventListener('resize', applyFixedCamera);
+            window.addEventListener('pageshow', applyFixedCamera);
+            this._heliResizeFns.push(applyFixedCamera);
+            const onPageshow = () => {
+                if (!window.HeliViewer || !this.heliWrapper) return;
+                const z = window.HeliViewer.getZoom();
+                if (z !== this.camRadius) { this.camRadius = z; this.updateCameraPosition(camera); }
+                const cur = window.HeliViewer.getModel();
+                if (cur && cur !== window.__HELI_GLB_DATA_URI__) {
+                    window.__HELI_GLB_DATA_URI__ = cur;
+                    this.loadThreeScene(canvas, document.getElementById('heli-loading'));
+                } else if (cur && this.heliGltf) {
+                    const map = window.HeliViewer.savedSkinMap ? window.HeliViewer.savedSkinMap() : {};
+                    const names = [];
+                    Object.keys(map).forEach((k) => { if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]); });
+                    if (!names.length) {
+                        const single2 = window.HeliViewer.savedSkin ? window.HeliViewer.savedSkin() : null;
+                        if (single2) names.push(single2);
+                    }
+                    let chain = Promise.resolve(false);
+                    names.forEach((n) => {
+                        chain = chain.then(() => ((n && (this.heliVariants || []).indexOf(n) >= 0)
+                            ? window.HeliViewer.applySkin(this.heliGltf, n) : Promise.resolve(false)));
+                    });
+                    chain.then(() => this.updateAttitude(), () => this.updateAttitude());
+                }
+            };
+            window.addEventListener('pageshow', onPageshow);
+            this._heliResizeFns.push(onPageshow);
+            if (window.HeliViewer) {
+                window.HeliViewer.bindPinchZoom(canvas,
+                    () => this.camRadius, (r) => { this.camRadius = r; }, applyFixedCamera);
+                this.bindHeliPopups();
+            }
             applyFixedCamera();
+            }
 
-            // Animate
+            if (!wantNew && this._heliApplyCam) this._heliApplyCam();
+
+
+            // Animate (first setup only — RAF loop persists across model swaps).
+            if (wantNew) {
             let lastPaintTs = 0;
             const animate = (ts) => {
                 this.heliAnimId = requestAnimationFrame(animate);
@@ -2490,6 +2596,7 @@ class StatusTab {
                 renderer.render(scene, camera);
             };
             animate();
+            }
 
         } catch(e) {
             loadingEl.innerHTML = '<span>⚠ 3D unavailable<br><small>' + e.message + '</small></span>';
@@ -2497,9 +2604,107 @@ class StatusTab {
         }
     }
 
+    refreshHeliModelBtn() {
+        const b = document.getElementById('heli-model-btn');
+        if (!b || !window.HeliViewer) return;
+        const cur = window.HeliViewer.getModel();
+        const hit = window.HeliViewer.MODEL_LIST.find((m) => ('../models/' + m.file) === cur);
+        b.textContent = '✈ ' + (hit ? hit.label : cur.split('/').pop());
+    }
+    closeHeliPop() {
+        const p = document.getElementById('heli-pop');
+        if (p) p.style.display = 'none';
+    }
+    bindHeliPopups() {
+        const pop = document.getElementById('heli-pop');
+        const mbtn = document.getElementById('heli-model-btn');
+        const sbtn = document.getElementById('heli-skin-btn');
+        if (!pop || !mbtn || !sbtn || this._heliPopBound) return;
+        this._heliPopBound = true;
+        this.refreshHeliModelBtn();
+        mbtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (pop.dataset.kind === 'model' && pop.style.display !== 'none') { this.closeHeliPop(); return; }
+            pop.dataset.kind = 'model';
+            pop.innerHTML = '';
+            const cur = window.HeliViewer.getModel();
+            window.HeliViewer.MODEL_LIST.forEach((m) => {
+                const uri = '../models/' + m.file;
+                const b = document.createElement('button');
+                let label = m.label;
+                if (uri === cur) { label += ' [on]'; b.classList.add('sel'); }
+                b.textContent = label;
+                b.addEventListener('click', () => {
+                    window.HeliViewer.setModel(uri);
+                    window.__HELI_GLB_DATA_URI__ = uri;
+                    this.closeHeliPop();
+                    this.loadThreeScene(document.getElementById('heli-canvas'), document.getElementById('heli-loading'));
+                });
+                pop.appendChild(b);
+            });
+            pop.style.display = 'block';
+        });
+        sbtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showSkinGroups(pop);
+        });
+        document.addEventListener('click', (e) => {
+            if (pop.style.display !== 'none' && !pop.contains(e.target)) this.closeHeliPop();
+        });
+    }
+    showSkinGroups(pop) {
+        // 2-level: group (mesh part) -> skin names. Keeps last choice per group.
+        if (pop.dataset.kind === 'skin-group' && pop.style.display !== 'none') { this.closeHeliPop(); return; }
+        pop.dataset.kind = 'skin-group';
+        pop.innerHTML = '';
+        const groups = (this.heliVariantGroups && this.heliVariantGroups.length) ? this.heliVariantGroups : [];
+        const map = (window.HeliViewer.savedSkinMap) ? window.HeliViewer.savedSkinMap() : {};
+        if (!groups.length) {
+            const b = document.createElement('button');
+            b.textContent = '(no skins in this model)';
+            b.disabled = true;
+            pop.appendChild(b);
+        }
+        groups.forEach((g) => {
+            const b = document.createElement('button');
+            const cur = map[g.label];
+            b.textContent = (cur && g.names.indexOf(cur) >= 0) ? (g.label + ' › ' + cur) : (g.label + ' ›');
+            if (cur && g.names.indexOf(cur) >= 0) b.classList.add('sel');
+            b.addEventListener('click', (e) => { e.stopPropagation(); this.showSkinNames(pop, g); });
+            pop.appendChild(b);
+        });
+        pop.style.display = 'block';
+    }
+    showSkinNames(pop, group) {
+        pop.dataset.kind = 'skin-names';
+        pop.innerHTML = '';
+        const back = document.createElement('button');
+        back.textContent = '‹ ' + group.label;
+        back.addEventListener('click', (e) => { e.stopPropagation(); this.showSkinGroups(pop); });
+        pop.appendChild(back);
+        const map = (window.HeliViewer.savedSkinMap) ? window.HeliViewer.savedSkinMap() : {};
+        group.names.forEach((n) => {
+            const b = document.createElement('button');
+            let label = n;
+            if (map[group.label] === n) { label += ' [on]'; b.classList.add('sel'); }
+            b.textContent = label;
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const m2 = (window.HeliViewer.savedSkinMap) ? window.HeliViewer.savedSkinMap() : {};
+                m2[group.label] = n;
+                window.HeliViewer.setSkinMap(m2);
+                window.HeliViewer.setSkin(n);
+                window.HeliViewer.applySkin(this.heliGltf, n).then(() => this.updateAttitude());
+                this.closeHeliPop();
+            });
+            pop.appendChild(b);
+        });
+        pop.style.display = 'block';
+    }
     getBgColors() {
         const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        return dark ? { bg: 0x121218 } : { bg: 0xf0f2f5 };
+
+        return dark ? { bg: 0x121218 } : { bg: 0x8a8f96 };
     }
 
     updateCameraPosition(camera) {
@@ -3224,7 +3429,7 @@ function setText(id, val) {
 // The helicopter.glb is embedded below as a base64 data URI.
 // This is set before StatusTab initializes so loadThreeScene can use it.
 /* Original rotorflight heli model (bell_cw) packed from rfconfigurator resources */
-window.__HELI_GLB_DATA_URI__ = '../models/heli.glb';
+window.__HELI_GLB_DATA_URI__ = (window.HeliViewer ? window.HeliViewer.getModel() : '../models/heli_opt.glb');
 
 /* ============================================================
    BOOT

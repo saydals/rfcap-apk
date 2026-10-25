@@ -1845,6 +1845,7 @@ body {
             .tab-rates .rate_curve { height: 240px; }
         }
 
+
     </style>
 
 <script>
@@ -1879,6 +1880,8 @@ body {
          is only paid for by tabs that actually use the preview. -->
     <script src="../vendor/three.min.js"></script>
     <script src="../vendor/GLTFLoader.js"></script>
+    <script src="../vendor/DRACOLoader.js"></script>
+    <script src="../vendor/heli-viewer.js"></script>
 </head>
 <body data-theme="light">
     <div id="main-wrapper">
@@ -2141,7 +2144,7 @@ body {
                                                     Loading model...
                                                 </div>
                                                 <canvas id="heli-canvas"></canvas>
-                                                <div class="heli-attitude-info" id="heli-attitude-info">
+                        <div class="heli-attitude-info" id="heli-attitude-info">
                                                     <dl>
                                                         <dt>Roll</dt>       <dd id="att-roll">0 °/s</dd>
                                                         <dt>Pitch</dt>      <dd id="att-pitch">0 °/s</dd>
@@ -4150,10 +4153,53 @@ async activateProfile(index) {
 
             getBgColors() {
                 const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-                return dark ? { bg: 0x121218 } : { bg: 0xf0f2f5 };
+                return dark ? { bg: 0x121218 } : { bg: 0x8a8f96 };
             }
 
+            refreshHeliModelBtn() {} // Rates has no buttons (Status owns selection).
+            closeHeliPop() {}
+            syncHeliToStatus() {
+                // Bring the Rates preview (zoom + model/skin) in line with the
+                // Status-tab selection. Model reload is async via loadThreeScene.
+                if (!window.HeliViewer || !this.heliWrapper) return false;
+                const z = window.HeliViewer.getZoom();
+                if (z !== this.camRadius) {
+                    this.camRadius = z;
+                    if (this.heliCamera) this.updateCameraPosition(this.heliCamera);
+                }
+                const cur = window.HeliViewer.getModel();
+                if (cur && cur !== window.__HELI_GLB_DATA_URI__) {
+                    window.__HELI_GLB_DATA_URI__ = cur;
+                    const le = document.getElementById('heli-loading');
+                    if (le) le.style.display = '';
+                    this.loadThreeScene(document.getElementById('heli-canvas'), le);
+                    return true;
+                }
+                if (this.heliGltf) {
+                    const map = window.HeliViewer.savedSkinMap ? window.HeliViewer.savedSkinMap() : {};
+                    const names = [];
+                    Object.keys(map).forEach((k) => { if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]); });
+                    if (!names.length && window.HeliViewer.savedSkin) {
+                        const single = window.HeliViewer.savedSkin();
+                        if (single) names.push(single);
+                    }
+                    let chain = Promise.resolve(false);
+                    names.forEach((n) => {
+                        chain = chain.then(() => ((n && (this.heliVariants || []).indexOf(n) >= 0)
+                            ? window.HeliViewer.applySkin(this.heliGltf, n) : Promise.resolve(false)));
+                    });
+                    chain.then(() => this.updateHeliReadout(), () => this.updateHeliReadout());
+                }
+                return false;
+            }
+            reloadHeliModel() {
+                // Go through loadThreeScene so the reuse path (RAF/listeners/scene kept) runs.
+                this.loadThreeScene(document.getElementById('heli-canvas'),
+                    document.getElementById('heli-loading'));
+            }
+            bindHeliPopups() {} // Rates has no popups (Status owns selection).
             updateCameraPosition(camera) {
+
                 const r = this.camRadius;
                 const phi = this.camPhi;
                 const theta = this.camTheta;
@@ -4167,29 +4213,30 @@ async activateProfile(index) {
 
             async loadThreeScene(canvas, loadingEl) {
                 try {
-                    let THREE = window.THREE;
-                    let GLTFLoader = window.THREE?.GLTFLoader;
+                    const THREE = window.THREE;
+                    const GLTFLoader = window.THREE?.GLTFLoader;
+                    // Offline-first: vendor libs only (no CDN fallback).
                     if (!THREE || !GLTFLoader) {
-                        try {
-                            THREE = await import('three');
-                            const gltfMod = await import('three/addons/loaders/GLTFLoader.js');
-                            GLTFLoader = gltfMod.GLTFLoader;
-                        } catch (importErr) {
-                            const tMod = await import('https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js');
-                            THREE = tMod;
-                            const gMod = await import('https://cdn.jsdelivr.net/npm/three@0.166.0/examples/jsm/loaders/GLTFLoader.js');
-                            GLTFLoader = gMod.GLTFLoader;
-                        }
+                        loadingEl.innerHTML = '⚠ 3D engine missing (offline vendor)';
+                        return;
                     }
-                    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+                    // Reuse renderer/scene/camera on reload (dispose+forceContextLoss
+                    // leaves Android WebView with a dead context = white screen).
+                    const wantNew = !this.renderer;
+                    // NOTE: do NOT cancel the RAF here — the loop is persistent and
+                    // paints the newly swapped model. Cancelling without restart
+                    // freezes the last frame (old model stays visible).
+                    const renderer = this.renderer || new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
                     renderer.setPixelRatio(window.devicePixelRatio);
                     renderer.shadowMap.enabled = true;
                     this.renderer = renderer;
-                    const scene = new THREE.Scene();
+                    let scene, camera, modelWrapper;
+                    if (wantNew) {
+                    scene = new THREE.Scene();
                     this.heliScene = scene;
                     renderer.setClearColor(this.getBgColors().bg, 1);
-                    this.camRadius = 4.2; this.camTheta = 0; this.camPhi = 0;
-                    const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
+                    this.camRadius = (window.HeliViewer ? window.HeliViewer.getZoom() : 4.2); this.camTheta = 0; this.camPhi = 0;
+                    camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
                     this.heliCamera = camera;
                     this.updateCameraPosition(camera);
                     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
@@ -4203,21 +4250,42 @@ async activateProfile(index) {
                     const grid = new THREE.GridHelper(6, 12, isDark ? 0x888888 : 0x555555, isDark ? 0x3a3a3a : 0xb5b5b5);
                     grid.position.y = -0.8;
                     scene.add(grid);
-                    scene.add(new THREE.AxesHelper(2.5));
-                    const modelWrapper = new THREE.Object3D();
+                    modelWrapper = new THREE.Object3D();
                     scene.add(modelWrapper);
                     this.heliWrapper = modelWrapper;
+                    } else {
+                        scene = this.heliScene;
+                        camera = this.heliCamera;
+                        modelWrapper = this.heliWrapper;
+                        while (modelWrapper.children.length) modelWrapper.remove(modelWrapper.children[0]);
+                        this.heliModel = null;
+                        this.heliGltf = null;
+                        loadingEl.style.display = '';
+                        renderer.setClearColor(this.getBgColors().bg, 1);
+                    }
                     // GLB or placeholder, resize, animate (see next method)
-                    this._heliLoadAndStart(modelWrapper, GLTFLoader, loadingEl, canvas, renderer, scene, camera);
+                    this._heliLoadAndStart(modelWrapper, GLTFLoader, loadingEl, canvas, renderer, scene, camera, wantNew);
                 } catch (e) {
                     loadingEl.innerHTML = '<span>⚠ 3D unavailable<br><small>' + e.message + '</small></span>';
                     console.error('Three.js init error:', e);
                 }
             }
 
-            _heliLoadAndStart(modelWrapper, GLTFLoader, loadingEl, canvas, renderer, scene, camera) {
+            _heliLoadAndStart(modelWrapper, GLTFLoader, loadingEl, canvas, renderer, scene, camera, wantNew) {
                 const THREE = window.THREE;
                 const glbDataUri = window.__HELI_GLB_DATA_URI__;
+                // clear previous model group on reload
+                while (modelWrapper.children.length) modelWrapper.remove(modelWrapper.children[0]);
+                this.heliModel = null;
+                this.heliGltf = null;
+                if (wantNew && this._heliRO) { try { this._heliRO.disconnect(); } catch (e) {} this._heliRO = null; }
+                if (wantNew && this._heliResizeFns) {
+                    this._heliResizeFns.forEach((fn) => {
+                        try { window.removeEventListener('resize', fn); } catch (e) {}
+                        try { window.removeEventListener('pageshow', fn); } catch (e) {}
+                    });
+                    this._heliResizeFns = [];
+                }
                 const attach = (model) => {
                     const box = new THREE.Box3().setFromObject(model);
                     const center = box.getCenter(new THREE.Vector3());
@@ -4234,9 +4302,24 @@ async activateProfile(index) {
                     this.updateHeliReadout();
                 };
                 if (glbDataUri && GLTFLoader) {
-                    const loader = new GLTFLoader();
+                    const loader = (window.HeliViewer ? window.HeliViewer.makeLoader() : new GLTFLoader());
                     loader.load(glbDataUri,
-                        (gltf) => attach(gltf.scene),
+                        (gltf) => {
+                            this.heliGltf = gltf;
+                            if (window.HeliViewer) {
+                                this.heliVariants = window.HeliViewer.collectVariants(gltf);
+                                const map = window.HeliViewer.savedSkinMap ? window.HeliViewer.savedSkinMap() : {};
+                                const names = [];
+                                Object.keys(map).forEach((k) => { if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]); });
+                                const done = () => { this.refreshHeliModelBtn(); attach(gltf.scene); };
+                                let chain = Promise.resolve(false);
+                                names.forEach((n) => {
+                                    chain = chain.then(() => ((n && this.heliVariants.indexOf(n) >= 0)
+                                        ? window.HeliViewer.applySkin(gltf, n) : Promise.resolve(false)));
+                                });
+                                chain.then(done, done);
+                            } else attach(gltf.scene);
+                        },
                         (progress) => {
                             if (progress.total > 0) {
                                 const pct = Math.round(progress.loaded / progress.total * 100);
@@ -4265,10 +4348,16 @@ async activateProfile(index) {
                     this.heliModel = heliGroup;
                     loadingEl.style.display = 'none';
                 }
-                this._heliBindResizeAndAnimate(canvas, renderer, scene, camera);
+                this._heliBindResizeAndAnimate(canvas, renderer, scene, camera, loadingEl, wantNew);
             }
 
-            _heliBindResizeAndAnimate(canvas, renderer, scene, camera) {
+            _heliBindResizeAndAnimate(canvas, renderer, scene, camera, loadingEl, wantNew) {
+                if (!wantNew) {
+                    if (this._heliApplyCam) this._heliApplyCam();
+                    else this.updateCameraPosition(camera);
+                    this.refreshHeliModelBtn();
+                    return;
+                }
                 const wrapperEl = canvas.parentElement;
                 const resizeRenderer = () => {
                     const w = wrapperEl.clientWidth || canvas.clientWidth;
@@ -4279,14 +4368,27 @@ async activateProfile(index) {
                     camera.updateProjectionMatrix();
                 };
                 const ro = new ResizeObserver(resizeRenderer);
+                this._heliRO = ro;
                 ro.observe(wrapperEl);
+                this._heliResizeFns = this._heliResizeFns || [];
+                this._heliResizeFns.push(resizeRenderer);
                 window.addEventListener('resize', resizeRenderer);
                 window.addEventListener('orientationchange', () => setTimeout(resizeRenderer, 60));
                 if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeRenderer);
                 resizeRenderer();
                 const applyFixedCamera = () => { this.updateCameraPosition(camera); resizeRenderer(); };
+                this._heliApplyCam = applyFixedCamera;
                 window.addEventListener('resize', applyFixedCamera);
+                window.addEventListener('pageshow', applyFixedCamera);
+                this._heliResizeFns.push(applyFixedCamera);
+                if (window.HeliViewer) {
+                    window.HeliViewer.bindPinchZoom(canvas,
+                        () => this.camRadius, (r) => { this.camRadius = r; }, applyFixedCamera);
+                    this.bindHeliPopups();
+                    this.refreshHeliModelBtn();
+                }
                 applyFixedCamera();
+
                 /* RAF loop. Re-applies the heli attitude every frame so the
                    model keeps tracking live RC inputs even between poll
                    cycles. Throttled by skipping work when the tab is not
@@ -4300,6 +4402,22 @@ async activateProfile(index) {
                 const onVis = () => { this._heliVisible = !document.hidden; };
                 document.addEventListener('visibilitychange', onVis);
                 window.addEventListener('pageshow', onVis);
+                this._heliResizeFns.push(onVis);
+                const onShow = () => {
+                    if (window.HeliViewer && this.heliWrapper) {
+                        this.syncHeliToStatus();
+                    }
+                };
+                window.addEventListener('pageshow', onShow);
+                // Live sync while Status edits model/skin/zoom: Status writes
+                // localStorage + dispatches rf-heli-change; hidden iframes
+                // don't get storage events, so the SHELL also forwards them
+                // (see shell.js forwardHeliChange). Either path triggers sync.
+                window.addEventListener('rf-heli-change', onShow);
+                window.addEventListener('storage', (e) => {
+                    if (e && (e.key === 'rfcap_heli_model' || e.key === 'rfcap_heli_skins' || e.key === 'rfcap_heli_skin' || e.key === 'rfcap_heli_zoom')) onShow();
+                });
+                this._heliResizeFns.push(onShow);
                 /* Frame loop. The model is spun by the LIVE setpoint (°/s)
                    using the real frame delta, exactly like the desktop
                    configurator (Model.rotateBy + THREE.Clock): hold a stick
@@ -4446,6 +4564,23 @@ async activateProfile(index) {
                 window._ratesTab.hideToolbar();
                 window._ratesTab._resetDirtyTracking();
                 window._ratesTab.loadDataFromFC();
+                /* Sync the 3D preview with the Status-tab choice on every
+                   entry: the HeliViewer keys are shared via localStorage, but
+                   each tab's WebGL scene only reloads on demand. */
+                try {
+                    if (window.HeliViewer && window._ratesTab.heliWrapper) {
+                        const cur = window.HeliViewer.getModel();
+                        if (cur && cur !== window.__HELI_GLB_DATA_URI__) {
+                            window.__HELI_GLB_DATA_URI__ = cur;
+                            const le = document.getElementById('heli-loading');
+                            if (le) le.style.display = '';
+                            window._ratesTab.loadThreeScene(
+                                document.getElementById('heli-canvas'), le);
+                        } else if (window._ratesTab.heliGltf) {
+                            window._ratesTab.syncHeliToStatus();
+                        }
+                    }
+                } catch (err) { console.warn('heli sync on activeTab failed:', err); }
             });
         });
     </script>
@@ -4453,7 +4588,7 @@ async activateProfile(index) {
     <script>
         /* Same model used by the status tab. Resolved by both
            loadThreeScene() implementations. */
-        window.__HELI_GLB_DATA_URI__ = '../models/heli.glb';
+        window.__HELI_GLB_DATA_URI__ = (window.HeliViewer ? window.HeliViewer.getModel() : '../models/heli_opt.glb');
     </script>
 </body>
 </html>

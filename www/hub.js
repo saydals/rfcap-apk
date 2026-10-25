@@ -1243,6 +1243,13 @@
         broadcastActiveTab: function(name) {
             RF.activeTab = name;
             broadcast({ t: 'activeTab', v: name });
+        },
+        /* Live 3D-selection sync: Status writes localStorage keys; hidden
+           iframes never receive `storage` events, so forward the notice
+           over the hub ports — bridge.js re-dispatches it as
+           `rf-heli-change` inside each tab. */
+        forwardHeliChange: function(detail) {
+            broadcast({ t: 'rf-heli-change', v: detail || {} });
         }
     };
 
