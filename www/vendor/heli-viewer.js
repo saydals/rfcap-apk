@@ -17,7 +17,7 @@
     { file: 'Goblin380_opt.glb',       label: 'Goblin 380' },
     { file: 'Gaui_X3_opt.glb',         label: 'Gaui X3' }
   ];
-  var ZOOM_MIN = 2.0, ZOOM_MAX = 10.0, ZOOM_DEF = 4.2;
+  var ZOOM_MIN = 1.0, ZOOM_MAX = 10.0, ZOOM_DEF = 4.2; // MIN=closest (2x closer than before)
   function lsGet(k, fb) { try { var v = localStorage.getItem(k); return (v === null || v === undefined || v === '') ? fb : v; } catch (e) { return fb; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function getModel() { return lsGet(LS_MODEL, DEFAULT_MODEL); }
@@ -64,8 +64,27 @@
   }
   /* Variants grouped by mesh (2-level skin picker: group -> skin names).
    * Std mappings[] + root names, plus GlbOptimizer mesh-level form. */
+  /* Pretty group label from GlbOptimizer extras or mesh names:
+   * "skin::Gaui_X3__Canopy" -> "Canopy", "Tailboom" -> "Tail Boom". */
+  function _prettyGroup(raw) {
+    if (!raw) return '';
+    var s = String(raw).replace(/^skin::/, '').trim();
+    var parts = s.split('__');
+    s = parts[parts.length - 1].replace(/_/g, ' ').trim();
+    s = s.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/\s+/g, ' ').trim();
+    var dict = {
+      'tailboom': 'Tail Boom', 'skidpipes': 'Skid Pipes', 'tailfin': 'Canopy',
+      'frame addon': 'Frame AddOn', 'canopy': 'Canopy', 'fuselage': 'Canopy',
+      'skids': 'Skids', 'fins': 'Fins', 'boom': 'Boom'
+    };
+    var low = s.toLowerCase();
+    if (dict[low]) return dict[low];
+    return s.split(' ').map(function (w) {
+      return w ? (w.charAt(0).toUpperCase() + w.slice(1)) : w;
+    }).join(' ');
+  }
   function _meshGroups(gltf) {
-    var groups = [];
+    var groups = [], byLabel = {};
     var j = (gltf && gltf.parser && gltf.parser.json) || null;
     var root = (j && j.extensions && j.extensions.KHR_materials_variants) || null;
     var meshes = (j && j.meshes) || [];
@@ -74,15 +93,33 @@
       if (!v) return;
       var names = [];
       var push = function (n) { if (n && names.indexOf(n) < 0) names.push(n); };
-      if (v.variants) v.variants.forEach(function (vv) { push(vv && vv.name); });
+      // GlbOptimizer mesh-level form carries the part group in extras
+      // (mesh names are empty in the new models, hence the old "Part N").
+      var groupRaw = '';
+      var grabExtras = function (vv) {
+        if (vv && vv.extras && (vv.extras.groupLabel || vv.extras.groupId) && !groupRaw) {
+          groupRaw = vv.extras.groupLabel || vv.extras.groupId;
+        }
+      };
+      if (v.variants) v.variants.forEach(function (vv) { push(vv && vv.name); grabExtras(vv); });
       if (v.mappings) v.mappings.forEach(function (mp) {
         (mp.variants || []).forEach(function (vi) {
           if (root && root.variants && root.variants[vi]) push(root.variants[vi].name);
         });
       });
       if (!names.length) return;
-      var label = (m.name || ('Part ' + (mi + 1))).replace(/^skin::/, '').replace(/_/g, ' ').trim() || ('Part ' + (mi + 1));
-      groups.push({ label: label, names: names });
+      var label = _prettyGroup(groupRaw)
+        || (m.name || '').replace(/^skin::/, '').replace(/_/g, ' ').trim()
+        || ('Part ' + (mi + 1));
+      if (byLabel[label]) {
+        // same part split over several meshes (e.g. Fuselage L/R): union options
+        var g = byLabel[label];
+        names.forEach(function (n) { if (g.names.indexOf(n) < 0) g.names.push(n); });
+        return;
+      }
+      var entry = { label: label, names: names };
+      byLabel[label] = entry;
+      groups.push(entry);
     });
     return groups;
   }
@@ -105,10 +142,51 @@
     });
     return out;
   }
-  function applySkin(gltf, name) {
+  function isHideSkin(name, parser, matIdx) {
+    // A variant means "hide this part" when (a) its name says so
+    // (No canopy / None) or (b) the target material carries helixHidden.
+    if (name && /^(no[\s_-]*canopy|none|hide|hidden|off)$/i.test(String(name).trim())) return true;
+    try {
+      var m = parser.json.materials && parser.json.materials[matIdx];
+      if (m && m.extras && m.extras.helixHidden) return true;
+    } catch (e) {}
+    return false;
+  }
+  function _groupOfVariant(parser, groupLabel, name) {
+    // find the mesh-level variant entry carrying this (group, option) pair
+    var jsonMeshes = (parser.json && parser.json.meshes) || [];
+    for (var mi = 0; mi < jsonMeshes.length; mi++) {
+      var v = jsonMeshes[mi].extensions && jsonMeshes[mi].extensions.KHR_materials_variants;
+      if (!v || !v.variants) continue;
+      for (var i = 0; i < v.variants.length; i++) {
+        var vv = v.variants[i];
+        if (!vv || vv.name !== name) continue;
+        var ex = vv.extras || {};
+        var g = _prettyGroup(ex.groupLabel || ex.groupId || '');
+        if (g === groupLabel) return { mesh: mi, entry: vv };
+      }
+    }
+    return null;
+  }
+  function applySkin(gltf, name, groupLabel) {
     if (!gltf || !gltf.parser || !name) return Promise.resolve(false);
     var parser = gltf.parser;
     var jsonMeshes = (parser.json && parser.json.meshes) || [];
+    var wantMeshes = null; // restrict to one part group when names collide (RS7 Black/White/...)
+    if (groupLabel) {
+      wantMeshes = {};
+      jsonMeshes.forEach(function (jm, mi) {
+        var v = jm.extensions && jm.extensions.KHR_materials_variants;
+        if (!v || !v.variants) return;
+        for (var i = 0; i < v.variants.length; i++) {
+          var vv = v.variants[i];
+          if (!vv || vv.name !== name) continue;
+          var ex = vv.extras || {};
+          if (_prettyGroup(ex.groupLabel || ex.groupId || '') === groupLabel) { wantMeshes[mi] = 1; break; }
+        }
+      });
+      if (!Object.keys(wantMeshes).length) wantMeshes = null; // unknown group: fall back to name match
+    }
     var byMesh = {}; // meshIndex -> {primIdx -> matIdx}
     var rootV = (parser.json.extensions || {}).KHR_materials_variants || null;
     var nameToIdx = {};
@@ -134,6 +212,7 @@
         for (i = 0; i < v.variants.length; i++) {
           var vv = v.variants[i];
           if (vv && vv.name === name && vv.materials) {
+            if (wantMeshes && !wantMeshes[mi]) continue; // other part group with same option name
             map = {};
             for (p = 0; p < vv.materials.length; p++) map[p] = vv.materials[p];
             break;
@@ -156,10 +235,40 @@
       var prim = (a.primitives !== undefined) ? a.primitives : 0;
       var matIdx = (map[prim] !== undefined) ? map[prim] : map[0];
       if (matIdx === undefined) return;
+      // hide-part skins (No canopy / None / helixHidden): hide the mesh
+      // instead of swapping to a placeholder material (renders white).
+      if (isHideSkin(name, parser, matIdx)) {
+        o.visible = false;
+        return;
+      }
+      o.visible = true;
       jobs.push(parser.getDependency('material', matIdx).then(function (m) { o.material = m; }));
     });
-    if (!jobs.length) return Promise.resolve(false);
+    if (!jobs.length) {
+      // all affected meshes were hide-skins — still a successful apply
+      try { gltf.scene.updateMatrixWorld(true); } catch (e) {}
+      return Promise.resolve(true);
+    }
     return Promise.all(jobs).then(function () { return true; });
+  }
+  function startAnimation(gltf) {
+    // Play embedded GLB clips (e.g. "Forma - Rotor motion") looped.
+    // Returns a THREE.AnimationMixer or null (static model / old engine).
+    try {
+      if (!gltf || !gltf.animations || !gltf.animations.length) return null;
+      if (!window.THREE || !window.THREE.AnimationMixer) return null;
+      var mixer = new window.THREE.AnimationMixer(gltf.scene);
+      gltf.animations.forEach(function (clip) {
+        try { mixer.clipAction(clip).play(); } catch (e) {}
+      });
+      return mixer;
+    } catch (e) { return null; }
+  }
+  function stepAnimation(mixer, dt) {
+    if (!mixer) return;
+    if (!isFinite(dt) || dt <= 0) return;
+    if (dt > 0.1) dt = 0.1; // stall clamp: no multi-rev jump
+    try { mixer.update(dt); } catch (e) {}
   }
   function bindPinchZoom(canvas, getR, setR, applyFn) {
     if (!canvas || canvas._heliZoomBound) return;
@@ -222,6 +331,21 @@
       poke();
     },
     savedSkinMap: function () {
+      // RS7 rename: old "Tail Fin" group label -> "Canopy" (migrate silently)
+      // RAW700 rename: "Fuselage" -> "Canopy"
+      function _migrate(map) {
+        if (map && typeof map === 'object') {
+          if (map['Tail Fin'] && !map['Canopy']) {
+            map['Canopy'] = map['Tail Fin'];
+            delete map['Tail Fin'];
+          }
+          if (map['Fuselage'] && !map['Canopy']) {
+            map['Canopy'] = map['Fuselage'];
+            delete map['Fuselage'];
+          }
+        }
+        return map;
+      }
       try {
         var s = lsGet(LS_SKIN, '');
         if (!s) return {};
@@ -231,6 +355,7 @@
         if (all3 && typeof all3 === 'object' && !Array.isArray(all3)) {
           var m3 = all3[getModel()];
           if (m3 && typeof m3 === 'object') {
+            _migrate(m3);
             var out = {};
             Object.keys(m3).forEach(function (k) {
               if (k !== '__single' && m3[k]) out[k] = m3[k];
@@ -246,13 +371,20 @@
     collectVariants: collectVariants, collectVariantGroups: _meshGroups, applySkin: applySkin,
     applySkinMap: function (gltf, map) {
       var self = this;
-      var names = [];
-      Object.keys(map || {}).forEach(function (k) { if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]); });
+      var keys = Object.keys(map || {});
       var chain = Promise.resolve(false);
-      names.forEach(function (n) { chain = chain.then(function () { return self.applySkin(gltf, n); }); });
+      keys.forEach(function (k) {
+        // per-group apply so same option names (RS7 Black/...) don't leak across parts
+        if (k === '__single' || k === '_legacy' || !map[k]) return;
+        chain = chain.then(function () { return self.applySkin(gltf, map[k], k); });
+      });
+      if (!keys.filter(function (k) { return k !== '__single' && k !== '_legacy' && map[k]; }).length && map && map._legacy) {
+        chain = chain.then(function () { return self.applySkin(gltf, map._legacy); });
+      }
       return chain;
     },
     bindPinchZoom: bindPinchZoom,
+    startAnimation: startAnimation, stepAnimation: stepAnimation,
     makeLoader: function () {
       var loader = new THREE.GLTFLoader();
       if (window.THREE && window.THREE.DRACOLoader) {

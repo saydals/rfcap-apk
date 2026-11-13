@@ -1665,6 +1665,11 @@ class StatusTab {
         this.camPhi = 0.4;
         this.camRadius = 5;
         this.heliGltf = null;
+        this.heliMixer = null;
+        this.heliTapBoost = 0; // extra speed over base (0.4 = +40%, cap +200%)
+        this.heliAnimBase = 0.5; // default playback 50%; FC connected -> 1.0
+        this.heliAnimRate = 0.5; // eased actual playback multiplier
+        this.heliTapLast = 0;  // last tap timestamp (tempo bonus)
         this.heliVariants = [];
 
         this.sppConnected = false;
@@ -2294,6 +2299,33 @@ class StatusTab {
         setText('att-pitch',   pitch.toFixed(1) + '°');
         setText('att-heading', ((yaw + this.yawFix + 360) % 360).toFixed(0) + '°');
 
+        // FC connected: live attitude always wins, rotor at 100%.
+        // Offline: base 50% + tap boost.
+        if (this.isAnyTransportConnected && this.isAnyTransportConnected()) {
+            this._heliOfflineLevel = false; // FC reconnects: live pose resumes
+            this.heliAnimBase = 1.0;
+            if ((this.heliTapBoost || 0) > 0.001 || (this.heliAnimRate || 1) !== 1) {
+                // leaving offline rotor boost: ease to 100%, then FC pose.
+                this.heliTapBoost = 0;
+                this.heliAnimRate = 1;
+            } else {
+                this.heliTapBoost = 0;
+                this.heliAnimRate = 1;
+            }
+        } else {
+            this.heliAnimBase = 0.5;
+            if (this._heliOfflineLevel) {
+                // Offline Reset Z-axis: hold stock level + zeros until FC reconnects.
+                if (this.heliModel) {
+                    this.heliModel.rotation.x = 0;
+                    this.heliModel.rotation.y = 0;
+                    this.heliModel.rotation.z = 0;
+                }
+                if (this.heliWrapper) this.heliWrapper.rotation.y = 0;
+                return;
+            }
+        }
+
         if (this.heliModel && this.heliWrapper) {
             const DEG_TO_RAD = 0.017453292519943295;
             const x = (pitch * -1.0) * DEG_TO_RAD;
@@ -2317,16 +2349,42 @@ class StatusTab {
         const canvas = document.getElementById('heli-canvas');
         const loadingEl = document.getElementById('heli-loading');
 
-        // Reset Z-axis (Yaw) button - exact configurator logic
+        // Reset Z-axis (Yaw) button - exact configurator logic.
+        // Offline: no live FC pose, so snap BOTH the model (level 0,0,0)
+        // and the orbit camera (due-north) to stock. yawFix untouched.
         const resetBtn = document.getElementById('heli-reset-yaw');
         if (resetBtn) {
             resetBtn.textContent = `Reset Z-axis (${this.yawFix.toFixed(1)} deg)`;
             resetBtn.addEventListener('click', () => {
+                const connected = (this.isAnyTransportConnected && this.isAnyTransportConnected());
                 const kin = this.msp.data.SENSOR_DATA.kinematics;
-                this.yawFix = kin[2] * -1.0;
-                resetBtn.textContent = `Reset Z-axis (${this.yawFix.toFixed(1)} deg)`;
-                setText('att-heading', '0°');
-                this.updateAttitude();
+                if (connected) {
+                    this.yawFix = kin[2] * -1.0;
+                    resetBtn.textContent = `Reset Z-axis (${this.yawFix.toFixed(1)} deg)`;
+                    // FC connected: model yaw is FC-driven, but the ORBIT
+                    // camera is ours — snap it back to stock too.
+                    this.camTheta = 0; this.camPhi = 0;
+                    try {
+                        if (this.heliCamera) this.updateCameraPosition(this.heliCamera);
+                    } catch (e) {}
+                    setText('att-heading', '0°');
+                    this.updateAttitude();
+                } else {
+                    this.camTheta = 0; this.camPhi = 0;
+                    try {
+                        if (this.heliCamera) this.updateCameraPosition(this.heliCamera);
+                        if (this.heliModel) {
+                            this.heliModel.rotation.x = 0;
+                            this.heliModel.rotation.y = 0;
+                            this.heliModel.rotation.z = 0;
+                        }
+                        if (this.heliWrapper) this.heliWrapper.rotation.y = 0;
+                    } catch (e) {}
+                    this._heliOfflineLevel = true; // hold level until FC reconnects
+                    setText('att-roll', '0.0°');
+                    setText('att-pitch', '0.0°');
+                    setText('att-heading', '0°');
+                }
             });
         }
 
@@ -2364,6 +2422,17 @@ class StatusTab {
             const renderer = this.renderer || new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true;
+            // Correct color pipeline: textures are tagged sRGB by GLTFLoader,
+            // so the output must be sRGB too — otherwise mid-tones (carbon
+            // weave) crush to black. Tone mapping assumes sRGB output.
+            try {
+                if (THREE.sRGBEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+                if ('physicallyCorrectLights' in renderer) renderer.physicallyCorrectLights = true;
+                if (THREE.ACESFilmicToneMapping !== undefined) {
+                    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                    renderer.toneMappingExposure = 1.0;
+                }
+            } catch (e) {}
             this.renderer = renderer;
 
             let scene, camera, modelWrapper;
@@ -2385,16 +2454,20 @@ class StatusTab {
             this.heliCamera = camera;
             this.updateCameraPosition(camera);
 
-            // Lights
-            const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
-            scene.add(ambLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            dirLight.position.set(5, 10, 7);
+            // Lights — softer contrast: front-top key, stronger base/fill
+            // so carbon reads everywhere instead of one hot angle.
+            // (physical light mode: intensities scaled up accordingly)
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x444455, 1.8));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            dirLight.position.set(2, 8, 7);
             dirLight.castShadow = true;
             scene.add(dirLight);
-            const backLight = new THREE.DirectionalLight(0x8888ff, 0.4);
-            backLight.position.set(-5, -2, -5);
-            scene.add(backLight);
+            const fillLight = new THREE.DirectionalLight(0xfff2e0, 1.0);
+            fillLight.position.set(-6, 2, 4);
+            scene.add(fillLight);
+            const rimLight = new THREE.DirectionalLight(0x88aaff, 1.1);
+            rimLight.position.set(-2, 4, -6);
+            scene.add(rimLight);
 
             // Ground grid only (no RGB axis indicator).
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -2415,6 +2488,7 @@ class StatusTab {
                 while (modelWrapper.children.length) modelWrapper.remove(modelWrapper.children[0]);
                 this.heliModel = null;
                 this.heliGltf = null;
+                this.heliMixer = null;
                 this.heliVariants = [];
                 this.heliVariantGroups = [];
                 loadingEl.style.display = '';
@@ -2428,25 +2502,32 @@ class StatusTab {
                 loader.load(glbDataUri, (gltf) => {
                     const model = gltf.scene;
                     this.heliGltf = gltf;
+                    // Play embedded clips (rotor motion) looped; null when static.
+                    this.heliMixer = (window.HeliViewer && window.HeliViewer.startAnimation)
+                        ? window.HeliViewer.startAnimation(gltf) : null;
                     if (window.HeliViewer) {
                         this.heliVariants = window.HeliViewer.collectVariants(gltf);
                         this.heliVariantGroups = window.HeliViewer.collectVariantGroups
                             ? window.HeliViewer.collectVariantGroups(gltf) : [];
                         const map = window.HeliViewer.savedSkinMap
                             ? window.HeliViewer.savedSkinMap() : {};
-                        // apply only names that exist in the new model (keep last skins)
-                        const applyOne = (n) => (n && this.heliVariants.indexOf(n) >= 0)
-                            ? window.HeliViewer.applySkin(gltf, n) : Promise.resolve(false);
-                        const names = [];
-                        Object.keys(map).forEach((k) => {
-                            if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]);
-                        });
-                        if (!names.length) {
-                            const single = window.HeliViewer.savedSkin ? window.HeliViewer.savedSkin() : null;
-                            if (single) names.push(single);
-                        }
+                        // per-group apply so same option names don't leak across parts
+                        const applyOne = (g, n) => {
+                            if (!n) return Promise.resolve(false);
+                            if (g === '_legacy') return window.HeliViewer.applySkin(gltf, n);
+                            const grp = (this.heliVariantGroups || []).find((x) => x.label === g);
+                            if (!grp || grp.names.indexOf(n) < 0) return Promise.resolve(false);
+                            return window.HeliViewer.applySkin(gltf, n, g);
+                        };
                         let chain = Promise.resolve(false);
-                        names.forEach((n) => { chain = chain.then(() => applyOne(n)); });
+                        Object.keys(map).forEach((g) => {
+                            if (g === '__single' || !map[g]) return;
+                            chain = chain.then(() => applyOne(g, map[g]));
+                        });
+                        if (!Object.keys(map).filter((g) => g !== '__single' && map[g]).length) {
+                            const single = window.HeliViewer.savedSkin ? window.HeliViewer.savedSkin() : null;
+                            if (single) chain = chain.then(() => window.HeliViewer.applySkin(gltf, single));
+                        }
                         chain.then(() => this.updateAttitude(), () => this.updateAttitude());
                         this.refreshHeliModelBtn();
                         // Make sure the new model is centred for the CURRENT camera distance
@@ -2538,17 +2619,20 @@ class StatusTab {
                     this.loadThreeScene(canvas, document.getElementById('heli-loading'));
                 } else if (cur && this.heliGltf) {
                     const map = window.HeliViewer.savedSkinMap ? window.HeliViewer.savedSkinMap() : {};
-                    const names = [];
-                    Object.keys(map).forEach((k) => { if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]); });
-                    if (!names.length) {
-                        const single2 = window.HeliViewer.savedSkin ? window.HeliViewer.savedSkin() : null;
-                        if (single2) names.push(single2);
-                    }
                     let chain = Promise.resolve(false);
-                    names.forEach((n) => {
-                        chain = chain.then(() => ((n && (this.heliVariants || []).indexOf(n) >= 0)
-                            ? window.HeliViewer.applySkin(this.heliGltf, n) : Promise.resolve(false)));
+                    Object.keys(map).forEach((g) => {
+                        if (g === '__single' || !map[g]) return;
+                        chain = chain.then(() => {
+                            const grp = (this.heliVariantGroups || []).find((x) => x.label === g);
+                            if (g === '_legacy') return window.HeliViewer.applySkin(this.heliGltf, map[g]);
+                            return ((grp && grp.names.indexOf(map[g]) >= 0)
+                                ? window.HeliViewer.applySkin(this.heliGltf, map[g], g) : Promise.resolve(false));
+                        });
                     });
+                    if (!Object.keys(map).filter((g) => g !== '__single' && map[g]).length) {
+                        const single2 = window.HeliViewer.savedSkin ? window.HeliViewer.savedSkin() : null;
+                        if (single2) chain = chain.then(() => window.HeliViewer.applySkin(this.heliGltf, single2));
+                    }
                     chain.then(() => this.updateAttitude(), () => this.updateAttitude());
                 }
             };
@@ -2558,6 +2642,7 @@ class StatusTab {
                 window.HeliViewer.bindPinchZoom(canvas,
                     () => this.camRadius, (r) => { this.camRadius = r; }, applyFixedCamera);
                 this.bindHeliPopups();
+                this.bindHeliOfflineGestures(canvas, applyFixedCamera);
             }
             applyFixedCamera();
             }
@@ -2568,6 +2653,7 @@ class StatusTab {
             // Animate (first setup only — RAF loop persists across model swaps).
             if (wantNew) {
             let lastPaintTs = 0;
+            let lastAnimTs = 0;
             const animate = (ts) => {
                 this.heliAnimId = requestAnimationFrame(animate);
                 /* GPU relief: while this tab is in the background (another tab
@@ -2577,7 +2663,30 @@ class StatusTab {
                 const now = (typeof ts === 'number') ? ts : performance.now();
                 const bridge = window.__RF_BRIDGE__;
                 const inactive = (bridge && bridge.active === false) || document.hidden;
-                if (inactive && (now - lastPaintTs) < 200) return;
+                if (inactive && (now - lastPaintTs) < 200) { lastAnimTs = now; return; }
+                // GLB rotor/blade animation (looped). Frozen while inactive.
+                // Base 50% offline (100% when FC connected); taps stack
+                // boost on top (cap 300%), boost drains over time.
+                if (window.HeliViewer && window.HeliViewer.stepAnimation && this.heliMixer) {
+                    let dt = (lastAnimTs && now) ? (now - lastAnimTs) / 1000 : 0;
+                    lastAnimTs = now;
+                    if (inactive) dt = 0;
+                    const connected = (this.isAnyTransportConnected && this.isAnyTransportConnected());
+                    const base = connected ? 1.0 : 0.5;
+                    this.heliAnimBase = base;
+                    if (connected) { this.heliTapBoost = 0; this.heliAnimRate = 1; this.heliTapLast = 0; }
+                    else {
+                        // drain boost (~0.075/s = 3x faster decay); slow tapping can't outrun the drain
+                        this.heliTapBoost = Math.max(0, (this.heliTapBoost || 0) - dt * 0.075);
+                        const target = base + (this.heliTapBoost || 0);
+                        const cur = (this.heliAnimRate == null) ? base : this.heliAnimRate;
+                        const k = (target > cur) ? 3.0 : 1.0;
+                        this.heliAnimRate = cur + (target - cur) * Math.min(1, dt * k);
+                    }
+                    window.HeliViewer.stepAnimation(this.heliMixer, dt * (this.heliAnimRate || 1));
+                } else {
+                    lastAnimTs = now;
+                }
                 lastPaintTs = now;
                 const bg = this.getBgColors();
                 renderer.setClearColor(bg.bg, 1);
@@ -2598,6 +2707,97 @@ class StatusTab {
         const cur = window.HeliViewer.getModel();
         const hit = window.HeliViewer.MODEL_LIST.find((m) => ('../models/' + m.file) === cur);
         b.textContent = '✈ ' + (hit ? hit.label : cur.split('/').pop());
+    }
+    /* Offline-only extras (FC disconnected): drag = orbit camera,
+       taps = game-style tempo: fast taps stack higher, slow taps fade.
+       FC connected: gestures disabled, camera/pose/100% come from updateAttitude. */
+    _heliTapKick() {
+        if (this.isAnyTransportConnected && this.isAnyTransportConnected()) return;
+        const now = performance.now();
+        const gap = (this.heliTapLast && now > this.heliTapLast) ? (now - this.heliTapLast) / 1000 : 99;
+        this.heliTapLast = now;
+        // tempo bonus (10x harder than before): fast double-tap (<0.25s)
+        // kicks hardest, lazy tap (>1.2s) barely adds
+        let kick = 0.013;
+        if (gap < 0.25) kick = 0.022;
+        else if (gap < 0.5) kick = 0.017;
+        else if (gap > 1.2) kick = 0.006;
+        this.heliTapBoost = Math.min(2.0, (this.heliTapBoost || 0) + kick); // cap 300%
+        try {
+            const le = document.getElementById('heli-loading');
+            if (le && this.heliMixer) {
+                le.style.display = '';
+                const pct = Math.round(100 * (1 + (this.heliTapBoost || 0)));
+                le.innerHTML = '⟳ rotor ' + pct + '%';
+                clearTimeout(this._heliTapMsgT);
+                this._heliTapMsgT = setTimeout(() => { le.style.display = 'none'; }, 700);
+            }
+        } catch (err) {}
+    }
+    bindHeliOfflineGestures(canvas, applyCam) {
+        if (!canvas || canvas._heliOfflineBound) return;
+        canvas._heliOfflineBound = true;
+        const offline = () => !(this.isAnyTransportConnected && this.isAnyTransportConnected());
+        let dragging = false, moved = 0, lx = 0, ly = 0, pinch = false;
+        let downT = 0, downX = 0, downY = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            pinch = (e.touches && e.touches.length > 1);
+            if (!offline() || pinch) { dragging = false; return; }
+            const t = e.touches[0];
+            dragging = true; moved = 0; lx = t.clientX; ly = t.clientY;
+            downT = performance.now(); downX = t.clientX; downY = t.clientY;
+        }, { passive: true });
+        canvas.addEventListener('touchmove', (e) => {
+            if (!dragging || !offline() || !e.touches || e.touches.length !== 1) return;
+            const t = e.touches[0];
+            const dx = t.clientX - lx, dy = t.clientY - ly;
+            moved += Math.abs(dx) + Math.abs(dy);
+            lx = t.clientX; ly = t.clientY;
+            this.camTheta -= dx * 0.008;
+            this.camPhi = Math.max(-1.2, Math.min(1.2, this.camPhi + dy * 0.008));
+            // offline-only pose: drag moves the CAMERA, model stays at last FC
+            // attitude, so Reset Z-axis can still re-zero the heading reference
+            // via yawFix + updateAttitude.
+            if (applyCam) applyCam(); else if (this.heliCamera) this.updateCameraPosition(this.heliCamera);
+            if (e.cancelable) e.preventDefault();
+        }, { passive: false });
+        canvas.addEventListener('touchend', (e) => {
+            if (dragging && offline() && !pinch) {
+                const dtMs = performance.now() - downT;
+                const dist = Math.abs((e.changedTouches[0] || {}).clientX - downX)
+                           + Math.abs((e.changedTouches[0] || {}).clientY - downY);
+                // quick tap (not drag): tempo kick — faster taps stack higher
+                if (dtMs < 300 && dist < 14 && moved < 14) {
+                    this._heliTapKick();
+                }
+            }
+            dragging = false; pinch = false;
+        }, { passive: true });
+        // desktop mouse fallback (same offline rule)
+        canvas.addEventListener('mousedown', (e) => {
+            if (!offline()) return;
+            dragging = true; moved = 0; lx = e.clientX; ly = e.clientY;
+            downT = performance.now(); downX = e.clientX; downY = e.clientY;
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!dragging || !offline()) return;
+            const dx = e.clientX - lx, dy = e.clientY - ly;
+            moved += Math.abs(dx) + Math.abs(dy);
+            lx = e.clientX; ly = e.clientY;
+            this.camTheta -= dx * 0.008;
+            this.camPhi = Math.max(-1.2, Math.min(1.2, this.camPhi + dy * 0.008));
+            if (applyCam) applyCam(); else if (this.heliCamera) this.updateCameraPosition(this.heliCamera);
+        });
+        window.addEventListener('mouseup', (e) => {
+            if (dragging && offline()) {
+                const dtMs = performance.now() - downT;
+                const dist = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY);
+                if (dtMs < 300 && dist < 8 && moved < 8) {
+                    this._heliTapKick();
+                }
+            }
+            dragging = false;
+        });
     }
     closeHeliPop() {
         const p = document.getElementById('heli-pop');
@@ -2682,7 +2882,7 @@ class StatusTab {
                 m2[group.label] = n;
                 window.HeliViewer.setSkinMap(m2);
                 window.HeliViewer.setSkin(n);
-                window.HeliViewer.applySkin(this.heliGltf, n).then(() => this.updateAttitude());
+                window.HeliViewer.applySkin(this.heliGltf, n, group.label).then(() => this.updateAttitude());
                 this.closeHeliPop();
             });
             pop.appendChild(b);

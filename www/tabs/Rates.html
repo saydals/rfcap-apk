@@ -4177,6 +4177,10 @@ async activateProfile(index) {
                 }
                 if (this.heliGltf) {
                     const map = window.HeliViewer.savedSkinMap ? window.HeliViewer.savedSkinMap() : {};
+                    const syncDone = () => this.updateHeliReadout();
+                    if (window.HeliViewer.applySkinMap) {
+                        window.HeliViewer.applySkinMap(this.heliGltf, map).then(syncDone, syncDone);
+                    } else {
                     const names = [];
                     Object.keys(map).forEach((k) => { if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]); });
                     if (!names.length && window.HeliViewer.savedSkin) {
@@ -4189,6 +4193,7 @@ async activateProfile(index) {
                             ? window.HeliViewer.applySkin(this.heliGltf, n) : Promise.resolve(false)));
                     });
                     chain.then(() => this.updateHeliReadout(), () => this.updateHeliReadout());
+                    }
                 }
                 return false;
             }
@@ -4229,6 +4234,16 @@ async activateProfile(index) {
                     const renderer = this.renderer || new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
                     renderer.setPixelRatio(window.devicePixelRatio);
                     renderer.shadowMap.enabled = true;
+                    // Correct color pipeline: sRGB output (matches GLTFLoader
+                    // texture tags) + physical lights + ACES.
+                    try {
+                        if (THREE.sRGBEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+                        if ('physicallyCorrectLights' in renderer) renderer.physicallyCorrectLights = true;
+                        if (THREE.ACESFilmicToneMapping !== undefined) {
+                            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                            renderer.toneMappingExposure = 1.0;
+                        }
+                    } catch (e) {}
                     this.renderer = renderer;
                     let scene, camera, modelWrapper;
                     if (wantNew) {
@@ -4239,13 +4254,19 @@ async activateProfile(index) {
                     camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
                     this.heliCamera = camera;
                     this.updateCameraPosition(camera);
-                    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-                    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-                    dirLight.position.set(5, 10, 7); dirLight.castShadow = true;
+                    // Lights — softer contrast: front-top key, stronger
+                    // base/fill so carbon reads everywhere, not one hot angle.
+                    // (physical light mode: intensities scaled up accordingly)
+                    scene.add(new THREE.HemisphereLight(0xffffff, 0x444455, 1.8));
+                    const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+                    dirLight.position.set(2, 8, 7); dirLight.castShadow = true;
                     scene.add(dirLight);
-                    const back = new THREE.DirectionalLight(0x8888ff, 0.4);
-                    back.position.set(-5, -2, -5);
-                    scene.add(back);
+                    const fillLight = new THREE.DirectionalLight(0xfff2e0, 1.0);
+                    fillLight.position.set(-6, 2, 4);
+                    scene.add(fillLight);
+                    const rim = new THREE.DirectionalLight(0x88aaff, 1.1);
+                    rim.position.set(-2, 4, -6);
+                    scene.add(rim);
                     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     const grid = new THREE.GridHelper(6, 12, isDark ? 0x888888 : 0x555555, isDark ? 0x3a3a3a : 0xb5b5b5);
                     grid.position.y = -0.8;
@@ -4260,6 +4281,7 @@ async activateProfile(index) {
                         while (modelWrapper.children.length) modelWrapper.remove(modelWrapper.children[0]);
                         this.heliModel = null;
                         this.heliGltf = null;
+                        this.heliMixer = null;
                         loadingEl.style.display = '';
                         renderer.setClearColor(this.getBgColors().bg, 1);
                     }
@@ -4278,6 +4300,7 @@ async activateProfile(index) {
                 while (modelWrapper.children.length) modelWrapper.remove(modelWrapper.children[0]);
                 this.heliModel = null;
                 this.heliGltf = null;
+                this.heliMixer = null;
                 if (wantNew && this._heliRO) { try { this._heliRO.disconnect(); } catch (e) {} this._heliRO = null; }
                 if (wantNew && this._heliResizeFns) {
                     this._heliResizeFns.forEach((fn) => {
@@ -4306,18 +4329,25 @@ async activateProfile(index) {
                     loader.load(glbDataUri,
                         (gltf) => {
                             this.heliGltf = gltf;
+                            // Play embedded clips (rotor motion) looped; null when static.
+                            this.heliMixer = (window.HeliViewer && window.HeliViewer.startAnimation)
+                                ? window.HeliViewer.startAnimation(gltf) : null;
                             if (window.HeliViewer) {
                                 this.heliVariants = window.HeliViewer.collectVariants(gltf);
                                 const map = window.HeliViewer.savedSkinMap ? window.HeliViewer.savedSkinMap() : {};
+                                const done = () => { this.refreshHeliModelBtn(); attach(gltf.scene); };
+                                if (window.HeliViewer.applySkinMap) {
+                                    window.HeliViewer.applySkinMap(gltf, map).then(done, done);
+                                } else {
                                 const names = [];
                                 Object.keys(map).forEach((k) => { if (map[k] && names.indexOf(map[k]) < 0) names.push(map[k]); });
-                                const done = () => { this.refreshHeliModelBtn(); attach(gltf.scene); };
                                 let chain = Promise.resolve(false);
                                 names.forEach((n) => {
                                     chain = chain.then(() => ((n && this.heliVariants.indexOf(n) >= 0)
                                         ? window.HeliViewer.applySkin(gltf, n) : Promise.resolve(false)));
                                 });
                                 chain.then(done, done);
+                                }
                             } else attach(gltf.scene);
                         },
                         (progress) => {
@@ -4448,6 +4478,10 @@ async activateProfile(index) {
                     this._heliLastPaint = now;
                     renderer.setClearColor(this.getBgColors().bg, 1);
                     this.stepHeliRotation(dt);
+                    // GLB rotor/blade animation (looped). Frozen while inactive.
+                    if (window.HeliViewer && window.HeliViewer.stepAnimation && this.heliMixer) {
+                        window.HeliViewer.stepAnimation(this.heliMixer, dt);
+                    }
                     renderer.render(scene, camera);
                 };
                 animate();
