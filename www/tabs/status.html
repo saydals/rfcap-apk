@@ -2146,27 +2146,26 @@ class StatusTab {
             });
         } catch(e) {}
 
+        /* RECONNECT OWNERSHIP: the hub (www/hub.js) is the ONLY retry owner.
+           This page used to run its own 10s setInterval that dialled again
+           whether or not a previous connect was still pending, which stacked
+           connect requests on one GATT link and made the module stop
+           answering ("waits for no reply, then reconnects anyway"). Now this
+           page never dials on a timer — it only reacts to hub state and, when
+           the user taps Connect after a failure, asks the hub to retry. */
         const _self = this;
-        this._stopAutoReconnect = function() {
-            if (_self._autoReconnectTimer) {
-                clearInterval(_self._autoReconnectTimer);
-                _self._autoReconnectTimer = null;
-            }
-        };
-        this._startAutoReconnect = function() {
-            if (_self._autoReconnectTimer) return;
-            const last = _self.lastConn;
-            if (!last || !last.device) return;
-            _self._autoReconnectTimer = setInterval(() => {
-                if (!_self._autoReconnectEnabled()) return;
-                if (_self.isAnyTransportConnected()) { _self._stopAutoReconnect(); return; }
-                if (last.type === 'spp') _self.sppConnect(last.device, _self.sppSetStatus, null, (ok) => _self.onSppConnectResult(last.device, ok));
-                else if (last.type === 'ble') _self.bleConnect(last.device, BLE_PROFILES, _self.bleSetStatus, null).then((ok) => _self.onBleConnectResult(last.device, ok));
-                else if (last.type === 'usb') _self.usbConnect(last.device, _self.usbSetStatus, null, (ok) => _self.onUsbConnectResult(last.device, ok));
-            }, 10000);
-        };
+        this._stopAutoReconnect = function() {};
+        this._startAutoReconnect = function() {};
         this._autoReconnectEnabled = function() {
             try { return localStorage.getItem('rfcap_ble_auto_connect') !== '0'; } catch(e) { return false; }
+        };
+        /* Used by the box list / top panel: hand the retry to the hub and let
+           its backoff decide when to redial, instead of looping here. */
+        this._requestHubReconnect = function() {
+            const hub = window.RFHub;
+            if (hub && typeof hub.noteLinkDown === 'function') {
+                try { hub.noteLinkDown('page requested'); } catch(e) {}
+            }
         };
     }
 

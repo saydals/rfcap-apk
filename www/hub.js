@@ -34,10 +34,23 @@
        connected. `on:true` is broadcast ONLY after verify. */
     const MSP_PROBE_API_VERSION = 1;    // MSP_API_VERSION
     const VERIFY_TIMEOUT_MS = 3500;     // must see one MSP frame within this
-    const CONNECT_TIMEOUT_BLE_MS = 20000;
+    /* rfconfigurator parity: the native BleBridgeManager waits at most 15s for
+       the GATT link, so the JS guard has to sit just above that — otherwise a
+       slow-but-alive connect is cut off by JS while the native side is still
+       working, and the extra teardown+redial is what made reconnection flaky. */
+    const CONNECT_TIMEOUT_BLE_MS = 18000;
     const CONNECT_TIMEOUT_SPP_MS = 12000;
-    const KEEPALIVE_MS = 3000;          // rfconfigurator _KEEPALIVE_INTERVAL_MS
-    const LINK_LOST_MS = 6000;          // no-RX this long -> drop link
+    /* rfconfigurator serial.js: _startBleKeepalive() pings an idle link every
+       15s (config 'bleKeepalive'), NOT every 3s. Poking the FC every 3s kept
+       the radio busy and made the first real MSP round-trip after a reconnect
+       slower to arrive. */
+    const KEEPALIVE_MS = 15000;         // rfconfigurator _KEEPALIVE_INTERVAL_MS
+    /* rfconfigurator drops the link after ~10s of silence (receiveTimeout). */
+    const LINK_LOST_MS = 10000;         // no-RX this long -> drop link
+    /* A reconnect must never fire while one is already in flight. The hub owns
+       the single-flight lock (_connecting) and this backoff keeps a failed
+       dial from being retried on the very next tick. */
+    const RECONNECT_BACKOFF_MS = 4000;
 
     function base64ToUint8Array(b64) {
         if (!b64) return new Uint8Array(0);
@@ -68,6 +81,8 @@
             this._connecting = false;     /* single-flight connect lock */
             this._manualDisc = false;     /* true while user asked to drop */
             this._lastRx = 0;             /* Date.now() of last inbound byte */
+            this._lastAttempt = 0;        /* Date.now() of last dial (backoff) */
+            this._lastFailure = null;     /* why the last dial failed (UI hint) */
 
             if (pluginBle) {
                 const onNativeData = (event) => {
@@ -168,6 +183,19 @@
                 console.warn('[RfBLE] connect already in progress - ignoring duplicate');
                 return false;
             }
+            /* Reconnect backoff (rfconfigurator has no polling redialer: a
+               failed dial is followed by a real gap). Without this the 10s
+               auto-reconnect timer, the hub's own auto-connect and a user tap
+               could each stack another connect request on the same GATT link,
+               which is exactly what made the module stop answering. */
+            if (!options || !options.force) {
+                const since = Date.now() - (this._lastAttempt || 0);
+                if (this._lastAttempt && since < RECONNECT_BACKOFF_MS) {
+                    console.warn('[RfBLE] connect backoff - retry in ' + Math.ceil((RECONNECT_BACKOFF_MS - since) / 1000) + 's');
+                    return false;
+                }
+            }
+            this._lastAttempt = Date.now();
 
             if (path && path.startsWith('spp:')) {
                 return await this.connectSPP(path.substring(4));
@@ -224,6 +252,11 @@
             } catch (error) {
                 if (timer) clearTimeout(timer);
                 console.error('[RfBLE] Failed to connect', error);
+                this._lastFailure = (error && error.message) || 'BLE connect failed';
+                /* rfconfigurator parity: close the native GATT session before
+                   reporting failure, so a half-open link cannot survive into
+                   the next dial (that stale session was what the module kept
+                   refusing to reconnect to). */
                 try { await pluginBle.disconnect().catch(function() {}); } catch (e) {}
                 this.connected = false;
                 this.connectionId = null;
@@ -278,6 +311,7 @@
                 console.warn('[RfBLE] SPP connect already in progress - ignoring duplicate');
                 return false;
             }
+            this._lastAttempt = Date.now();
             this.deviceName = null;   /* stale name from a previous session */
             this._manualDisc = false;
             this._connecting = true;
@@ -801,6 +835,11 @@
         if (!(RF.state && RF.state.on)) return;
         var kind = RF.state.kind;
         var idle = Date.now() - _lastLinkActivity;
+        /* rfconfigurator parity: the keepalive only runs in the FOREGROUND
+           (serial.js: `if (document.hidden) return`). While the app is
+           backgrounded we must not poke the FC — the writes pile up and the
+           first real request after resume then looks like "no answer". */
+        if (typeof document !== 'undefined' && document.hidden) return;
         if ((kind === 'ble' || kind === 'spp') && !dropInFlight) {
             var anyWants = false;
             try {
@@ -816,13 +855,16 @@
                 return;
             }
         }
-        if (kind !== 'ble' || _keepaliveBusy || verifyWait) return;
+        /* rfconfigurator: keepalive runs for BOTH transports and only pokes an
+           idle link. Poking a link that just carried traffic is wasted radio
+           time and slows the next real round-trip. */
+        if ((kind !== 'ble' && kind !== 'spp') || _keepaliveBusy || verifyWait) return;
         if (idle < KEEPALIVE_MS) return;
         _keepaliveBusy = true;
         bumpLinkActivity();   /* do not re-poke every tick while in flight */
         try {
-            rfBle.send(MSP_STATUS_PROBE)
-                .catch(function() {})
+            var poke = (kind === 'spp') ? rfBle.sendSPP(MSP_STATUS_PROBE) : rfBle.send(MSP_STATUS_PROBE);
+            poke.catch(function() {})
                 .then(function() { _keepaliveBusy = false; });
         } catch (e) { _keepaliveBusy = false; }
     }, 1000);
@@ -883,6 +925,7 @@
     }
 
     function setState(patch) {
+        var wasOn = !!RF.state.on;
         Object.assign(RF.state, patch);
         broadcast(Object.assign({ t: 'st' }, RF.state));
         if (RF.render) { try { RF.render(RF.state); } catch (e) {} }
@@ -891,6 +934,13 @@
            from a dead 'res' path), so tabs never learned about reconnects and
            stayed in the wiped (all-unchecked) state after a link restore. */
         onStateChange();
+        /* Single retry owner: an UP -> DOWN edge is the only thing that should
+           start a redial. Previously the dial was restarted from a page-side
+           interval as well, which could land on the same GATT link while the
+           native connect was still pending and make the module stop answering. */
+        if (wasOn && !RF.state.on && !dropInFlight) {
+            try { noteLinkDown(RF.state.detail); } catch (e) {}
+        }
     }
 
     /* ---------- request handlers ---------- */
@@ -995,6 +1045,16 @@
             if (!rfBle) throw new Error('RfBle not available');
             if (rfBle._connecting || verifyWait) throw new Error('connect already in progress');
             if (RF.state && RF.state.on) throw new Error('already connected');
+            /* Single-flight + backoff guard for the "dial again immediately"
+               case: status's reconnect timer, the hub auto-connect and the
+               user's Connect tap can all land on the same tick. rfBle.connect()
+               enforces the backoff; this keeps the state machine honest too. */
+            if (!msg.force) {
+                const since = Date.now() - (rfBle._lastAttempt || 0);
+                if (rfBle._lastAttempt && since < RECONNECT_BACKOFF_MS) {
+                    throw new Error('reconnect backoff (' + Math.ceil((RECONNECT_BACKOFF_MS - since) / 1000) + 's)');
+                }
+            }
             setState({ on: false, kind: null, name: null, detail: null });
             var device = { path: 'bluetooth-' + msg.deviceId, address: msg.deviceId };
             var okSocket = await rfBle.connect(device.path, { baudRate: 115200 });
@@ -1263,38 +1323,80 @@
        and the open socket blocked manual reconnect until the module was
        power-cycled). Going through H.* makes the state, header, status
        page and all tab iframes agree, and the normal auto-attach
-       (bridge.js tryAutoConnectClick) kicks in for every tab. */
-    (function() {
-        if (!isNative) return;
+       (bridge.js tryAutoConnectClick) kicks in for every tab.
+
+       SINGLE RETRY OWNER (B-parity): rfconfigurator never polls for a
+       reconnect. The old setup had TWO dialers (this one-shot timer AND
+       status.html's 10s setInterval) racing on the same GATT link, which
+       is what made the module stop answering: each tick stacked another
+       connect request while the previous one was still pending. Now the
+       hub is the only retry owner, it waits for the in-flight dial to
+       settle, and it backs off between attempts. */
+    var _reconnectTimer = null;
+    var _reconnectBackoff = 5000;     /* first retry gap after a failed dial */
+    var _reconnectMaxBackoff = 30000; /* cap, so we do not hammer the module */
+
+    function reconnectTarget() {
         var last = null;
         try { last = JSON.parse(localStorage.getItem('rf-last-conn') || 'null'); } catch (e) {}
-        if (!last || !last.kind || !last.address) return;
+        if (!last || !last.kind || !last.address) return null;
+        /* honour the user's BLE auto-connect switch (BLE-only setting) */
         if (last.kind === 'ble') {
             try {
-                var autoConn = localStorage.getItem('rfcap_ble_auto_connect');
-                if (autoConn === '0') {
-                    console.log('[hub] BLE auto-connect disabled by user setting');
-                    return;
-                }
-            } catch(e) {}
+                if (localStorage.getItem('rfcap_ble_auto_connect') === '0') return null;
+            } catch (e) {}
         }
-        setTimeout(function() {
-            try {
-                if (RF.state.on) return;   /* already connected - never double-dial */
-                if (last.kind === 'spp') {
-                    H.btConnect({ address: last.address, name: last.name }).catch(function(e) {
-                        console.warn('[hub] auto-reconnect failed:', e.message);
-                    });
-                } else if (last.kind === 'ble') {
-                    H.bleConnect({ deviceId: last.address, name: last.name }).catch(function(e) {
-                        console.warn('[hub] auto-reconnect failed:', e.message);
-                    });
-                } else if (last.kind === 'usb') {
-                    H.usbConnect({ deviceId: last.address }).catch(function(e) {
-                        console.warn('[hub] auto-reconnect failed:', e.message);
-                    });
-                }
-            } catch (e) { console.warn('[hub] auto-reconnect failed:', e.message); }
-        }, 1500);
-    })();
+        return last;
+    }
+
+    function scheduleReconnect(delayMs) {
+        if (_reconnectTimer) return;            /* one timer, ever */
+        var wait = (typeof delayMs === 'number') ? delayMs : _reconnectBackoff;
+        _reconnectTimer = setTimeout(function() {
+            _reconnectTimer = null;
+            if (!isNative) return;
+            if (RF.state && RF.state.on) return;               /* already up */
+            if (typeof document !== 'undefined' && document.hidden) { scheduleReconnect(); return; }
+            if (rfBle && (rfBle._connecting || verifyWait)) { scheduleReconnect(2000); return; }
+            var last = reconnectTarget();
+            if (!last) return;                                  /* user disabled it */
+            var p;
+            if (last.kind === 'spp') {
+                p = H.btConnect({ address: last.address, name: last.name });
+            } else if (last.kind === 'ble') {
+                p = H.bleConnect({ deviceId: last.address, name: last.name });
+            } else if (last.kind === 'usb') {
+                p = H.usbConnect({ deviceId: last.address });
+            } else {
+                return;
+            }
+            Promise.resolve(p).then(function() {
+                _reconnectBackoff = 5000;      /* success -> fast recovery next time */
+            }).catch(function(e) {
+                console.warn('[hub] auto-reconnect failed:', e && e.message);
+                /* exponential-ish backoff, capped: a module that is not
+                   answering must be left alone, not poked every tick */
+                _reconnectBackoff = Math.min(_reconnectMaxBackoff, Math.round(_reconnectBackoff * 1.6));
+                scheduleReconnect();
+            });
+        }, wait);
+    }
+
+    /* Kick the retry loop from the ONE place that knows the link went down. */
+    function noteLinkDown(detail) {
+        if (_reconnectTimer) return;
+        console.log('[hub] link down (' + (detail || '') + ') - scheduling reconnect');
+        _reconnectBackoff = 5000;
+        scheduleReconnect(1500);   /* small settle delay: let native teardown finish */
+    }
+
+    /* Expose the retry trigger so the state machine (setState) can drive it
+       without an ordering dependency between the two blocks. */
+    window.RFHub.noteLinkDown = noteLinkDown;
+
+    /* Boot: dial the last transport once, on the normal backoff. */
+    if (isNative && reconnectTarget()) {
+        _reconnectBackoff = 5000;
+        scheduleReconnect(1500);
+    }
 })();

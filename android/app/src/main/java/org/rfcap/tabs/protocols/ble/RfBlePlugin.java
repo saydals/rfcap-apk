@@ -149,7 +149,8 @@ public class RfBlePlugin extends Plugin {
 	private boolean fallbackScan = false;
 	private List<UUID> requestedServices = new ArrayList<>();
 
-	private static final int DESIRED_MTU = 247;
+	private static final int DESIRED_MTU = 515;
+	private static final int DESIRED_MTU_FALLBACK = 247;
 
 	private BleBridgeManager bleManager;
 	private String connectedAddress;
@@ -567,6 +568,16 @@ public class RfBlePlugin extends Plugin {
 			return;
 		}
 
+		/* rfconfigurator parity (NordicBlePlugin.handleConnect): tear down any
+		   previous session BEFORE starting a new one. A leftover GATT session
+		   kept the module's single LE channel busy, so every manual reconnect
+		   failed until the module was power-cycled. */
+		if (bleManager != null) {
+			try { bleManager.close(); } catch (Exception ignored) { }
+			bleManager = null;
+		}
+		connectedAddress = null;
+
 		KnownDevice profile = new KnownDevice("UserSelected", serviceUuid, writeUuid, notifyUuid);
 
 		bleManager = new BleBridgeManager(getContext(), this, profile);
@@ -593,18 +604,25 @@ public class RfBlePlugin extends Plugin {
 
 			@Override
 			public void onDeviceReady(@NonNull BluetoothDevice device) {
-				JSObject res = new JSObject();
-				res.put("success", true);
-				/* Resolve the remote name (Android caches it for bonded
-				   devices) so the UI can show a friendly name even when
-				   the app skips scanning - e.g. the auto-reconnect path. */
-				try {
-					String devName = device.getName();
-					if (devName != null) {
-						res.put("name", devName);
+				/* Do NOT resolve here. onDeviceReady fires as soon as the GATT
+				   link is up, but the MSP notify CCCD and the MTU exchange are
+				   still queued at that point — resolving immediately is what
+				   made the first MSP_API_VERSION probe go out before the link
+				   was actually usable, so verify failed and the app tore the
+				   link down and dialled again ("no reply, reconnect anyway").
+				   rfconfigurator parity: the connect result is delivered from
+				   initialize() once MTU negotiation (or its fallback) finishes,
+				   with a 500ms watchdog as the last resort. */
+				Log.d(TAG, "onDeviceReady for " + device.getAddress() + " - waiting for MTU");
+				final BleBridgeManager mgr = bleManager;
+				if (mgr == null) {
+					return;
+				}
+				handler.postDelayed(() -> {
+					if (bleManager == mgr) {
+						mgr.onReadyFallback(device, call);
 					}
-				} catch (Exception ignored) {}
-				call.resolve(res);
+				}, 500);
 			}
 
 			@Override
@@ -615,6 +633,15 @@ public class RfBlePlugin extends Plugin {
 			@Override
 			public void onDeviceDisconnected(@NonNull BluetoothDevice device, int reason) {
 				connectedAddress = null;
+				/* A drop during connect must fail the pending call instead of
+				   leaving JS waiting for a resolve that never comes. */
+				final BleBridgeManager mgr = bleManager;
+				if (mgr != null && mgr.isConnectPending()) {
+					mgr.clearConnectCall();
+					if (!call.isReleased()) {
+						call.reject("Disconnected during connect: " + reason);
+					}
+				}
 				JSObject evt = new JSObject();
 				evt.put("address", device.getAddress());
 				evt.put("reason", reason);
@@ -622,12 +649,29 @@ public class RfBlePlugin extends Plugin {
 			}
 		});
 
-		bleManager.connect(device)
+		/* Keep the pending call so the result is delivered only after MTU
+		   negotiation completes (see BleBridgeManager.sendConnectResult).
+		   A connect that is superseded or fails must never leave a dangling
+		   Capacitor promise - that is what made JS wait forever. */
+		final BleBridgeManager session = bleManager;
+		session.connectCall = call;
+		session.connectResultSent = false;
+
+		session.connect(device)
 			.useAutoConnect(false)
 			.timeout(15_000)
 			.fail((dev, status) -> {
 				connectedAddress = null;
-				call.reject("Connection failed: " + status);
+				/* rfconfigurator parity: drop the whole session on failure so the
+				   next dial starts clean instead of reusing a half-open GATT. */
+				session.clearConnectCall();
+				try { session.close(); } catch (Exception ignored) { }
+				if (bleManager == session) {
+					bleManager = null;
+				}
+				if (!call.isReleased()) {
+					call.reject("Connection failed: " + status);
+				}
 			})
 			.enqueue();
 	}
@@ -635,6 +679,14 @@ public class RfBlePlugin extends Plugin {
 	@PluginMethod
 	public void disconnect(PluginCall call) {
 		if (bleManager == null || !bleManager.isConnected()) {
+			/* Not connected: still tear the session down (a half-open GATT from
+			   a failed connect is exactly what blocked the next dial) and report
+			   success so JS never waits on a dead link. */
+			if (bleManager != null) {
+				try { bleManager.close(); } catch (Exception ignored) { }
+				bleManager = null;
+			}
+			connectedAddress = null;
 			JSObject result = new JSObject();
 			result.put("success", true);
 			call.resolve(result);
@@ -922,6 +974,13 @@ public class RfBlePlugin extends Plugin {
 		private String profileName;
 		private int negotiatedMtu = 23;
 
+		/* The pending Capacitor call for the in-flight connect(). Resolved
+		   exactly once, after MTU negotiation completes (or its 500ms
+		   watchdog fires), so JS never starts writing before the link is
+		   fully configured. */
+		private PluginCall connectCall;
+		private boolean connectResultSent;
+
 		private BluetoothGattCharacteristic writeCharacteristic;
 		private BluetoothGattCharacteristic notifyCharacteristic;
 
@@ -991,10 +1050,42 @@ public class RfBlePlugin extends Plugin {
 
 			@Override
 			protected void initialize() {
+				/* Revision Patch 1 (rfconfigurator parity): three operations go
+				   through Nordic's internal Request queue, and ORDER MATTERS
+				   (verified against the original app):
+				    1. requestConnectionPriority(HIGH) - 37.5ms -> 15ms interval
+				    2. requestMtu(515)               - max payload, 247 fallback
+				    3. enableNotifications           - start receiving MSP
+				   Doing 2 and 3 without 1 (the old code) left the link on the
+				   default interval, so the first MSP round-trip after connect was
+				   slow enough to blow the JS verify window. */
+				requestConnectionPriority(android.bluetooth.BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+						.done(device -> Log.i(TAG, "Connection priority set to HIGH for " + profileName))
+						.fail((device, status) -> Log.w(TAG, "Connection priority HIGH failed: " + status))
+						.enqueue();
+
 				requestMtu(DESIRED_MTU)
-					.with((device, mtu) -> negotiatedMtu = mtu)
-					.fail((device, status) -> Log.w(TAG, "MTU request failed with status " + status))
-					.enqueue();
+						.with((device, mtu) -> {
+							negotiatedMtu = mtu;
+							Log.i(TAG, "MTU negotiated to " + mtu + " for " + profileName);
+							sendConnectResult(device, mtu);
+						})
+						.fail((device, status) -> {
+							Log.w(TAG, "MTU request failed with status " + status + " for " + profileName);
+							/* 515 can fail on older stacks / modules: one 247 retry */
+							requestMtu(DESIRED_MTU_FALLBACK)
+									.with((dev2, mtu2) -> {
+										negotiatedMtu = mtu2;
+										Log.i(TAG, "MTU fallback negotiated to " + mtu2 + " for " + profileName);
+										sendConnectResult(device, mtu2);
+									})
+									.fail((dev2, status2) -> {
+										Log.w(TAG, "MTU fallback also failed with status " + status2);
+										sendConnectResult(device, negotiatedMtu);
+									})
+									.enqueue();
+						})
+						.enqueue();
 
 				if (notifyCharacteristic != null) {
 					enableNotifications(notifyCharacteristic).enqueue();
@@ -1023,6 +1114,49 @@ public class RfBlePlugin extends Plugin {
 				return null;
 			}
 			return writeCharacteristic(writeCharacteristic, data);
+		}
+
+		/** Delivers the connect result exactly once (rfconfigurator
+		 *  sendConnectResult). Safe to call from the MTU callbacks, the
+		 *  500ms watchdog, or the disconnect observer. */
+		private synchronized void sendConnectResult(BluetoothDevice device, int mtu) {
+			PluginCall target = connectCall;
+			if (target == null || connectResultSent) return;
+			connectResultSent = true;
+			connectCall = null;
+
+			JSObject res = new JSObject();
+			res.put("success", true);
+			res.put("mtu", mtu);
+			try {
+				String devName = device.getName();
+				if (devName != null) {
+					res.put("name", devName);
+				}
+			} catch (Exception ignored) {}
+			target.resolve(res);
+		}
+
+		/** Last-resort delivery if MTU negotiation never reports back. */
+		void onReadyFallback(@NonNull BluetoothDevice device, PluginCall call) {
+			if (connectCall == null && connectResultSent) return;
+			if (connectCall == null) {
+				/* onDeviceReady may arrive before connect() stored the call;
+				   stash it so the watchdog can still answer. */
+				connectCall = call;
+			}
+			int mtu = negotiatedMtu;
+			Log.i(TAG, "onDeviceReady fallback MTU for " + profileName + ": " + mtu);
+			sendConnectResult(device, mtu);
+		}
+
+		void clearConnectCall() {
+			connectCall = null;
+		}
+
+		/** True while a connect() promise is still waiting for its result. */
+		boolean isConnectPending() {
+			return connectCall != null && !connectResultSent;
 		}
 	}
 }
