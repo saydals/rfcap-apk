@@ -1,0 +1,5 @@
+3D Model: Lynx OXY-3 / OXY-X Qube
+Author: nagas (rcgroups)
+Source: https://www.rcgroups.com/forums/showpost.php?p=39528286&postcount=2477
+License: Not specified (user-built model for PhoenixRC)
+Modifications: Optimized for RFCap APK.

@@ -1134,7 +1134,7 @@
                         </div>
                         <button class="heli-reset-btn" id="heli-reset-yaw">Reset Yaw</button>
                         <button class="heli-model-btn" id="heli-model-btn" title="3D model"></button>
-                        <button class="heli-skin-btn" id="heli-skin-btn" title="Skin (color scheme)">⚙</button>
+                        <button class="heli-skin-btn" id="heli-skin-btn" title="Copyright / license">⚙</button>
                         <div class="heli-pop" id="heli-pop" style="display:none"></div>
                     </div>
                 </div>
@@ -2826,10 +2826,35 @@ class StatusTab {
         });
         sbtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.showSkinGroups(pop);
+            this.showModelCopyright(pop);
         });
         document.addEventListener('click', (e) => {
             if (pop.style.display !== 'none' && !pop.contains(e.target)) this.closeHeliPop();
+        });
+    }
+    showModelCopyright(pop) {
+        if (pop.dataset.kind === 'copyright' && pop.style.display !== 'none') { this.closeHeliPop(); return; }
+        pop.dataset.kind = 'copyright';
+        pop.innerHTML = '';
+        const cur = (window.HeliViewer && window.HeliViewer.getModel) ? window.HeliViewer.getModel() : '';
+        const base = (cur.split('/').pop() || '').replace(/\.glb$/i, '');
+        const pre = document.createElement('div');
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.style.fontSize = '12px';
+        pre.style.lineHeight = '1.4';
+        pre.style.padding = '8px 10px';
+        pre.style.color = '#fff';
+        pre.textContent = 'Loading copyright info...';
+        pop.appendChild(pre);
+        pop.style.display = 'block';
+        const url = '../models/' + base + '.txt';
+        fetch(url).then((r) => {
+            if (!r.ok) throw new Error('not found');
+            return r.text();
+        }).then((t) => {
+            pre.textContent = (t || '').trim() || '(no copyright info)';
+        }).catch(() => {
+            pre.textContent = '(no copyright info)';
         });
     }
     showSkinGroups(pop) {

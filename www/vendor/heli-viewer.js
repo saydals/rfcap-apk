@@ -11,16 +11,22 @@
   var LS_ZOOM  = 'rfcap_heli_zoom';
   var DEFAULT_MODEL = '../models/heli_opt.glb';
   var MODEL_LIST = [
-    { file: 'heli_opt.glb',           label: 'Rotorflight' },
-    { file: 'Goosky_RS7_opt.glb',     label: 'Goosky RS7' },
-    { file: 'Goblin_RAW_700_opt.glb', label: 'Goblin RAW 700' },
-    { file: 'Goblin380_opt.glb',       label: 'Goblin 380' },
-    { file: 'Gaui_X3_opt.glb',         label: 'Gaui X3' }
+    { file: 'heli_opt.glb',               label: 'Rotorflight' },
+    { file: 'elicopter_smurd_romania.glb', label: 'SMURD' },
+    { file: 'md_500.glb',                 label: 'MD 500' },
+    { file: 'Goblin_Kraken_700.glb',      label: 'Kraken 700' },
+    { file: 'Oxy3.glb',                   label: 'Oxy3' }
   ];
   var ZOOM_MIN = 1.0, ZOOM_MAX = 10.0, ZOOM_DEF = 4.2; // MIN=closest (2x closer than before)
   function lsGet(k, fb) { try { var v = localStorage.getItem(k); return (v === null || v === undefined || v === '') ? fb : v; } catch (e) { return fb; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  function getModel() { return lsGet(LS_MODEL, DEFAULT_MODEL); }
+  function getModel() {
+    var v = lsGet(LS_MODEL, DEFAULT_MODEL);
+    var ok = false;
+    for (var i = 0; i < MODEL_LIST.length; i++) { if (('../models/' + MODEL_LIST[i].file) === v) { ok = true; break; } }
+    if (!ok) { v = DEFAULT_MODEL; lsSet(LS_MODEL, v); }
+    return v;
+  }
   function savedSkin() {
     // legacy single-name fallback (pre per-model format)
     try {

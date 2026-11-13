@@ -1,0 +1,5 @@
+3D Model: Elicopter SMURD Romania
+Author: solid3DDD
+Source: https://sketchfab.com/3d-models/elicopter-smurd-romania-d505c4eba9ef46c1b8725d1977bd0263
+License: CC BY 4.0
+Modifications: Modified from the original model. 

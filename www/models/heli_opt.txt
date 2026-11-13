@@ -1,0 +1,5 @@
+3D Model: Rotorflight (Bell 206)
+Author: Rotorflight Project (Colin Gillespie, Johnny31297)
+Source: https://github.com/rotorflight/rotorflight-configurator
+License: GPL-3.0 (Rotorflight Configurator project)
+Modifications: Modified from the upstream Bell 206 model; optimized with Draco compression and WebP textures.

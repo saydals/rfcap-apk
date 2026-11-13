@@ -1,0 +1,5 @@
+3D Model: Goblin Kraken 700
+Author: Bishop_1 (rcgroups)
+Source: https://www.rcgroups.com/forums/showpost.php?p=52715791&postcount=17782
+License: Not specified (user-built model for PhoenixRC)
+Modifications: Optimized for RFCap APK.
