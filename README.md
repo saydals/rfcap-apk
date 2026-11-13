@@ -29,7 +29,7 @@ APK releases are available at [Releases](https://github.com/saydals/rfcap-apk/re
 
 <table>
   <tr>
-    <td><img src="https://github.com/saydals/rfcap-apk/raw/main/1.JPG?v=2" width="400"></td>
+    <td><img src="https://github.com/saydals/rfcap-apk/raw/8db822cfd90bcd0fb72e0e85a43c58799b9cbd3c/1.JPG" width="400"></td>
     <td><img src="https://github.com/saydals/rfcap-apk/raw/main/2.JPG" width="400"></td>
   </tr>
   <tr>
