@@ -1804,7 +1804,6 @@ class StatusTab {
     /* Master connect: adopts an already-live shared link, redials the last
        transport picked from a box, or falls back to Web Serial. */
     async connectFromTopPanel() {
-        this._stopAutoReconnect && this._stopAutoReconnect();
         const br = window.__RF_BRIDGE__;
         /* B-parity: hub state is the ONLY truth. A local flag saying
            "connected" with br.state.on===false is exactly the ghost-Connected
@@ -1855,7 +1854,6 @@ class StatusTab {
 
     /* Mark a box as owning an already-live shared link without re-dialling. */
     async adoptLink(type, device) {
-        this._stopAutoReconnect && this._stopAutoReconnect();
         if (device) {
             if (type === 'spp') { this.sppDevice = device; this.sppConnected = true; }
             else if (type === 'ble') { this.bleDevice = device; this.bleConnected = true; }
@@ -1965,7 +1963,6 @@ class StatusTab {
     }
 
     async onConnect() {
-        this._stopAutoReconnect && this._stopAutoReconnect();
         /* Batched tab loading (P0): all init reads go out in ONE combined
            MSP write instead of 8 sequential round trips - the same
            batchCodes() pattern the original configurator uses. If the batch
@@ -2023,7 +2020,6 @@ class StatusTab {
         this.resetArmingBox();
         this.resetSensors();
         this.clearLiveMspData();
-        this._startAutoReconnect && this._startAutoReconnect();
     }
 
     /* ---- COMPACT TRANSPORT PANELS (open after Scan, accordion) ---- */
@@ -2136,37 +2132,34 @@ class StatusTab {
     bindAutoConnectSetting() {
         const toggle = document.getElementById('ble-auto-connect-toggle');
         if (!toggle) return;
-        try {
-            const saved = localStorage.getItem('rfcap_ble_auto_connect');
-            toggle.checked = saved !== '0';
-            toggle.addEventListener('change', () => {
-                try {
-                    localStorage.setItem('rfcap_ble_auto_connect', toggle.checked ? '1' : '0');
-                } catch(e) {}
-            });
-        } catch(e) {}
+        /* The checkbox is the user-facing gate for the hub's retry loop. The
+           hub owns the reconnect timer, so this page only persists the value
+           and hands it over — it never dials on its own. */
+        this._autoConnectEnabled = () => {
+            try { return localStorage.getItem('rfcap_ble_auto_connect') !== '0'; } catch (e) { return true; }
+        };
+        /* Ask the hub to (re)start or cancel the retry loop now. The iframe
+           shares the parent's origin, so window.parent.RFHub is reachable;
+           when running standalone (no shell) this is simply a no-op. */
+        const applyToHub = (enabled) => {
+            try {
+                const hub = window.parent && window.parent.RFHub;
+                if (hub && typeof hub.setAutoConnect === 'function') {
+                    hub.setAutoConnect(enabled);
+                    return;
+                }
+            } catch (e) {}
+            /* Standalone / no hub: at least keep localStorage consistent. */
+            try { localStorage.setItem('rfcap_ble_auto_connect', enabled ? '1' : '0'); } catch (e) {}
+        };
 
-        /* RECONNECT OWNERSHIP: the hub (www/hub.js) is the ONLY retry owner.
-           This page used to run its own 10s setInterval that dialled again
-           whether or not a previous connect was still pending, which stacked
-           connect requests on one GATT link and made the module stop
-           answering ("waits for no reply, then reconnects anyway"). Now this
-           page never dials on a timer — it only reacts to hub state and, when
-           the user taps Connect after a failure, asks the hub to retry. */
-        const _self = this;
-        this._stopAutoReconnect = function() {};
-        this._startAutoReconnect = function() {};
-        this._autoReconnectEnabled = function() {
-            try { return localStorage.getItem('rfcap_ble_auto_connect') !== '0'; } catch(e) { return false; }
-        };
-        /* Used by the box list / top panel: hand the retry to the hub and let
-           its backoff decide when to redial, instead of looping here. */
-        this._requestHubReconnect = function() {
-            const hub = window.RFHub;
-            if (hub && typeof hub.noteLinkDown === 'function') {
-                try { hub.noteLinkDown('page requested'); } catch(e) {}
-            }
-        };
+        try {
+            toggle.checked = this._autoConnectEnabled();
+        } catch (e) {}
+
+        toggle.addEventListener('change', () => {
+            applyToHub(toggle.checked);
+        });
     }
 
     updateArmingBox() {
@@ -2968,7 +2961,6 @@ class StatusTab {
 
         scanBtn.addEventListener('click', async () => {
             if (sppScanning) return;
-            this._stopAutoReconnect && this._stopAutoReconnect();
             sppScanning = true;
             scanBtn.classList.add('scan-active');
             scanBtn.textContent = '⏳ SPP';
@@ -3022,7 +3014,6 @@ class StatusTab {
             this.lastConn = { type: 'spp', device: dev };
             this._bumpConnCount(dev);
             this._saveLastConn('spp', dev);
-            this._stopAutoReconnect && this._stopAutoReconnect();
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.sppConnected = false;
@@ -3196,7 +3187,6 @@ class StatusTab {
         this.usbRefreshList = () => refreshUsbList(currentDevices);
 
         scanBtn.addEventListener('click', async () => {
-            this._stopAutoReconnect && this._stopAutoReconnect();
             scanBtn.classList.add('scan-active');
             scanBtn.textContent = '⏳ USB';
             this.usbSetStatus('scanning', 'Scanning USB serial devices...');
@@ -3243,7 +3233,6 @@ class StatusTab {
             this.usbUnsub = window.UsbSerial.subscribeRawData((data) => {
                 if (this.msp && this.msp.parser) this.msp.parser.feed(new Uint8Array(data));
             });
-            this._stopAutoReconnect && this._stopAutoReconnect();
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.usbConnected = false;
@@ -3355,7 +3344,6 @@ class StatusTab {
                 return;
             }
 
-            this._stopAutoReconnect && this._stopAutoReconnect();
             bleScanning = true;
             bleDevices = [];
             scanBtn.classList.add('scan-active');
@@ -3454,7 +3442,6 @@ class StatusTab {
             this.lastConn = { type: 'ble', device: dev };
             this._bumpConnCount(dev);
             this._saveLastConn('ble', dev);
-            this._stopAutoReconnect && this._stopAutoReconnect();
             this.serial.onStatusChange && this.serial.onStatusChange(true);
         } else {
             this.bleConnected = false;

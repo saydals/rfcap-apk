@@ -1008,10 +1008,12 @@
             dropInFlight = true;
             try {
                 if (RF.state.kind === 'spp') { try { await rfBle.disconnectSPP(); } catch (e) {} }
+                /* setState INSIDE the guard: a manual disconnect is an UP->DOWN
+                   edge too, and it must NOT kick the auto-reconnect loop. */
+                setState({ on: false, kind: null, name: null, detail: null });
             } finally {
                 dropInFlight = false;
             }
-            setState({ on: false, kind: null, name: null, detail: null });
             return {};
         },
 
@@ -1079,10 +1081,12 @@
             dropInFlight = true;
             try {
                 if (RF.state.kind === 'ble') { try { await rfBle.disconnect(); } catch (e) {} }
+                /* setState INSIDE the guard: a manual disconnect is an UP->DOWN
+                   edge too, and it must NOT kick the auto-reconnect loop. */
+                setState({ on: false, kind: null, name: null, detail: null });
             } finally {
                 dropInFlight = false;
             }
-            setState({ on: false, kind: null, name: null, detail: null });
             return {};
         },
 
@@ -1106,8 +1110,14 @@
         },
 
         async usbDisconnect() {
-            if (RF.state.kind === 'usb') { try { await rfSerial.disconnect(); } catch (e) {} }
-            setState({ on: false, kind: null, name: null, detail: null });
+            dropInFlight = true;
+            try {
+                if (RF.state.kind === 'usb') { try { await rfSerial.disconnect(); } catch (e) {} }
+                /* Manual disconnect must not kick the auto-reconnect loop. */
+                setState({ on: false, kind: null, name: null, detail: null });
+            } finally {
+                dropInFlight = false;
+            }
             return {};
         },
 
@@ -1336,16 +1346,22 @@
     var _reconnectBackoff = 5000;     /* first retry gap after a failed dial */
     var _reconnectMaxBackoff = 30000; /* cap, so we do not hammer the module */
 
+    /* The status-page "Auto Connect" switch is the single user-facing gate for
+       every transport (BLE, SPP and USB) — not just BLE. The key is shared
+       with status.html, which owns the checkbox. */
+    function autoConnectEnabled() {
+        try {
+            return localStorage.getItem('rfcap_ble_auto_connect') !== '0';
+        } catch (e) {
+            return true;   /* default ON, matching the checkbox default */
+        }
+    }
+
     function reconnectTarget() {
         var last = null;
         try { last = JSON.parse(localStorage.getItem('rf-last-conn') || 'null'); } catch (e) {}
         if (!last || !last.kind || !last.address) return null;
-        /* honour the user's BLE auto-connect switch (BLE-only setting) */
-        if (last.kind === 'ble') {
-            try {
-                if (localStorage.getItem('rfcap_ble_auto_connect') === '0') return null;
-            } catch (e) {}
-        }
+        if (!autoConnectEnabled()) return null;   /* user turned the switch off */
         return last;
     }
 
@@ -1390,9 +1406,43 @@
         scheduleReconnect(1500);   /* small settle delay: let native teardown finish */
     }
 
+    /* React to the status-page "Auto Connect" switch changing.
+       - ON  while the link is down: start retrying immediately (otherwise the
+         user would have to wait for the next link-down event).
+       - OFF: cancel any pending retry so the loop stops at once instead of
+         finishing the current backoff window first. */
+    function setAutoConnect(enabled) {
+        try { localStorage.setItem('rfcap_ble_auto_connect', enabled ? '1' : '0'); } catch (e) {}
+        if (!enabled) {
+            if (_reconnectTimer) {
+                clearTimeout(_reconnectTimer);
+                _reconnectTimer = null;
+            }
+            console.log('[hub] auto-connect OFF - reconnect cancelled');
+            return;
+        }
+        console.log('[hub] auto-connect ON');
+        if (RF.state && RF.state.on) return;   /* already linked, nothing to do */
+        if (_reconnectTimer) return;           /* a retry is already pending */
+        _reconnectBackoff = 5000;
+        scheduleReconnect(1500);
+    }
+
     /* Expose the retry trigger so the state machine (setState) can drive it
        without an ordering dependency between the two blocks. */
     window.RFHub.noteLinkDown = noteLinkDown;
+    window.RFHub.setAutoConnect = setAutoConnect;
+    window.RFHub.autoConnectEnabled = autoConnectEnabled;
+
+    /* Same-origin iframes share localStorage but do NOT see each other's
+       writes synchronously, so the checkbox handler calls setAutoConnect()
+       directly; this listener only covers external changes (another tab, a
+       manual localStorage edit). */
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'rfcap_ble_auto_connect') {
+            setAutoConnect(e.newValue !== '0');
+        }
+    });
 
     /* Boot: dial the last transport once, on the normal backoff. */
     if (isNative && reconnectTarget()) {
